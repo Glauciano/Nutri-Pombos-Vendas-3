@@ -10,7 +10,7 @@ type Pombo = { id: number; nome: string | null; anilha: string; status: string |
 type Retorno = { pomboId: string; hora: string; velocidade: number; colocacao: number; obs?: string };
 type Registro = { provaId: string; horaSoltura: string; clima: string; vento: string; velocidadeVento: number; temperatura: number; retornos: Retorno[]; obs: string; encerrada: boolean; dataRegistro: string };
 type Resultado = { id: string; prova: string; data: string; distancia: number; pomboId: string; colocacao: number; velocidade: number; hora: string; observacoes: string };
-type LinhaImportada = { anilha: string; hora: string; socio?: string };
+type LinhaImportada = { anilha: string; hora: string; socio?: string; idSocio?: string; concurso?: string };
 
 const DIA_KEY = "nutripombos-diaprova-v2";
 const CHECK_KEY = "nutripombos-check-dia";
@@ -33,11 +33,53 @@ function calcVel(km: number, solta: string, chegada: string) { const segundos = 
 function classVel(v: number) { if (v >= 1400) return ["🏆 Excepcional", T.gold]; if (v >= 1300) return ["🥇 Excelente", T.green]; if (v >= 1200) return ["🥈 Muito boa", T.blue]; if (v >= 1100) return ["🥉 Boa", "#A78BFA"]; if (v >= 1000) return ["📊 Regular", T.orange]; return ["⚠️ Baixa", "#FBBF24"]; }
 function provaId(p: Prova) { return p.id ?? String(p.num); }
 function parsearConstatacao(texto: string): LinhaImportada[] {
-  const result: LinhaImportada[] = []; let socio = "";
-  for (const line of texto.split("\n")) {
-    const sm = line.match(/S[oó]cio[:\s]+(\d+)/i); if (sm) { socio = sm[1]; continue; }
-    const m = line.match(/([0-9A-Z]{6,}\/\d{2,4}).*?(\d{2}:\d{2}:\d{2})/i);
-    if (m) result.push({ anilha: m[1], hora: m[2], socio });
+  const result: LinhaImportada[] = [];
+  let socio = "";
+  let idSocio = "";
+  let concurso = "";
+  const linhas = texto.split(/\r?\n/);
+
+  for (const line of linhas) {
+    const limpa = line.trim();
+    if (!limpa || limpa.startsWith("#") || limpa.startsWith("//") || (limpa.startsWith("[") && limpa.endsWith("]"))) continue;
+
+    // Detectar Sócio no formato INI (SocioNome=...) ou TXT
+    if (limpa.startsWith("SocioNome=") || limpa.match(/^S[oó]cio[:\s]+/i)) {
+      socio = limpa.split("=").length > 1 ? limpa.split("=")[1].trim() : limpa.replace(/^S[oó]cio[:\s]+/i, "").trim();
+      continue;
+    }
+    if (limpa.startsWith("SocioID=")) {
+      idSocio = limpa.split("=")[1].trim();
+      continue;
+    }
+    if (limpa.startsWith("Concurso=")) {
+      concurso = limpa.split("=")[1].trim();
+      continue;
+    }
+    if (limpa.includes("=") && !limpa.match(/^Band\d+=/i)) {
+      continue;
+    }
+
+    // 1. Formato Pigeon Master INI "Band1=008488920|11:27:24|Normal"
+    if (limpa.match(/^Band\d+=/i) || (limpa.includes("|") && limpa.includes(":"))) {
+      const parteDados = limpa.includes("=") ? limpa.split("=")[1] : limpa;
+      const colunas = parteDados.split("|").map(v => v.trim());
+      if (colunas.length >= 2) {
+        const idChip = colunas[0];
+        const hora = normalizarHora(colunas[1]);
+        if (idChip && hora.match(/^\d{2}:\d{2}/)) {
+          result.push({ anilha: idChip, hora, socio, idSocio, concurso });
+          continue;
+        }
+      }
+    }
+
+    // 2. Formato barra, Benzing, Bricon, vírgulas ou espaços
+    const m = limpa.match(/([0-9A-Z\-\/]{5,})[;,\s\|]+(\d{2}:\d{2}(?::\d{2})?)/i);
+    if (m) {
+      result.push({ anilha: m[1].trim(), hora: normalizarHora(m[2].trim()), socio, idSocio, concurso });
+      continue;
+    }
   }
   return result;
 }
@@ -67,7 +109,7 @@ export default function DiaProva() {
   function toggle(id: string) { const next = checks.includes(id) ? checks.filter(v => v !== id) : [...checks, id]; setChecks(next); localStorage.setItem(CHECK_KEY, JSON.stringify(next)); }
   function ordenar(retornos: Retorno[]) { return retornos.sort((a, b) => hmsParaSeg(a.hora) - hmsParaSeg(b.hora)).map((r, i) => ({ ...r, colocacao: i + 1 })); }
   function addRetorno() { if (!reg || !prova || !novo.pomboId || !reg.horaSoltura) return; const hora = normalizarHora(novo.hora); const retorno = { pomboId: novo.pomboId, hora, velocidade: calcVel(prova.km, normalizarHora(reg.horaSoltura), hora), colocacao: 0, obs: novo.obs }; setReg({ ...reg, retornos: ordenar([...reg.retornos, retorno]) }); setNovo({ pomboId: "", hora: agoraHMS(), obs: "" }); }
-  function importar() { if (!reg || !prova || !reg.horaSoltura) { setMessage("⚠️ Registre a hora de soltura antes de importar!"); return; } const linhas = parsearConstatacao(importTxt); if (!linhas.length) { setMessage("❌ Nenhum registro encontrado."); return; } const lista = [...reg.retornos]; let count = 0; for (const linha of linhas) { const alvo = linha.anilha.replace(/\D/g, ""); const pombo = pombos.find(p => p.anilha.replace(/\D/g, "") === alvo); const id = pombo ? String(pombo.id) : `anilha:${linha.anilha}`; if (lista.some(r => r.pomboId === id && r.hora === linha.hora)) continue; lista.push({ pomboId: id, hora: linha.hora, velocidade: calcVel(prova.km, normalizarHora(reg.horaSoltura), linha.hora), colocacao: 0, obs: pombo ? "" : `Anilha: ${linha.anilha}${linha.socio ? ` | Sócio: ${linha.socio}` : ""}` }); count++; } setReg({ ...reg, retornos: ordenar(lista) }); setImportTxt(""); setMessage(`✅ ${count} registro(s) importado(s)!`); }
+  function importar() { if (!reg || !prova || !reg.horaSoltura) { setMessage("⚠️ Registre a hora de soltura antes de importar!"); return; } const linhas = parsearConstatacao(importTxt); if (!linhas.length) { setMessage("❌ Nenhum registro encontrado no arquivo ou texto."); return; } const lista = [...reg.retornos]; let count = 0; for (const linha of linhas) { const alvo = linha.anilha.trim(); const pombo = pombos.find(p => p.anilha.trim() === alvo || p.anilha.replace(/\D/g, "") === alvo.replace(/\D/g, "") || p.anilha.includes(alvo) || alvo.includes(p.anilha)); const id = pombo ? String(pombo.id) : `anilha:${alvo}`; if (lista.some(r => r.pomboId === id && r.hora === linha.hora)) continue; const obsMeta = [pombo ? "" : `Anilha/Chip: ${linha.anilha}`, linha.socio ? `Sócio: ${linha.socio}${linha.idSocio ? ` (#${linha.idSocio})` : ""}` : "", linha.concurso ? `Concurso: ${linha.concurso}` : ""].filter(Boolean).join(" | "); lista.push({ pomboId: id, hora: linha.hora, velocidade: calcVel(prova.km, normalizarHora(reg.horaSoltura), linha.hora), colocacao: 0, obs: obsMeta }); count++; } setReg({ ...reg, retornos: ordenar(lista) }); setImportTxt(""); setMessage(`✅ ${count} registro(s) importado(s)!`); }
   function salvarHistorico() { if (!reg || !prova) return; const anteriores = readLocal<Resultado[]>(HIST_KEY, []); const novos = reg.retornos.map(r => ({ id: crypto.randomUUID(), prova: `${prova.cidade}/${prova.estado} — #${prova.num}`, data: prova.dataSolta, distancia: prova.km, pomboId: r.pomboId, colocacao: r.colocacao, velocidade: r.velocidade, hora: r.hora, observacoes: r.obs ?? "" })); localStorage.setItem(HIST_KEY, JSON.stringify([...anteriores, ...novos])); setReg(null); setTela("hub"); setMessage(`${novos.length} resultado(s) salvos no histórico.`); }
 
   if (tela === "selecionar") return <Shell><Back onClick={() => setTela("hub")} /><h1 style={{ ...T.h1, marginBottom: 16 }}>📅 Selecionar Prova</h1>{CALENDARIO_2026.map(p => { const c = classificarProva(p.km); return <button key={p.num} onClick={() => iniciar(p)} style={{ width: "100%", textAlign: "left", padding: 14, marginBottom: 7, borderRadius: 11, cursor: "pointer", color: T.white, background: T.bgCard, border: `1px solid ${c.cor}55`, borderLeft: `4px solid ${c.cor}` }}><b>#{p.num} {p.cidade} — {p.estado}</b><span style={{ float: "right", color: T.dim }}>›</span><div style={{ ...T.small, marginTop: 4 }}>{c.emoji} {c.tipo} • {p.km}km • {p.dataSolta}</div></button>; })}</Shell>;
@@ -90,7 +132,7 @@ function TelaAtiva({ reg, setReg, prova, pombos, horaAtual, novo, setNovo, addRe
     <section style={T.card}><Title>🚀 Hora de Soltura (HH:MM:SS)</Title><div style={{ display: "flex", gap: 7 }}><input value={reg.horaSoltura} placeholder="HH:MM:SS" onChange={e => setReg({ ...reg, horaSoltura: e.target.value })} style={{ ...T.input, textAlign: "center", color: T.gold, fontFamily: "monospace", fontSize: 19 }} /><button onClick={() => setReg({ ...reg, horaSoltura: agoraHMS() })} style={T.btnSm}>⏱️ Agora</button></div></section>
     <section style={T.card}><Title>🌤️ Condições</Title><div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>{CLIMAS.map(v => <Chip key={v} active={reg.clima === v} color={T.gold} onClick={() => setReg({ ...reg, clima: v })}>{v}</Chip>)}</div><div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 9 }}>{VENTOS.map(v => <Chip key={v} active={reg.vento === v} color={T.blue} onClick={() => setReg({ ...reg, vento: v })}>{v}</Chip>)}</div><div className="condition-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}><label style={T.label}>🌬️ Velocidade do vento: {reg.velocidadeVento} km/h<input type="range" min={0} max={80} value={reg.velocidadeVento} onChange={e => setReg({ ...reg, velocidadeVento: +e.target.value })} style={{ width: "100%", accentColor: T.blue, marginTop: 8 }} /></label><label style={T.label}>🌡️ Temperatura: {reg.temperatura}°C<input type="range" min={0} max={45} value={reg.temperatura} onChange={e => setReg({ ...reg, temperatura: +e.target.value })} style={{ width: "100%", accentColor: T.gold, marginTop: 8 }} /></label></div></section>
     <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 7, marginBottom: 12 }}><Mini label="Chegados" value={reg.retornos.length} color={T.green} /><Mini label="Melhor m/min" value={melhor.toLocaleString("pt-BR")} color={T.gold} /><Mini label="Faltam" value={Math.max(0, pombos.length - reg.retornos.length)} color={T.orange} /></div>
-    <section style={T.card}><Title>🐦 Registrar Chegada</Title><div className="arrival-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}><select value={novo.pomboId} onChange={e => setNovo({ ...novo, pomboId: e.target.value })} style={T.input}><option value="">Selecionar pombo...</option>{pombos.filter(p => !reg.retornos.some(r => r.pomboId === String(p.id))).map(p => <option key={p.id} value={p.id}>{p.nome || "Sem nome"} — {p.anilha}</option>)}</select><div style={{ display: "flex", gap: 5 }}><input value={novo.hora} onChange={e => setNovo({ ...novo, hora: e.target.value })} style={{ ...T.input, color: T.green, fontFamily: "monospace" }} /><button onClick={() => setNovo({ ...novo, hora: agoraHMS() })} style={T.btnSm}>⏱️</button></div></div>{preview > 0 && <div style={{ color: classe[1], padding: 9, marginTop: 8, background: `${classe[1]}12`, borderRadius: 8 }}><b>{classe[0]}</b><strong style={{ float: "right" }}>{preview.toLocaleString("pt-BR")} m/min</strong></div>}<input placeholder="Observação (opcional)" value={novo.obs} onChange={e => setNovo({ ...novo, obs: e.target.value })} style={{ ...T.input, margin: "8px 0" }} /><button disabled={!novo.pomboId || !reg.horaSoltura} onClick={addRetorno} style={{ ...T.btn, opacity: !novo.pomboId || !reg.horaSoltura ? .4 : 1 }}>✅ Registrar Chegada</button><button onClick={() => setShowImport(!showImport)} style={{ ...T.btnGhost, width: "100%", color: T.blue, marginTop: 8 }}>📥 Importar Constatação Remota</button>{showImport && <div style={{ padding: 12, marginTop: 9, borderRadius: 10, background: "#3b82f612", border: `1px solid ${T.blue}55` }}><p style={T.small}>Cole linhas como: <code style={{ color: T.gold }}>0084701/20 - 13:07:03</code></p><textarea rows={6} value={importTxt} onChange={e => setImportTxt(e.target.value)} style={{ ...T.input, height: 130, fontFamily: "monospace" }} /><button onClick={importar} style={{ ...T.btn, marginTop: 8 }}>📥 Importar ({parsearConstatacao(importTxt).length} encontrados)</button>{message && <p style={{ color: message.startsWith("✅") ? T.green : T.red }}>{message}</p>}</div>}</section>
+    <section style={T.card}><Title>🐦 Registrar Chegada</Title><div className="arrival-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}><select value={novo.pomboId} onChange={e => setNovo({ ...novo, pomboId: e.target.value })} style={T.input}><option value="">Selecionar pombo...</option>{pombos.filter(p => !reg.retornos.some(r => r.pomboId === String(p.id))).map(p => <option key={p.id} value={p.id}>{p.nome || "Sem nome"} — {p.anilha}</option>)}</select><div style={{ display: "flex", gap: 5 }}><input value={novo.hora} onChange={e => setNovo({ ...novo, hora: e.target.value })} style={{ ...T.input, color: T.green, fontFamily: "monospace" }} /><button onClick={() => setNovo({ ...novo, hora: agoraHMS() })} style={T.btnSm}>⏱️</button></div></div>{preview > 0 && <div style={{ color: classe[1], padding: 9, marginTop: 8, background: `${classe[1]}12`, borderRadius: 8 }}><b>{classe[0]}</b><strong style={{ float: "right" }}>{preview.toLocaleString("pt-BR")} m/min</strong></div>}<input placeholder="Observação (opcional)" value={novo.obs} onChange={e => setNovo({ ...novo, obs: e.target.value })} style={{ ...T.input, margin: "8px 0" }} /><button disabled={!novo.pomboId || !reg.horaSoltura} onClick={addRetorno} style={{ ...T.btn, opacity: !novo.pomboId || !reg.horaSoltura ? .4 : 1 }}>✅ Registrar Chegada</button><button onClick={() => setShowImport(!showImport)} style={{ ...T.btnGhost, width: "100%", color: T.blue, marginTop: 8 }}>📥 Importar Constatação Remota / ETS</button>{showImport && <div style={{ padding: 12, marginTop: 9, borderRadius: 10, background: "#3b82f612", border: `1px solid ${T.blue}55` }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 6 }}><p style={{ ...T.small, margin: 0 }}>Cole o texto ou carregue o arquivo (.ini, .txt, .csv, .log):</p><label style={{ ...T.btnGhost, padding: "5px 10px", fontSize: 11, cursor: "pointer", display: "inline-block" }}>📂 Abrir Arquivo ETS<input type="file" accept=".ini,.txt,.csv,.log,.json" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onload = ev => setImportTxt(String(ev.target?.result || "")); r.readAsText(f); } }} /></label></div><textarea rows={6} value={importTxt} onChange={e => setImportTxt(e.target.value)} placeholder={"[PIGEON_MASTER_RACE_CLOCK]\nBand1=008488920|11:27:24|Normal\n-- ou --\n0084701/20 - 13:07:03"} style={{ ...T.input, height: 130, fontFamily: "monospace" }} /><button onClick={importar} style={{ ...T.btn, marginTop: 8 }}>📥 Importar ({parsearConstatacao(importTxt).length} encontrados)</button>{message && <p style={{ color: message.startsWith("✅") ? T.green : T.red, marginTop: 6 }}>{message}</p>}</div>}</section>
     {reg.retornos.length > 0 && <Retornos reg={reg} setReg={setReg} pombos={pombos} />}
     <section style={T.card}><Title>📝 Observações</Title><textarea value={reg.obs} onChange={e => setReg({ ...reg, obs: e.target.value })} style={{ ...T.input, height: 75 }} /></section><div style={{ display: "flex", gap: 8 }}><button onClick={onBack} style={{ ...T.btnGhost, flex: 1 }}>← Voltar</button><button onClick={onEnd} style={{ ...T.btn, flex: 2, background: T.green, borderColor: T.green }}>🏁 Encerrar Prova</button></div>
   </>;

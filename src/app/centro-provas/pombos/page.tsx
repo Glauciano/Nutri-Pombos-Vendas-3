@@ -204,13 +204,14 @@ export default function PombosPage(){
 }
 
 function mascaraAnilha(v:string):string{
-  const d=v.replace(/\D/g,"");
-  if(d.length<=7)return d;
-  return d.slice(0,7)+"/"+d.slice(7,9);
+  if (/^[0-9]+$/.test(v) && v.length > 7 && v.length <= 9) {
+    return v.slice(0, 7) + "/" + v.slice(7);
+  }
+  return v;
 }
 
 function validarAnilha(v:string):boolean{
-  return /^\d{7}\/\d{2}$/.test(v);
+  return v.trim().length >= 4;
 }
 
 /* ========== EDIT POMBO FORM ========== */
@@ -231,7 +232,7 @@ function EditarPombo({pombo,pombos,onSaved,onCancel}:{pombo:Pombo;pombos:Pombo[]
   const anilhaOk=validarAnilha(anilha);
 
   async function salvar(){
-    if(!anilhaOk){alert("Anilha inválida. Use o formato 0000000/00\nExemplo: 1234567/26");return}
+    if(!anilhaOk){alert("Anilha inválida. Digite pelo menos 4 caracteres (ex: 1234567/26 ou 008488920)");return}
     setSaving(true);
     try{
       const r=await fetch("/api/pombos",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:pombo.id,anilha:anilha.trim(),nome:nome.trim()||null,sexo,cor:cor.trim()||null,dataNascimento:nasc||null,paiId:paiId?Number(paiId):null,maeId:maeId?Number(maeId):null,observacoes:obs.trim()||null,status})});
@@ -245,7 +246,7 @@ function EditarPombo({pombo,pombos,onSaved,onCancel}:{pombo:Pombo;pombos:Pombo[]
     <div style={{padding:10,marginBottom:12,borderRadius:9,color:T.gold,background:`${T.gold}10`,border:`1px solid ${T.gold}33`,fontSize:11}}>
       📋 Editando: <b>{pombo.nome||pombo.anilha}</b> ({pombo.anilha})
     </div>
-    <Field label="🏷️ Anilha *"><div style={{position:"relative"}}><input value={anilha} onChange={e=>{const m=mascaraAnilha(e.target.value);setAnilha(m)}} placeholder="0000000/00" maxLength={10} style={{...T.input,fontFamily:"monospace",fontSize:18,fontWeight:900,letterSpacing:2,color:anilhaOk||!anilha?T.gold:T.red}}/>{anilha&&!anilhaOk&&<div style={{fontSize:10,color:T.red,marginTop:4}}>Formato: 7 dígitos + / + 2 dígitos do ano</div>}{anilhaOk&&<div style={{fontSize:10,color:"#4ADE80",marginTop:4}}>✅ Anilha válida</div>}</div></Field>
+    <Field label="🏷️ Anilha *"><div style={{position:"relative"}}><input value={anilha} onChange={e=>{const m=mascaraAnilha(e.target.value);setAnilha(m)}} placeholder="0000000/00" maxLength={10} style={{...T.input,fontFamily:"monospace",fontSize:18,fontWeight:900,letterSpacing:2,color:anilhaOk||!anilha?T.gold:T.red}}/>{anilha&&!anilhaOk&&<div style={{fontSize:10,color:T.red,marginTop:4}}>Digite pelo menos 4 caracteres</div>}{anilhaOk&&<div style={{fontSize:10,color:"#4ADE80",marginTop:4}}>✅ Anilha válida</div>}</div></Field>
     <Field label="📛 Nome"><input value={nome} onChange={e=>setNome(e.target.value)} placeholder="Nome do pombo" style={T.input}/></Field>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
       <Field label="⚥ Sexo"><select value={sexo} onChange={e=>setSexo(e.target.value)} style={{...T.input,appearance:"auto"}}><option value="macho">♂ Macho</option><option value="femea">♀ Fêmea</option></select></Field>
@@ -283,7 +284,7 @@ function NovoPombo({pombos,onSaved}:{pombos:Pombo[];onSaved:()=>void}){
   const anilhaOk=validarAnilha(anilha);
 
   async function salvar(){
-    if(!anilhaOk){alert("Anilha inválida. Use o formato 0000000/00\nExemplo: 1234567/26");return}
+    if(!anilhaOk){alert("Anilha inválida. Digite pelo menos 4 caracteres (ex: 1234567/26 ou 008488920)");return}
     setSaving(true);
     try{
       const r=await fetch("/api/pombos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({anilha:anilha.trim(),nome:nome.trim()||null,sexo,cor:cor.trim()||null,dataNascimento:nasc||null,paiId:paiId?Number(paiId):null,maeId:maeId?Number(maeId):null,observacoes:obs.trim()||null,status:"ativo"})});
@@ -294,7 +295,7 @@ function NovoPombo({pombos,onSaved}:{pombos:Pombo[];onSaved:()=>void}){
 
   return <section style={T.card}>
     <Title>➕ Cadastrar Novo Pombo</Title>
-    <Field label="🏷️ Anilha *"><div style={{position:"relative"}}><input value={anilha} onChange={e=>{const m=mascaraAnilha(e.target.value);setAnilha(m)}} placeholder="0000000/00" maxLength={10} style={{...T.input,fontFamily:"monospace",fontSize:18,fontWeight:900,letterSpacing:2,color:anilhaOk||!anilha?T.gold:T.red}}/>{anilha&&!anilhaOk&&<div style={{fontSize:10,color:T.red,marginTop:4}}>Formato: 7 dígitos + / + 2 dígitos do ano</div>}{anilhaOk&&<div style={{fontSize:10,color:"#4ADE80",marginTop:4}}>✅ Anilha válida</div>}</div></Field>
+    <Field label="🏷️ Anilha *"><div style={{position:"relative"}}><input value={anilha} onChange={e=>{const m=mascaraAnilha(e.target.value);setAnilha(m)}} placeholder="0000000/00" maxLength={10} style={{...T.input,fontFamily:"monospace",fontSize:18,fontWeight:900,letterSpacing:2,color:anilhaOk||!anilha?T.gold:T.red}}/>{anilha&&!anilhaOk&&<div style={{fontSize:10,color:T.red,marginTop:4}}>Digite pelo menos 4 caracteres</div>}{anilhaOk&&<div style={{fontSize:10,color:"#4ADE80",marginTop:4}}>✅ Anilha válida</div>}</div></Field>
     <Field label="📛 Nome"><input value={nome} onChange={e=>setNome(e.target.value)} placeholder="Nome do pombo" style={T.input}/></Field>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
       <Field label="⚥ Sexo"><select value={sexo} onChange={e=>setSexo(e.target.value)} style={{...T.input,appearance:"auto"}}><option value="macho">♂ Macho</option><option value="femea">♀ Fêmea</option></select></Field>

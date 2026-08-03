@@ -43,15 +43,31 @@ async function buildPedigree(pombo: any, depth = 0): Promise<any> {
   return { ...pombo, pai, mae };
 }
 
+function formatDbError(error: any, defaultMsg: string) {
+  const msg = String(error?.message || error || "");
+  const code = error?.code;
+  if (code === "42P01" || msg.includes('relation "pombos" does not exist')) {
+    return "As tabelas do banco de dados ainda não foram criadas. Rode no seu projeto: npx drizzle-kit push";
+  }
+  if (code === "23505" || msg.includes("unique constraint") || msg.includes("duplicate key")) {
+    return "Já existe um pombo cadastrado com esta mesma anilha.";
+  }
+  if (code === "23503" || msg.includes("foreign key constraint")) {
+    return "O pai ou a mãe selecionados não existem no sistema.";
+  }
+  return defaultMsg + (error?.message ? `: ${error.message}` : "");
+}
+
 export async function POST(request: Request) {
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   try {
     const body = await request.json();
-    if (!body.anilha || !/^\d{7}\/\d{2}$/.test(body.anilha)) {
-      return NextResponse.json({ error: "Anilha inválida. Use o formato 0000000/00 (ex: 1234567/26)" }, { status: 400 });
+    const anilhaStr = String(body.anilha || "").trim();
+    if (!anilhaStr || anilhaStr.length < 4) {
+      return NextResponse.json({ error: "Anilha inválida. Informe pelo menos 4 caracteres (ex: 1234567/26 ou BR-24-12345)." }, { status: 400 });
     }
     const newPombo = await db.insert(pombos).values({
-      anilha: body.anilha,
+      anilha: anilhaStr,
       nome: body.nome || null,
       sexo: body.sexo,
       dataNascimento: body.dataNascimento ? new Date(body.dataNascimento) : null,
@@ -62,9 +78,9 @@ export async function POST(request: Request) {
       observacoes: body.observacoes || null,
     }).returning();
     return NextResponse.json(newPombo[0], { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return NextResponse.json({ error: "Failed to create pombo" }, { status: 500 });
+    return NextResponse.json({ error: formatDbError(error, "Não foi possível criar o pombo") }, { status: 500 });
   }
 }
 
@@ -73,11 +89,12 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json();
     if (!body.id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-    if (body.anilha && !/^\d{7}\/\d{2}$/.test(body.anilha)) {
-      return NextResponse.json({ error: "Anilha inválida. Use o formato 0000000/00 (ex: 1234567/26)" }, { status: 400 });
+    const anilhaStr = body.anilha ? String(body.anilha).trim() : "";
+    if (anilhaStr && anilhaStr.length < 4) {
+      return NextResponse.json({ error: "Anilha inválida. Informe pelo menos 4 caracteres (ex: 1234567/26 ou BR-24-12345)." }, { status: 400 });
     }
     const updated = await db.update(pombos).set({
-      anilha: body.anilha,
+      anilha: anilhaStr || undefined,
       nome: body.nome || null,
       sexo: body.sexo,
       dataNascimento: body.dataNascimento ? new Date(body.dataNascimento) : null,
@@ -89,9 +106,9 @@ export async function PUT(request: Request) {
       updatedAt: new Date(),
     }).where(eq(pombos.id, Number(body.id))).returning();
     return NextResponse.json(updated[0]);
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return NextResponse.json({ error: "Failed to update pombo" }, { status: 500 });
+    return NextResponse.json({ error: formatDbError(error, "Não foi possível atualizar o pombo") }, { status: 500 });
   }
 }
 
@@ -104,8 +121,8 @@ export async function DELETE(request: Request) {
     const deleted = await db.delete(pombos).where(eq(pombos.id, Number(id))).returning();
     if (!deleted.length) return NextResponse.json({ error: "Pombo não encontrado" }, { status: 404 });
     return NextResponse.json({ success: true, deleted: deleted[0] });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return NextResponse.json({ error: "Failed to delete pombo" }, { status: 500 });
+    return NextResponse.json({ error: formatDbError(error, "Não foi possível excluir o pombo") }, { status: 500 });
   }
 }

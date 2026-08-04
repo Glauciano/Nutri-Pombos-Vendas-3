@@ -40,6 +40,8 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/planejamento-anual", label: "Planejamento anual", icon: CalendarDays },
       { href: "/centro-provas/calendario-anual", label: "Calendário nutricional", icon: CalendarDays },
       { href: "/centro-provas/configuracao", label: "Configuração", icon: Settings },
+      { href: "/centro-provas/simulador-vento", label: "Simulador de Vento", icon: CloudSun },
+      { href: "/centro-provas/custos", label: "Custos e ROI", icon: Calculator },
     ],
   },
   {
@@ -57,6 +59,7 @@ const groups: NavGroup[] = [
     items: [
       { href: "/centro-provas/pombos", label: "Pombos e Pedigree", icon: Bird },
       { href: "/centro-provas/classificacao", label: "Classificação por Km", icon: Trophy },
+      { href: "/centro-provas/simulador-cruzamento", label: "Simulador Genético", icon: Dna },
     ],
   },
   {
@@ -66,6 +69,7 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/suplementacao", label: "Suplementação", icon: PackageOpen },
       { href: "/centro-provas/controle-sanitario", label: "Controle sanitário", icon: ShieldCheck },
       { href: "/centro-provas/guia-terapeutico", label: "Guia terapêutico", icon: HeartPulse },
+      { href: "/centro-provas/resgate", label: "Resgate e Triagem", icon: HeartPulse },
     ],
   },
   {

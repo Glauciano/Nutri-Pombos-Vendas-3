@@ -114,6 +114,7 @@ export default function CentroProvas() {
       <Module icon="🗺️" title="Mapa de Solturas" description="Rotas e cidades interativas" color={T.blue} onClick={() => setAba("mapa")} />
       <Module icon="🌤️" title="Previsão do Tempo" description="Clima, vento e sete dias" color={T.green} onClick={() => setAba("clima")} />
       <Link href="/centro-provas/simulador-vento"><Module icon="🌪️" title="Simulador de Vento" description="Aerodinâmica, deriva e tempo" color="#38bdf8" /></Link>
+      <Link href="/centro-provas/geodesica"><Module icon="🗺️" title="Geodésica e Relevo" description="Cálculo ortodrômico de rota" color="#eab308" /></Link>
       <Link href="/centro-provas/dia-prova"><Module icon="🔴" title="Dia da Prova" description="Chegadas e constatação" color="#ef4444" /></Link>
       <Link href="/centro-provas/gps-chip"><Module icon="📡" title="GPS & Chip" description="ETS/RFID e importação" color="#06b6d4" /></Link>
     </ModuleGroup>
@@ -123,6 +124,9 @@ export default function CentroProvas() {
       <Link href="/centro-provas/performance"><Module icon="📊" title="Centro de Performance" description="Índices e evolução" color="#39e58c" /></Link>
       <Link href="/centro-provas/classificacao"><Module icon="🏆" title="Classificação por Km" description="Coeficiente de aptidão e seleção" color="#eab308" /></Link>
       <Link href="/centro-provas/simulador-cruzamento"><Module icon="🧬" title="Simulador Genético" description="Cruzamentos, cores e vigor híbrido" color="#22c55e" /></Link>
+      <Link href="/centro-provas/olho"><Module icon="👁️" title="Análise de Olho (Eye-Sign)" description="Teoria do Círculo de Adaptação" color="#a78bfa" /></Link>
+      <Link href="/centro-provas/asa"><Module icon="🪶" title="Índice da Asa e Muda" description="10 penas primárias de voo" color="#f97316" /></Link>
+      <Link href="/centro-provas/certificado"><Module icon="📜" title="Certificado de Leilão" description="Pedigree para vendas e leilão" color="#eab308" /></Link>
       <Link href="/centro-provas/treinamentos"><Module icon="🏋️" title="Treinamentos" description="Distância, tempo e velocidade" color="#60a5fa" /></Link>
       <Link href="/centro-provas/treinamento-orientacao"><Module icon="🧭" title="Treinamento de Orientação" description="Progressão e retorno seguro" color="#22c55e" /></Link>
       <Link href="/centro-provas/viuvez"><Module icon="❤️" title="Sistema de Viuvez" description="Casais, ciclos e checklist" color="#f472b6" /></Link>
@@ -149,6 +153,7 @@ export default function CentroProvas() {
       <Link href="/centro-provas/calendario-anual"><Module icon="🗓️" title="Calendário Nutricional" description="Muda, competição e recuperação" color="#c084fc" /></Link>
       <Link href="/centro-provas/planejamento-anual"><Module icon="📆" title="Planejamento Anual" description="Eventos e visão mensal" color="#f472b6" /></Link>
       <Link href="/centro-provas/configuracao"><Module icon="⚙️" title="Configuração do Plantel" description="Consumo, quantidade e condição" color="#94a3b8" /></Link>
+      <Link href="/centro-provas/fotoperiodo"><Module icon="💡" title="Fotoperíodo (Darkness)" description="Controle de luz do pombal" color="#38bdf8" /></Link>
       <Link href="/centro-provas/custos"><Module icon="💸" title="Gestão Financeira & ROI" description="Custo do plantel e por pombo" color="#eab308" /></Link>
     </ModuleGroup>
 

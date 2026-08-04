@@ -115,6 +115,7 @@ export default function CentroProvas() {
       <Module icon="🌤️" title="Previsão do Tempo" description="Clima, vento e sete dias" color={T.green} onClick={() => setAba("clima")} />
       <Link href="/centro-provas/simulador-vento"><Module icon="🌪️" title="Simulador de Vento" description="Aerodinâmica, deriva e tempo" color="#38bdf8" /></Link>
       <Link href="/centro-provas/geodesica"><Module icon="🗺️" title="Geodésica e Relevo" description="Cálculo ortodrômico de rota" color="#eab308" /></Link>
+      <Link href="/centro-provas/geomagnetico"><Module icon="🌤️" title="Radar Geomagnético Kp" description="Tempestade solar e bússola" color="#f97316" /></Link>
       <Link href="/centro-provas/dia-prova"><Module icon="🔴" title="Dia da Prova" description="Chegadas e constatação" color="#ef4444" /></Link>
       <Link href="/centro-provas/gps-chip"><Module icon="📡" title="GPS & Chip" description="ETS/RFID e importação" color="#06b6d4" /></Link>
     </ModuleGroup>
@@ -122,6 +123,7 @@ export default function CentroProvas() {
     <ModuleGroup title="📈 Desempenho e Treino" subtitle="Histórico, evolução, orientação e motivação">
       <Link href="/centro-provas/historico"><Module icon="📜" title="Histórico de Provas" description="Resultados, vitórias e pódios" color="#eab308" /></Link>
       <Link href="/centro-provas/performance"><Module icon="📊" title="Centro de Performance" description="Índices e evolução" color="#39e58c" /></Link>
+      <Link href="/centro-provas/pombo-as"><Module icon="🏆" title="Pombo Ás Oficial (FCI)" description="Ranking das melhores 5 provas" color="#eab308" /></Link>
       <Link href="/centro-provas/classificacao"><Module icon="🏆" title="Classificação por Km" description="Coeficiente de aptidão e seleção" color="#eab308" /></Link>
       <Link href="/centro-provas/simulador-cruzamento"><Module icon="🧬" title="Simulador Genético" description="Cruzamentos, cores e vigor híbrido" color="#22c55e" /></Link>
       <Link href="/centro-provas/olho"><Module icon="👁️" title="Análise de Olho (Eye-Sign)" description="Teoria do Círculo de Adaptação" color="#a78bfa" /></Link>
@@ -143,6 +145,7 @@ export default function CentroProvas() {
     <ModuleGroup title="🌾 Nutrição e Saúde" subtitle="Receitas, suplementos, prevenção e rotina">
       <Link href="/centro-provas/receitas"><Module icon="🧪" title="Receitas Caseiras" description="Preparações personalizadas" color="#06b6d4" /></Link>
       <Link href="/centro-provas/suplementacao"><Module icon="💊" title="Suplementação" description="Produtos e planejamento" color="#a78bfa" /></Link>
+      <Link href="/centro-provas/carbo-lipideo"><Module icon="🧪" title="Abastecimento Carbo-Lipídeo" description="Proporção Glicogênio vs Gordura" color="#38bdf8" /></Link>
       <Link href="/centro-provas/guia-terapeutico"><Module icon="🏥" title="Guia Terapêutico" description="Triagem e orientação segura" color="#22c55e" /></Link>
       <Link href="/centro-provas/controle-sanitario"><Module icon="💉" title="Controle Sanitário" description="Vacinas, exames e farmácia" color="#ef4444" /></Link>
       <Link href="/centro-provas/alertas"><Module icon="🔔" title="Central de Alertas" description="Rotina e avisos dinâmicos" color="#f59e0b" /></Link>

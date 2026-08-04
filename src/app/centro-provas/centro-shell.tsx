@@ -20,12 +20,14 @@ const groups: NavGroup[] = [
       { href: "/centro-provas", label: "Painel principal", icon: LayoutDashboard },
       { href: "/centro-provas/alertas", label: "Central de alertas", icon: Bell },
       { href: "/centro-provas/performance", label: "Performance", icon: Activity },
+      { href: "/centro-provas/pombo-as", label: "Pombo Ás Oficial (FCI)", icon: Trophy },
     ],
   },
   {
     label: "Provas",
     items: [
       { href: "/centro-provas/gerenciar-calendario", label: "Calendário de provas", icon: CalendarDays },
+      { href: "/centro-provas/geomagnetico", label: "Radar Geomagnético Kp", icon: Radio },
       { href: "/centro-provas/dia-prova", label: "Dia da prova", icon: Target },
       { href: "/centro-provas/gps-chip", label: "GPS e chip", icon: Radio },
       { href: "/centro-provas/historico", label: "Histórico", icon: Trophy },
@@ -72,6 +74,7 @@ const groups: NavGroup[] = [
     items: [
       { href: "/centro-provas/receitas", label: "Receitas", icon: UtensilsCrossed },
       { href: "/centro-provas/suplementacao", label: "Suplementação", icon: PackageOpen },
+      { href: "/centro-provas/carbo-lipideo", label: "Abastecimento Carbo-Lipídeo", icon: PackageOpen },
       { href: "/centro-provas/controle-sanitario", label: "Controle sanitário", icon: ShieldCheck },
       { href: "/centro-provas/guia-terapeutico", label: "Guia terapêutico", icon: HeartPulse },
       { href: "/centro-provas/resgate", label: "Resgate e Triagem", icon: HeartPulse },

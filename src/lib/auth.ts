@@ -16,6 +16,11 @@ function hashToken(token: string) {
 
 export async function createSession(usuarioId: number) {
   if (!isDbConfigured()) return; // Skip if no DB
+  // ANTI-COMPARTILHAMENTO DE CONTA:
+  // Remove sessões anteriores do mesmo usuário para garantir uso individual por dispositivo
+  try {
+    await db.delete(sessoes).where(eq(sessoes.usuarioId, usuarioId));
+  } catch {}
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86_400_000);
   await db.insert(sessoes).values({ usuarioId, tokenHash: hashToken(token), expiresAt });

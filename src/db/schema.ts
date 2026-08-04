@@ -6,7 +6,7 @@ export const usuarios = pgTable("usuarios", {
   nome: text("nome").notNull(),
   email: text("email").notNull().unique(),
   senhaHash: text("senha_hash").notNull(),
-  plano: text("plano", { enum: ["teste", "anual", "vitalicio", "admin"] }).notNull().default("teste"),
+  plano: text("plano", { enum: ["teste", "mensal", "anual", "vitalicio", "admin"] }).notNull().default("teste"),
   acessoAtivo: boolean("acesso_ativo").notNull().default(true),
   acessoAte: timestamp("acesso_ate"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

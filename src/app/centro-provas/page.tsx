@@ -147,6 +147,7 @@ export default function CentroProvas() {
       <Link href="/centro-provas/receitas"><Module icon="🧪" title="Receitas Caseiras" description="Preparações personalizadas" color="#06b6d4" /></Link>
       <Link href="/centro-provas/suplementacao"><Module icon="💊" title="Suplementação" description="Produtos e planejamento" color="#a78bfa" /></Link>
       <Link href="/centro-provas/carbo-lipideo"><Module icon="🧪" title="Abastecimento Carbo-Lipídeo" description="Proporção Glicogênio vs Gordura" color="#38bdf8" /></Link>
+      <Link href="/centro-provas/osmolaridade"><Module icon="💧" title="Hidratação & Osmolaridade" description="Evitar sede no cesto de enceste" color="#38bdf8" /></Link>
       <Link href="/centro-provas/guia-terapeutico"><Module icon="🏥" title="Guia Terapêutico" description="Triagem e orientação segura" color="#22c55e" /></Link>
       <Link href="/centro-provas/controle-sanitario"><Module icon="💉" title="Controle Sanitário" description="Vacinas, exames e farmácia" color="#ef4444" /></Link>
       <Link href="/centro-provas/alertas"><Module icon="🔔" title="Central de Alertas" description="Rotina e avisos dinâmicos" color="#f59e0b" /></Link>

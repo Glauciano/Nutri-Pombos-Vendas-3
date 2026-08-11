@@ -116,6 +116,7 @@ export default function CentroProvas() {
       <Link href="/centro-provas/simulador-vento"><Module icon="🌪️" title="Simulador de Vento" description="Aerodinâmica, deriva e tempo" color="#38bdf8" /></Link>
       <Link href="/centro-provas/geodesica"><Module icon="🗺️" title="Geodésica e Relevo" description="Cálculo ortodrômico de rota" color="#eab308" /></Link>
       <Link href="/centro-provas/geomagnetico"><Module icon="🌤️" title="Radar Geomagnético Kp" description="Tempestade solar e bússola" color="#f97316" /></Link>
+      <Link href="/centro-provas/clima-avancado"><Module icon="🌤️" title="Radar Aero-Clima & Pressão" description="Barômetro, teto e cisalhamento" color="#22c55e" /></Link>
       <Link href="/centro-provas/dia-prova"><Module icon="🔴" title="Dia da Prova" description="Chegadas e constatação" color="#ef4444" /></Link>
       <Link href="/centro-provas/gps-chip"><Module icon="📡" title="GPS & Chip" description="ETS/RFID e importação" color="#06b6d4" /></Link>
     </ModuleGroup>

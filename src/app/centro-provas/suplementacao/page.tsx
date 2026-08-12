@@ -226,6 +226,37 @@ const BASE:Suplemento[]=[
      "Efeitos colaterais: taquicardia, hipertensão, arritmia",
      "Manipular com cuidado — não beber, fumar ou comer durante a administração",
    ]},
+
+  /* ┌─────────────────────────────────────────────────────────┐
+     │  7. ELETROVITT LÍQUIDO — Solução Oral Hidroeletrolítica  │
+     └─────────────────────────────────────────────────────────┘ */
+  {id:"eletrovitt",nome:"Eletrovitt Líquido (Solução Oral)",fabricante:"Linha Avícola / Veterinária (Coveli / Biofarm / Vetnil)",emoji:"💧",cor:"#38bdf8",
+   tipo:"Polivitamínico com Eletrólitos e Aminoácidos (Líquido Solúvel)",
+   descricao:"Suplemento hidroeletrolítico, vitamínico e energético em apresentação líquida de rápida biodisponibilidade à base de eletrólitos essenciais (Sódio, Potássio, Cloreto, Cálcio, Magnésio), dextrose e complexo vitamínico. Indicado para reidratação imediata pré e pós-prova, bem como suporte em estresse térmico ou transporte.",
+   composicao:[
+     "Eletrólitos: Cloreto de Sódio, Cloreto de Potássio, Bicarbonato de Sódio, Cloreto de Magnésio, Cálcio",
+     "Fonte de Glicose rápida: Dextrose anidra solúvel",
+     "Vitaminas: Complexo B (B1, B2, B6, B12), Vitamina A, D3, E e Vitamina C",
+     "Aminoácidos: L-Lisina, DL-Metionina",
+     "Apresentação LÍQUIDA / Solução Oral de absorção celular ultrarrápida",
+   ],
+   indicacoes:[
+     "Reidratação hídrica e eletrolítica imediata após provas de velocidade ou fundo",
+     "Reposição mineral rápida na água de beber durante períodos de calor intenso no pombal",
+     "Prevenção contra esgotamento osmótico e acidose muscular",
+     "Apoio pré-encestamento para manter o balanço de eletrólitos no caminhão",
+   ],
+   posologia:[
+     {situacao:"Pombos (Pós-prova / Reidratação)",dose:"2,5 mL por litro de água",freq:"Durante 2 a 3 dias consecutivos após o retorno",obs:"Adicionar na água de beber limpa e fresca (~50 gotas por litro)."},
+     {situacao:"Pombos (Pré-encestamento)",dose:"2 mL por litro de água",freq:"Na QUINTA-FEIRA pré-enceste (não fornecer na sexta-feira)",obs:"Evita a sede no cesto enquanto abastece os sais minerais."},
+     {situacao:"Aves debilitadas / Triagem",dose:"2 a 3 gotas direto no bico",freq:"1 vez ao dia por 3 dias",obs:"Apenas em casos de extraviados com desidratação severa."},
+   ],
+   atencao:[
+     "Preparar solução fresca diariamente e descartar sobras do dia anterior",
+     "Não fornecer eletrólitos concentrados no dia exato do encestamento (Sexta-feira) para evitar sede no cesto",
+     "Manter o frasco bem fechado em local fresco e ao abrigo da luz solar direta",
+     "Consulte um Médico Veterinário em caso de aves prostradas",
+   ]},
 ];
 
 const PROTOCOLO:Record<Categoria,{dia:string;foco:string;itens:string[]}[]>={
@@ -268,6 +299,11 @@ function calcularDoseSuplemento(s: Suplemento, pombos: number, litrosAgua: numbe
     unidade = "mL";
     modo = "na água de beber";
     instrucao = `Adicionar ${gMlDia}mL em ${litrosAgua.toFixed(2)}L de água limpa no bebedouro.`;
+  } else if (s.id === "eletrovitt") {
+    gMlDia = Math.round(2.5 * litrosAgua * 10) / 10;
+    unidade = "mL";
+    modo = "na água de beber";
+    instrucao = `Adicionar ${gMlDia}mL de Eletrovitt Líquido (~${Math.round(gMlDia * 20)} gotas) em ${litrosAgua.toFixed(2)}L de água limpa no bebedouro diariamente.`;
   } else if (s.id === "glicopan") {
     gMlDia = Math.round(2 * litrosAgua * 10) / 10;
     unidade = "mL";
@@ -426,7 +462,7 @@ export default function Suplementacao(){
     {tab === "meus" && <><button onClick={() => { setForm(novo()); setEditId(null); setShow(true); }} style={{ ...T.btn, marginBottom: 12 }}>➕ Adicionar meu produto</button>{show && <section style={T.card}><Title>{editId ? "✏️ Editar Produto" : "➕ Novo Produto"}</Title><div className="supp-head" style={{ display: "grid", gridTemplateColumns: "90px 1fr", gap: 8 }}><Field label="Emoji"><input value={form.emoji || "💊"} onChange={e => setForm(v => ({ ...v, emoji: e.target.value }))} style={{ ...T.input, textAlign: "center" }} /></Field><Field label="Cor"><input type="color" value={form.cor || T.gold} onChange={e => setForm(v => ({ ...v, cor: e.target.value }))} style={{ ...T.input, padding: 4 }} /></Field></div>{[["Nome *", "nome"], ["Fabricante", "fabricante"], ["Tipo", "tipo"], ["Descrição", "descricao"]].map(([l, k]) => <Field key={k} label={l}><input value={String(form[k as keyof Suplemento] || "")} onChange={e => setForm(v => ({ ...v, [k]: e.target.value }))} style={T.input} /></Field>)}<ListEditor label="🧪 Composição" value={tmp} setValue={setTmp} items={form.composicao || []} setItems={items => setForm(v => ({ ...v, composicao: items }))} /><ListEditor label="✅ Indicações" value={tmp} setValue={setTmp} items={form.indicacoes || []} setItems={items => setForm(v => ({ ...v, indicacoes: items }))} /><Field label="💊 Referência de uso"><div className="supp-pos" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>{(["situacao", "dose", "freq", "obs"] as const).map(k => <input key={k} placeholder={k} value={pos[k]} onChange={e => setPos(v => ({ ...v, [k]: e.target.value }))} style={T.input} />)}</div><button onClick={() => { if (pos.situacao && pos.dose) { setForm(v => ({ ...v, posologia: [...(v.posologia || []), pos] })); setPos({ situacao: "", dose: "", freq: "", obs: "" }); } }} style={{ ...T.btnGhost, width: "100%", marginTop: 6 }}>+ Adicionar referência</button></Field><div style={{ display: "flex", gap: 8 }}><button onClick={() => setShow(false)} style={{ ...T.btnGhost, flex: 1 }}>Cancelar</button><button onClick={salvar} style={{ ...T.btn, flex: 2 }}>💾 Salvar produto</button></div></section>}{custom.map(s => <button key={s.id} onClick={() => setSel(s)} style={{ width: "100%", padding: 13, marginBottom: 7, textAlign: "left", borderRadius: 10, color: T.white, background: T.bgCard, border: `1px solid ${s.cor}44`, borderLeft: `4px solid ${s.cor}` }}>{s.emoji} <b>{s.nome}</b> <small style={{ color: s.cor }}>• {s.tipo}</small></button>)}{ready && !custom.length && !show && <div style={{ padding: 35, textAlign: "center", color: T.dim }}>Nenhum produto personalizado.</div>}</>}
   </Shell>;
 }
-function Notice(){return <div style={{padding:10,margin:"12px 0",borderRadius:9,color:T.blue,background:`${T.blue}12`,border:`1px solid ${T.blue}44`,fontSize:11,lineHeight:1.6}}>ℹ️ As informações dos 6 produtos cadastrados são baseadas nas bulas oficiais dos fabricantes. Confirme no rótulo se a apresentação é indicada para aves. Produtos injetáveis e estimulantes exigem orientação veterinária. Em caso de dúvida, consulte um Médico Veterinário.</div>}
+function Notice(){return <div style={{padding:10,margin:"12px 0",borderRadius:9,color:T.blue,background:`${T.blue}12`,border:`1px solid ${T.blue}44`,fontSize:11,lineHeight:1.6}}>ℹ️ As informações dos 7 produtos cadastrados (incluindo Eletrovitt Líquido / Solução Oral) são baseadas nas bulas oficiais dos fabricantes. Confirme no rótulo se a apresentação é indicada para aves. Produtos injetáveis e estimulantes exigem orientação veterinária. Em caso de dúvida, consulte um Médico Veterinário.</div>}
 function Detail({title,values,color}:{title:string;values:string[];color:string}){return <section style={T.card}><Title>{title}</Title>{values.length?values.map(v=><div key={v} style={{padding:"5px 0",borderBottom:`1px solid ${T.border}`,fontSize:12,color:T.dim}}><span style={{color}}>•</span> {v}</div>):<div style={T.small}>Sem informações cadastradas.</div>}</section>}
 function Box({label,value,color}:{label:string;value:string;color:string}){return <div style={{padding:7,borderRadius:7,background:`${color}12`}}><div style={T.small}>{label}</div><b style={{color,fontSize:12}}>{value}</b></div>}
 function ListEditor({label,value,setValue,items,setItems}:{label:string;value:string;setValue:(v:string)=>void;items:string[];setItems:(v:string[])=>void}){return <Field label={label}><div style={{display:"flex",gap:6}}><input value={value} onChange={e=>setValue(e.target.value)} style={{...T.input,flex:1}}/><button onClick={()=>{if(value.trim()){setItems([...items,value.trim()]);setValue("")}}} style={T.btnSm}>+</button></div>{items.map((v,i)=><div key={`${v}-${i}`} style={{display:"flex",justifyContent:"space-between",padding:5,color:T.dim,fontSize:12}}>• {v}<button onClick={()=>setItems(items.filter((_,j)=>j!==i))} style={{color:T.red,background:"none",border:0}}>×</button></div>)}</Field>}

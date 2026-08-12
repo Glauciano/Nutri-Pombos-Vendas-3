@@ -77,6 +77,7 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/suplementacao", label: "Suplementação", icon: PackageOpen },
       { href: "/centro-provas/carbo-lipideo", label: "Abastecimento Carbo-Lipídeo", icon: PackageOpen },
       { href: "/centro-provas/osmolaridade", label: "Hidratação & Osmolaridade", icon: HeartPulse },
+      { href: "/centro-provas/recuperacao", label: "Recuperação Cardiorrespiratória", icon: Activity },
       { href: "/centro-provas/controle-sanitario", label: "Controle sanitário", icon: ShieldCheck },
       { href: "/centro-provas/guia-terapeutico", label: "Guia terapêutico", icon: HeartPulse },
       { href: "/centro-provas/resgate", label: "Resgate e Triagem", icon: HeartPulse },

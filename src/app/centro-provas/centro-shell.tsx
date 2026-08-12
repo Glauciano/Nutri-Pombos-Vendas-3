@@ -66,6 +66,7 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/classificacao", label: "Classificação por Km", icon: Trophy },
       { href: "/centro-provas/simulador-cruzamento", label: "Simulador Genético", icon: Dna },
       { href: "/centro-provas/olho", label: "Análise de Olho (Eye-Sign)", icon: Search },
+      { href: "/centro-provas/anatomia", label: "Triângulo de Ouro Anatômico", icon: Activity },
       { href: "/centro-provas/asa", label: "Índice da Asa e Muda", icon: Activity },
       { href: "/centro-provas/certificado", label: "Certificado de Leilão", icon: Trophy },
     ],

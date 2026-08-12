@@ -128,6 +128,7 @@ export default function CentroProvas() {
       <Link href="/centro-provas/classificacao"><Module icon="🏆" title="Classificação por Km" description="Coeficiente de aptidão e seleção" color="#eab308" /></Link>
       <Link href="/centro-provas/simulador-cruzamento"><Module icon="🧬" title="Simulador Genético" description="Cruzamentos, cores e vigor híbrido" color="#22c55e" /></Link>
       <Link href="/centro-provas/olho"><Module icon="👁️" title="Análise de Olho (Eye-Sign)" description="Teoria do Círculo de Adaptação" color="#a78bfa" /></Link>
+      <Link href="/centro-provas/anatomia"><Module icon="⚖️" title="Triângulo de Ouro Anatômico" description="Quilha, forquilha e baricentro" color="#eab308" /></Link>
       <Link href="/centro-provas/asa"><Module icon="🪶" title="Índice da Asa e Muda" description="10 penas primárias de voo" color="#f97316" /></Link>
       <Link href="/centro-provas/certificado"><Module icon="📜" title="Certificado de Leilão" description="Pedigree para vendas e leilão" color="#eab308" /></Link>
       <Link href="/centro-provas/treinamentos"><Module icon="🏋️" title="Treinamentos" description="Distância, tempo e velocidade" color="#60a5fa" /></Link>

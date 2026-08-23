@@ -10,6 +10,7 @@ import {
   scorePonto, ventoNaRota, wmoInfo,
   buscarAr, classificarAr, buscarAltimetria, interpolarRota,
   buscarRadar, urlTileRadar, tileXY,
+  aplicarPombalSalvo, getPombal, EVENTO_POMBAL, Coords,
 } from "../lib/apis-gratis";
 
 type Modo = "agora" | "prova";
@@ -37,6 +38,14 @@ export default function RotaDaProva() {
   const [radar, setRadar] = useState<{ host: string; frames: FrameRadar[] } | null>(null);
   const [radarIdx, setRadarIdx] = useState(0);
   const [radarPlay, setRadarPlay] = useState(true);
+  // 🏠 Pombal configurável (Configuração → Localização do Pombal)
+  const [pombal, setPombalState] = useState<Coords & { nome: string }>(() => ({ ...COORDS[POMBAL_BASE], nome: POMBAL_BASE }));
+  useEffect(() => {
+    setPombalState(aplicarPombalSalvo());
+    const atualizar = () => setPombalState(getPombal());
+    window.addEventListener(EVENTO_POMBAL, atualizar);
+    return () => window.removeEventListener(EVENTO_POMBAL, atualizar);
+  }, []);
 
   useEffect(() => {
     const lista = loadCalendario().filter((p) => !p.cancelada);
@@ -47,7 +56,7 @@ export default function RotaDaProva() {
 
   const rota = useMemo<PontoRota[]>(() => {
     if (!provaSel) return [];
-    const base = COORDS[POMBAL_BASE];
+    const base = { lat: pombal.lat, lon: pombal.lon };
     const waypoints = provas
       .filter((p) => p.km <= provaSel.km)
       .sort((a, b) => b.km - a.km)
@@ -55,8 +64,8 @@ export default function RotaDaProva() {
         const coord = p.latitude != null && p.longitude != null ? { lat: p.latitude, lon: p.longitude } : COORDS[p.cidade];
         return { chave: `p${p.num}`, nome: p.cidade, estado: p.estado, km: p.km, lat: coord?.lat ?? base.lat, lon: coord?.lon ?? base.lon, papel: i === 0 ? ("solta" as const) : ("intermediaria" as const) };
       });
-    return [...waypoints, { chave: "pombal", nome: "Pombal (chegada)", estado: "SP", km: 0, lat: base.lat, lon: base.lon, papel: "pombal" as const }];
-  }, [provaSel, provas]);
+    return [...waypoints, { chave: "pombal", nome: pombal.nome === POMBAL_BASE ? "Pombal (chegada)" : `${pombal.nome} (chegada)`, estado: "SP", km: 0, lat: base.lat, lon: base.lon, papel: "pombal" as const }];
+  }, [provaSel, provas, pombal]);
 
   const diasAte = provaSel ? diasParaProva(provaSel.dataSolta) : 0;
   const previsivel = diasAte >= 0 && diasAte <= LIMITE_PREVISAO_DIAS;
@@ -95,7 +104,7 @@ export default function RotaDaProva() {
   useEffect(() => {
     if (provaSel && (modo === "agora" || previsivel)) consultar(rota, modo, provaSel.dataSolta);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provaSel?.id, modo]);
+  }, [provaSel?.id, modo, pombal]);
 
   // ⛰️ Altimetria do perfil da rota (41 amostras em 1 chamada)
   useEffect(() => {
@@ -116,7 +125,7 @@ export default function RotaDaProva() {
     return () => clearInterval(t);
   }, [radar, radarPlay]);
 
-  const base = COORDS[POMBAL_BASE];
+  const base = pombal;
   const pontosComScore = rota.map((pt) => {
     const d = dados[pt.chave];
     if (d && "clima" in d) {
@@ -182,7 +191,7 @@ export default function RotaDaProva() {
               <div>
                 <div style={{ fontSize: 11, fontWeight: 800, color: T.gold, textTransform: "uppercase" }}>Percurso de {rota.length} pontos</div>
                 <div style={{ fontSize: 20, fontWeight: 900, marginTop: 4 }}>
-                  {rota[0]?.nome} 🠊 {base === COORDS[POMBAL_BASE] ? "Pombal" : "Pombal"} ({provaSel.km}km)
+                  {rota[0]?.nome} 🠊 {pombal.nome === POMBAL_BASE ? "Pombal" : pombal.nome} ({provaSel.km}km)
                 </div>
                 <div style={{ ...T.small, marginTop: 4 }}>
                   {rota.filter((r) => r.papel === "intermediaria").length} cidades intermediárias • passagem: {rota.map((r) => r.papel === "pombal" ? "🏠" : r.nome.split(" ")[0]).join(" → ")}

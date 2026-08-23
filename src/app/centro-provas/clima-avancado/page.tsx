@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
-import { AeroClimaReal, COORDS, POMBAL_BASE, buscarAeroClima, direcaoCardeal } from "../lib/apis-gratis";
+import { AeroClimaReal, COORDS, POMBAL_BASE, aplicarPombalSalvo, EVENTO_POMBAL, buscarAeroClima, direcaoCardeal } from "../lib/apis-gratis";
 
 type PressaoTrend = "estavel" | "subindo" | "queda_leve" | "queda_brusca";
 type TetoNuvens = "limpo_alto" | "parcial_800m" | "baixo_400m" | "neblina_chao";
@@ -57,7 +57,13 @@ export default function ClimaAvancadoSoltura() {
     } finally { setCarregandoReal(false); }
   }, [aplicarDadosReais]);
 
-  useEffect(() => { consultarReal(cidadeReal); }, [cidadeReal, consultarReal]);
+  useEffect(() => {
+    aplicarPombalSalvo();
+    consultarReal(cidadeReal);
+    const atualizar = () => consultarReal(cidadeReal);
+    window.addEventListener(EVENTO_POMBAL, atualizar);
+    return () => window.removeEventListener(EVENTO_POMBAL, atualizar);
+  }, [cidadeReal, consultarReal]);
 
   const analise = useMemo(() => {
     let score = 100;

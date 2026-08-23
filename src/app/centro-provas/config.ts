@@ -4,6 +4,10 @@ export interface ConfigPlantel {
   consumoDiario: number;
   quantidadePombos: number;
   condicaoCorporal: string;
+  /** Localização do pombal do usuário (se não definido, usa São Paulo como padrão) */
+  pombalNome?: string;
+  pombalLat?: number;
+  pombalLon?: number;
 }
 
 export const DEFAULT_CONFIG: ConfigPlantel = {

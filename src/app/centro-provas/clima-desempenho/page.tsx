@@ -7,6 +7,7 @@ import { T } from "../theme";
 import {
   COORDS, POMBAL_BASE, ClimaPassado,
   buscarClimaPassado, bearingRota, direcaoCardeal, ventoNaRota, wmoInfo,
+  aplicarPombalSalvo, getPombal,
 } from "../lib/apis-gratis";
 
 const HIST_KEY = "nutripombos-historico-provas-v1";
@@ -39,10 +40,12 @@ export default function ClimaDesempenho() {
     try { setHist(JSON.parse(localStorage.getItem(HIST_KEY) || "[]")); } catch { setHist([]); }
   }, []);
 
-  const base = COORDS[POMBAL_BASE];
+
+  useEffect(() => { aplicarPombalSalvo(); }, []);
 
   const analisar = async () => {
     setAnalisando(true);
+    const base = getPombal();
     const calendario = loadCalendario();
     const semDuplicado = hist.filter((h, i, a) => a.findIndex((x) => x.data === h.data && x.distancia === h.distancia) === i);
     const limite = semDuplicado.slice(0, 25);

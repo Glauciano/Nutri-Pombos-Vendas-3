@@ -1,3 +1,5 @@
+import { loadConfig, saveConfig } from "../config";
+
 /**
  * APIs 100% gratuitas, sem chave, com CORS liberado:
  *  - Open-Meteo Forecast   (clima atual + pressão + nascer/pôr do sol)
@@ -5,6 +7,9 @@
  *  - NOAA SWPC             (índice Kp geomagnético real)
  *  - OpenStreetMap embed   (mapa real embutido, usado nos componentes)
  */
+
+/** Evento disparado quando o usuário altera a localização do pombal */
+export const EVENTO_POMBAL = "nutripombos:pombal";
 
 export interface Coords { lat: number; lon: number }
 
@@ -27,6 +32,41 @@ export const COORDS: Record<string, Coords> = {
 };
 
 const GEO_CACHE_KEY = "nutripombos-geocode-v1";
+
+/* ------------------------------------------------------------------ */
+/* Localização do pombal (configurável pelo usuário)                   */
+/* ------------------------------------------------------------------ */
+
+/** Lê o pombal configurado; se não houver, usa São Paulo como padrão */
+export function getPombal(): Coords & { nome: string } {
+  try {
+    const cfg = loadConfig();
+    if (typeof cfg.pombalLat === "number" && typeof cfg.pombalLon === "number"
+      && Number.isFinite(cfg.pombalLat) && Number.isFinite(cfg.pombalLon)
+      && Math.abs(cfg.pombalLat) <= 90 && Math.abs(cfg.pombalLon) <= 180) {
+      return { lat: cfg.pombalLat, lon: cfg.pombalLon, nome: cfg.pombalNome?.trim() || "Pombal" };
+    }
+  } catch { /* ignora */ }
+  return { ...COORDS[POMBAL_BASE], nome: POMBAL_BASE };
+}
+
+/** Aplica o pombal salvo à tabela de coordenadas (chamar no mount das páginas) */
+export function aplicarPombalSalvo(): Coords & { nome: string } {
+  const p = getPombal();
+  COORDS[POMBAL_BASE] = { lat: p.lat, lon: p.lon };
+  return p;
+}
+
+/** Salva a localização do pombal e avisa todas as páginas abertas */
+export function salvarPombal(lat: number, lon: number, nome?: string) {
+  const cfg = loadConfig();
+  cfg.pombalLat = lat;
+  cfg.pombalLon = lon;
+  if (nome !== undefined) cfg.pombalNome = nome.trim() || undefined;
+  saveConfig(cfg);
+  COORDS[POMBAL_BASE] = { lat, lon };
+  try { window.dispatchEvent(new Event(EVENTO_POMBAL)); } catch { /* ignora */ }
+}
 
 /** Descobre a coordenada de qualquer cidade (cache em localStorage) */
 export async function geocodeCidade(nome: string): Promise<Coords | null> {

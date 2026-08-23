@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { classificarProva, diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
+import { aplicarPombalSalvo } from "../lib/apis-gratis";
 import { T } from "../theme";
 
 type Tab = "agora" | "7dias" | "provas";
@@ -23,6 +24,7 @@ function fmtData(dt:string){return new Date(`${dt}T12:00:00`).toLocaleDateString
 export default function PrevisaoTempo(){
   const[provas,setProvas]=useState<ProvaCalendario[]>([]);const[cidade,setCidade]=useState(BASE);const[pombalDir,setPombalDir]=useState("Sul");const[dados,setDados]=useState<DadosClima|null>(null);const[loading,setLoading]=useState(false);const[erro,setErro]=useState("");const[tab,setTab]=useState<Tab>("agora");
   useEffect(()=>setProvas(loadCalendario()),[]);
+  useEffect(()=>{const p=aplicarPombalSalvo();COORDS[BASE]={lat:p.lat,lon:p.lon}},[]);
   const hoje=new Date().toISOString().slice(0,10),proxima=provas.find(p=>p.dataSolta>=hoje&&!p.cancelada);
   const consultar=useCallback(async(c:string)=>{const coord=COORDS[c];if(!coord){setDados(null);setErro("Ainda não há coordenadas cadastradas para esta cidade.");return}setLoading(true);setErro("");try{setDados(await buscar(c,coord.lat,coord.lon))}catch(e){setDados(null);setErro(`Não foi possível obter dados reais agora. ${e instanceof Error?e.message:"Erro de rede"}`)}finally{setLoading(false)}},[]);
   useEffect(()=>{consultar(cidade)},[cidade,consultar]);

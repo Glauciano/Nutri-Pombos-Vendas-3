@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
-import { COORDS, POMBAL_BASE, SolDia, buscarSol, fmtHoras } from "../lib/apis-gratis";
+import { COORDS, POMBAL_BASE, SolDia, aplicarPombalSalvo, EVENTO_POMBAL, buscarSol, fmtHoras } from "../lib/apis-gratis";
 
 type FaseAno = "escurecimento_borrachos" | "pre_temporada" | "temporada_oficial" | "luz_artificial_classicas";
 
@@ -103,7 +103,13 @@ export default function ControleFotoperiodo() {
     finally { setSolLoading(false); }
   }, []);
 
-  useEffect(() => { consultarSol(cidadeSol); }, [cidadeSol, consultarSol]);
+  useEffect(() => {
+    aplicarPombalSalvo();
+    consultarSol(cidadeSol);
+    const atualizar = () => consultarSol(cidadeSol);
+    window.addEventListener(EVENTO_POMBAL, atualizar);
+    return () => window.removeEventListener(EVENTO_POMBAL, atualizar);
+  }, [cidadeSol, consultarSol]);
 
   const hojeSol = sol?.[0];
   // Comparação entre a luz natural de hoje e a meta da fase selecionada

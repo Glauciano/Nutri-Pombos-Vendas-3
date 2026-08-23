@@ -110,6 +110,7 @@ export default function Alertas(){
 
   return <main style={{minHeight:"100vh",background:T.bg,color:T.white,padding:"18px 12px 50px"}}><div style={{maxWidth:760,margin:"0 auto"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",marginBottom:14}}><h1 style={T.h1}>🔔 Central de Alertas</h1><Link href="/centro-provas" style={{...T.btnGhost,textDecoration:"none"}}>← Centro</Link></div>
+    <VesperaProva provas={provas.filter(p=>!p.cancelada)}/>
     <section style={{...T.card,display:"flex",justifyContent:"space-between",alignItems:"center",borderColor:`${T.gold}55`,background:`${T.gold}0d`}}><div><div style={{fontSize:40,lineHeight:1,fontWeight:900,color:T.gold,fontVariantNumeric:"tabular-nums"}}>{horaStr(agora)}</div><div style={{...T.small,marginTop:5}}>{agora.toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div></div>{avisos.length>0&&<b style={{padding:"4px 10px",borderRadius:20,background:T.red}}>{avisos.length} alertas</b>}</section>
     <section style={{...T.card,border:`2px solid ${atual?T.gold:T.blue}`,background:atual?`${T.gold}12`:`${T.blue}0d`}}><small style={{color:atual?T.gold:T.blue,fontWeight:800}}>{atual?"🔴 TAREFA DE REFERÊNCIA AGORA":"🔵 PRÓXIMA TAREFA"}</small><h3 style={{margin:"5px 0"}}>{(atual||proxima).emoji} {(atual||proxima).titulo}</h3><div style={T.small}>{(atual||proxima).desc}</div><div style={{color:T.gold,fontSize:11,marginTop:5}}>⏰ {(atual||proxima).hora}</div></section>
     {avisos.length>0&&<section style={T.card}><Title color={T.red}>⚠️ Alertas Ativos</Title>{avisos.map(a=><div key={a.texto} style={{padding:"6px 0",borderBottom:`1px solid ${T.border}`,color:a.cor,fontSize:12}}>{a.texto}</div>)}</section>}
@@ -141,3 +142,49 @@ export default function Alertas(){
 
 function Check({id,feito,emoji,title,desc,time,toggle}:{id:string;feito:boolean;emoji:string;title:string;desc?:string;time?:string;toggle:(id:string)=>void}){return <button onClick={()=>toggle(id)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 13px",marginBottom:5,textAlign:"left",borderRadius:9,color:feito?T.green:T.white,background:feito?`${T.green}12`:"#ffffff05",border:`1px solid ${feito?T.green:T.border}`}}><span style={{width:27,height:27,display:"grid",placeItems:"center",borderRadius:"50%",background:feito?T.green:T.bgInput,color:T.bg}}>{feito?"✓":emoji}</span><span style={{flex:1}}><b style={{fontSize:13}}>{title}</b>{desc&&<span style={{...T.small,display:"block",marginTop:2}}>{desc}</span>}</span>{time&&<small style={{color:T.dim}}>{time}</small>}</button>}
 function Title({children,color=T.gold}:{children:React.ReactNode;color?:string}){return <div style={{fontSize:13,fontWeight:800,color,marginBottom:8}}>{children}</div>}
+
+/* 🔔 Alerta de véspera de prova — notifica no navegador (gratuito, sem servidor) */
+const KEY_VESPERA="nutripombos-alerta-vespera-v1";
+function VesperaProva({provas}:{provas:ProvaCalendario[]}){
+  const[perm,setPerm]=useState<string>("default");
+  const[enviado,setEnviado]=useState(true);
+  useEffect(()=>{
+    setPerm(typeof Notification!=="undefined"?Notification.permission:"sem-suporte");
+    const hoje=new Date().toISOString().slice(0,10);
+    try{const st=JSON.parse(localStorage.getItem(KEY_VESPERA)||"{}");setEnviado(st.data===hoje)}catch{setEnviado(false)}
+  },[]);
+  const proximas=provas.filter(p=>{const d=diasParaProva(p.dataSolta);return d>=0&&d<=2});
+  const notificar=async(forcar=false)=>{
+    if(typeof Notification==="undefined")return;
+    const hoje=new Date().toISOString().slice(0,10);
+    try{const st=JSON.parse(localStorage.getItem(KEY_VESPERA)||"{}");if(!forcar&&st.data===hoje)return;localStorage.setItem(KEY_VESPERA,JSON.stringify({data:hoje}))}catch{}
+    setEnviado(true);
+    const p0=proximas[0];
+    const titulo=proximas.length?(diasParaProva(p0.dataSolta)===0?`🏁 Prova #${p0.num} ${p0.cidade} É HOJE!`:`⏰ Amanhã: prova #${p0.num} ${p0.cidade} (${p0.km}km)`):"✅ Sem provas nos próximos dias";
+    const corpo=proximas.length?"Toque para ver as condições da rota cidade por cidade":"Tudo tranquilo no calendário";
+    try{
+      const reg=await navigator.serviceWorker?.getRegistration();
+      if(reg)reg.showNotification(titulo,{body:corpo,icon:"/icon.svg",tag:"nutripombos-vespera"});
+      else new Notification(titulo,{body:corpo,icon:"/icon.svg"});
+    }catch{}
+  };
+  const ativar=async()=>{
+    if(typeof Notification==="undefined"){alert("Este navegador não suporta notificações.");return}
+    const p=await Notification.requestPermission();setPerm(p);
+    if(p==="granted")notificar(true);
+  };
+  return <section style={{...T.card,borderColor:`${T.gold}55`,background:`${T.gold}0d`,marginBottom:10}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+      <Title>🔔 Alerta de Véspera de Prova (grátis, no próprio celular)</Title>
+      {perm==="granted"?<button onClick={()=>notificar(true)} style={T.btnSm}>{enviado?"🔔 Testar":"🔔 Enviar agora"}</button>:<button onClick={ativar} style={T.btnSm}>🔔 Ativar notificações</button>}
+    </div>
+    {proximas.length===0&&<div style={{...T.small,fontSize:12}}>Nenhuma soltura nos próximos 2 dias. Quando chegar a véspera de uma prova, você recebe o alerta automático ao abrir o app.</div>}
+    {proximas.map(p=>{const d=diasParaProva(p.dataSolta);return <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:`1px solid ${T.border}`}}>
+      <span style={{fontSize:24}}>{d===0?"🏁":"⏰"}</span>
+      <div style={{flex:1}}><b style={{fontSize:13}}>#{p.num} {p.cidade} — {p.km}km</b><div style={T.small}>Solta em {p.diaSolta} {p.dataSolta.split("-").reverse().slice(0,2).join("/")} • {d===0?"É HOJE!":"faltam "+d+" dia(s)"}</div></div>
+      <Link href="/centro-provas/rota" style={{...T.btnGhost,textDecoration:"none",fontSize:11}}>🛣️ Ver rota</Link>
+    </div>})}
+    {perm==="denied"&&<div style={{...T.small,fontSize:11,color:T.orange,marginTop:8}}>⚠️ Notificações bloqueadas neste navegador — libere nas configurações do site para receber os alertas.</div>}
+    {perm==="default"&&<div style={{...T.small,fontSize:11,color:T.dim,marginTop:8}}>ℹ️ Toque em "Ativar" e permita as notificações — o alerta dispara na véspera e no dia da prova.</div>}
+  </section>;
+}

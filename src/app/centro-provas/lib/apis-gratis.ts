@@ -293,3 +293,114 @@ export function scorePonto(c: ClimaPonto, penVento: number, kpGlobal: number | n
   if (p >= 35) return { pts: p, label: "Condições difíceis", cor: "#f97316" };
   return { pts: p, label: "Condições ruins", cor: "#ff5d62" };
 }
+
+/* ------------------------------------------------------------------ */
+/* Qualidade do ar (Open-Meteo Air Quality — gratuito, sem chave)     */
+/* ------------------------------------------------------------------ */
+
+export interface ArPonto { pm25: number; pm10: number; ozonio: number; aqi: number }
+
+export async function buscarAr(lat: number, lon: number): Promise<ArPonto | null> {
+  try {
+    const r = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=pm10,pm2_5,ozone,us_aqi&timezone=America%2FSao_Paulo`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    const c = j?.current;
+    if (!c) return null;
+    return { pm25: Math.round(c.pm2_5 ?? 0), pm10: Math.round(c.pm10 ?? 0), ozonio: Math.round(c.ozone ?? 0), aqi: Math.round(c.us_aqi ?? -1) };
+  } catch { return null; }
+}
+
+export function classificarAr(a: ArPonto): { label: string; cor: string; emoji: string } {
+  const v = a.aqi;
+  if (v >= 0 && v <= 50) return { label: "Ar bom", cor: "#39e58c", emoji: "🟢" };
+  if (v <= 100) return { label: "Ar moderado", cor: "#fbbf24", emoji: "🟡" };
+  if (v <= 150) return { label: "Ruim p/ voadores", cor: "#f97316", emoji: "🟠" };
+  return { label: "Ar ruim (queimada?)", cor: "#ff5d62", emoji: "🔴" };
+}
+
+/* ------------------------------------------------------------------ */
+/* Altimetria da rota (Open-Meteo Elevation — gratuito, em lote)      */
+/* ------------------------------------------------------------------ */
+
+/** Interpola n pontos na linha reta entre A e B (incluindo extremos) */
+export function interpolarRota(a: Coords, b: Coords, n: number): Coords[] {
+  const pts: Coords[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    pts.push({ lat: a.lat + (b.lat - a.lat) * t, lon: a.lon + (b.lon - a.lon) * t });
+  }
+  return pts;
+}
+
+/** Elevação (m) de vários pontos em UMA chamada */
+export async function buscarAltimetria(pontos: Coords[]): Promise<number[]> {
+  const lat = pontos.map((p) => p.lat.toFixed(4)).join(",");
+  const lon = pontos.map((p) => p.lon.toFixed(4)).join(",");
+  const r = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  return (j?.elevation as number[]) || [];
+}
+
+/* ------------------------------------------------------------------ */
+/* Radar de chuva ao vivo (RainViewer — gratuito, sem chave)          */
+/* ------------------------------------------------------------------ */
+
+export interface FrameRadar { time: number; path: string; previsto: boolean }
+
+export async function buscarRadar(): Promise<{ host: string; frames: FrameRadar[] } | null> {
+  try {
+    const r = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+    if (!r.ok) return null;
+    const j = await r.json();
+    const passado: FrameRadar[] = (j?.radar?.past || []).map((f: { time: number; path: string }) => ({ time: f.time, path: f.path, previsto: false }));
+    const previsto: FrameRadar[] = (j?.radar?.nowcast || []).map((f: { time: number; path: string }) => ({ time: f.time, path: f.path, previsto: true }));
+    const frames = [...passado.slice(-12), ...previsto].filter((f, i, arr) => arr.findIndex((x) => x.time === f.time) === i);
+    if (!frames.length || !j?.host) return null;
+    return { host: j.host, frames };
+  } catch { return null; }
+}
+
+export function urlTileRadar(host: string, path: string, z: number, x: number, y: number): string {
+  return `${host}${path}/256/${z}/${x}/${y}/2/1_1.png`;
+}
+
+/** Converte lat/lon em número do tile (Web Mercator) */
+export function tileXY(lat: number, lon: number, z: number): { x: number; y: number } {
+  const n = 2 ** z;
+  const x = Math.floor(((lon + 180) / 360) * n);
+  const latR = (lat * Math.PI) / 180;
+  const y = Math.floor(((1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2) * n);
+  return { x, y };
+}
+
+/* ------------------------------------------------------------------ */
+/* Clima de datas passadas (Open-Meteo Archive — gratuito)            */
+/* ------------------------------------------------------------------ */
+
+export interface ClimaPassado { temp: number; chuva: number; vento: number; dirVento: number }
+
+export async function buscarClimaPassado(lat: number, lon: number, data: string): Promise<ClimaPassado> {
+  const p = new URLSearchParams({
+    latitude: String(lat), longitude: String(lon),
+    start_date: data, end_date: data,
+    hourly: "temperature_2m,precipitation,wind_speed_10m,wind_direction_10m",
+    timezone: "America/Sao_Paulo",
+  });
+  const r = await fetch(`https://archive-api.open-meteo.com/v1/archive?${p}`);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  const h = j?.hourly;
+  if (!h?.time) throw new Error("Sem dados no arquivo");
+  const idx: number[] = [];
+  (h.time as string[]).forEach((t, i) => { if (/T(09|10|11|12|13):00$/.test(t)) idx.push(i); });
+  if (!idx.length) throw new Error("Sem horas do dia");
+  const media = (k: string) => idx.reduce((s, i) => s + Number(h[k]?.[i] ?? 0), 0) / idx.length;
+  return {
+    temp: Math.round(media("temperature_2m")),
+    chuva: +media("precipitation").toFixed(1),
+    vento: Math.round(media("wind_speed_10m")),
+    dirVento: Math.round(media("wind_direction_10m")),
+  };
+}

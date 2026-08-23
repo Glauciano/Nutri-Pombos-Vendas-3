@@ -6,7 +6,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import {
   Activity, Bell, Bird, Bot, Calculator, CalendarDays, ChevronDown,
   CloudSun, Dna, HeartPulse, LayoutDashboard, Map, Menu, PackageOpen,
-  Radio, Search, Settings, ShieldCheck, Sparkles, Target, Trophy,
+  Radio, Search, Settings, ShieldCheck, Sparkles, Target, TrendingUp, Trophy,
   UtensilsCrossed, X, LogOut,
 } from "lucide-react";
 
@@ -20,6 +20,7 @@ const groups: NavGroup[] = [
       { href: "/centro-provas", label: "Painel principal", icon: LayoutDashboard },
       { href: "/centro-provas/alertas", label: "Central de alertas", icon: Bell },
       { href: "/centro-provas/performance", label: "Performance", icon: Activity },
+      { href: "/centro-provas/clima-desempenho", label: "Clima × Desempenho", icon: TrendingUp },
       { href: "/centro-provas/pombo-as", label: "Pombo Ás Oficial (FCI)", icon: Trophy },
     ],
   },

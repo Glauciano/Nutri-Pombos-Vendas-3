@@ -1,0 +1,12 @@
+{
+  "name": "Nutri Pombos — Centro de Provas",
+  "short_name": "Nutri Pombos",
+  "description": "Gestão de pombos-correio: rota da prova, clima, Kp, nutrição e desempenho",
+  "start_url": "/centro-provas",
+  "display": "standalone",
+  "background_color": "#0b1426",
+  "theme_color": "#f7bd00",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

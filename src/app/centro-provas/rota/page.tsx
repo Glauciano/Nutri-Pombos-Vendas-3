@@ -5,9 +5,11 @@ import Link from "next/link";
 import { classificarProva, diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
 import { T } from "../theme";
 import {
-  COORDS, POMBAL_BASE, KpReal, SolDia, ClimaPonto,
+  COORDS, POMBAL_BASE, KpReal, SolDia, ClimaPonto, ArPonto, FrameRadar,
   buscarKpNoaa, buscarSol, buscarClimaPonto, bearingRota, direcaoCardeal,
   scorePonto, ventoNaRota, wmoInfo,
+  buscarAr, classificarAr, buscarAltimetria, interpolarRota,
+  buscarRadar, urlTileRadar, tileXY,
 } from "../lib/apis-gratis";
 
 type Modo = "agora" | "prova";
@@ -26,6 +28,15 @@ export default function RotaDaProva() {
   const [solSolta, setSolSolta] = useState<SolDia | null>(null);
   const [solPombal, setSolPombal] = useState<SolDia | null>(null);
   const [carregando, setCarregando] = useState(false);
+  // 🌫️ Qualidade do ar por cidade
+  const [ar, setAr] = useState<Record<string, ArPonto | null>>({});
+  // ⛰️ Altimetria da rota
+  const [altimetria, setAltimetria] = useState<number[] | null>(null);
+  const [altErro, setAltErro] = useState("");
+  // 🛰️ Radar de chuva (RainViewer)
+  const [radar, setRadar] = useState<{ host: string; frames: FrameRadar[] } | null>(null);
+  const [radarIdx, setRadarIdx] = useState(0);
+  const [radarPlay, setRadarPlay] = useState(true);
 
   useEffect(() => {
     const lista = loadCalendario().filter((p) => !p.cancelada);
@@ -52,7 +63,7 @@ export default function RotaDaProva() {
 
   const consultar = useCallback(async (rotaAtual: PontoRota[], modoAtual: Modo, dataSolta?: string) => {
     if (!rotaAtual.length) return;
-    setCarregando(true); setDados({}); setKp(null); setSolSolta(null); setSolPombal(null);
+    setCarregando(true); setDados({}); setKp(null); setSolSolta(null); setSolPombal(null); setAr({});
     const dia = modoAtual === "prova" && dataSolta ? dataSolta : undefined;
     const [resultados, kpR] = await Promise.all([
       Promise.all(rotaAtual.map(async (pt) => {
@@ -63,6 +74,11 @@ export default function RotaDaProva() {
     ]);
     setDados(Object.fromEntries(resultados));
     setKp(kpR);
+    // 🌫️ Qualidade do ar (somente modo "agora" — a API não prevê AQI com antecedência)
+    if (modoAtual === "agora") {
+      Promise.all(rotaAtual.map(async (pt) => [pt.chave, await buscarAr(pt.lat, pt.lon)] as const))
+        .then((res) => setAr(Object.fromEntries(res)));
+    }
     if (rotaAtual[0] && rotaAtual[rotaAtual.length - 1]) {
       const base = rotaAtual[rotaAtual.length - 1];
       const solta = rotaAtual[0];
@@ -80,6 +96,25 @@ export default function RotaDaProva() {
     if (provaSel && (modo === "agora" || previsivel)) consultar(rota, modo, provaSel.dataSolta);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provaSel?.id, modo]);
+
+  // ⛰️ Altimetria do perfil da rota (41 amostras em 1 chamada)
+  useEffect(() => {
+    if (!rota.length || !provaSel) return;
+    const solta = rota[0];
+    const base = rota[rota.length - 1];
+    setAltimetria(null); setAltErro("");
+    buscarAltimetria(interpolarRota({ lat: solta.lat, lon: solta.lon }, { lat: base.lat, lon: base.lon }, 41))
+      .then((v) => { if (v.length) setAltimetria(v); else setAltErro("sem dados"); })
+      .catch(() => setAltErro("indisponível agora"));
+  }, [rota, provaSel]);
+
+  // 🛰️ Radar de chuva ao vivo
+  useEffect(() => { buscarRadar().then((r) => { if (r) setRadar(r); }); }, []);
+  useEffect(() => {
+    if (!radar || !radarPlay) return;
+    const t = setInterval(() => setRadarIdx((i) => (i + 1) % radar.frames.length), 900);
+    return () => clearInterval(t);
+  }, [radar, radarPlay]);
 
   const base = COORDS[POMBAL_BASE];
   const pontosComScore = rota.map((pt) => {
@@ -191,6 +226,130 @@ export default function RotaDaProva() {
           </section>
         )}
 
+        {/* ⛰️ Perfil do relevo da rota (Open-Meteo Elevation — gratuito) */}
+        {provaSel && (
+          <section style={T.card}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>
+              ⛰️ Perfil do Relevo da Rota — {rota[0]?.nome} → Pombal
+            </div>
+            {!altimetria && !altErro && <div style={{ ...T.small, textAlign: "center", padding: 16 }}>⏳ Medindo a altimetria do percurso...</div>}
+            {altErro && <div style={{ ...T.small, color: T.orange }}>⚠️ Altimetria {altErro}.</div>}
+            {altimetria && provaSel.km > 0 && (() => {
+              const W = 800, H = 190, padL = 34, padR = 12, padT = 26, padB = 26;
+              const max = Math.max(...altimetria), min = Math.min(...altimetria);
+              const y = (v: number) => padT + (1 - (v - min) / ((max - min) || 1)) * (H - padT - padB);
+              const x = (i: number) => padL + (i / (altimetria.length - 1)) * (W - padL - padR);
+              const linha = altimetria.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+              const idxMax = altimetria.indexOf(max);
+              return (
+                <div>
+                  <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block", background: "#0b1529", borderRadius: 12 }}>
+                    <polygon points={`${padL},${H - padB} ${linha} ${W - padR},${H - padB}`} fill="url(#grad-relevo)" />
+                    <defs>
+                      <linearGradient id="grad-relevo" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stopColor="#f7bd00" stopOpacity="0.55" />
+                        <stop offset="1" stopColor="#f7bd00" stopOpacity="0.05" />
+                      </linearGradient>
+                    </defs>
+                    <polyline points={linha} fill="none" stroke="#f7bd00" strokeWidth="2" />
+                    <text x={x(idxMax)} y={y(max) - 8} textAnchor="middle" fill="#ff5d62" fontSize="11" fontWeight="800">▲ {Math.round(max)}m</text>
+                    <text x={padL - 4} y={padT + 4} textAnchor="end" fill="#9aa8bc" fontSize="9">{Math.round(max)}m</text>
+                    <text x={padL - 4} y={H - padB} textAnchor="end" fill="#9aa8bc" fontSize="9">{Math.round(min)}m</text>
+                    {[0.25, 0.5, 0.75].map((f) => (
+                      <text key={f} x={padL + f * (W - padL - padR)} y={H - 8} textAnchor="middle" fill="#9aa8bc" fontSize="9">{Math.round(provaSel.km * (1 - f))}km</text>
+                    ))}
+                    {rota.map((pt, i) => {
+                      const t = pt.papel === "pombal" ? 1 : (provaSel.km - pt.km) / provaSel.km;
+                      const cx = padL + t * (W - padL - padR);
+                      return (
+                        <g key={pt.chave}>
+                          <circle cx={cx} cy={H - padB} r={i === 0 || pt.papel === "pombal" ? 6 : 4} fill={i === 0 ? "#ff5d62" : pt.papel === "pombal" ? "#39e58c" : "#55a3ff"} stroke="#0b1426" strokeWidth="2" />
+                          <text x={cx} y={i % 2 === 0 ? H - padB + 18 : H - padB - 10} textAnchor="middle" fill="#9aa8bc" fontSize="9">{pt.papel === "pombal" ? "🏠" : pt.nome.split(" ")[0]}</text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                  <div style={{ ...T.small, fontSize: 11, marginTop: 8 }}>
+                    🔺 Ponto mais alto do percurso: <b style={{ color: T.gold }}>{Math.round(max)}m</b> • desníveis e serras aumentam o esforço e desviam a linha de voo • Fonte: Open-Meteo Elevation
+                  </div>
+                </div>
+              );
+            })()}
+          </section>
+        )}
+
+        {/* 🛰️ Radar de chuva ao vivo (RainViewer — gratuito) */}
+        {provaSel && rota.length > 0 && (
+          <section style={T.card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.gold }}>🛰️ Radar de Chuva ao Vivo na Rota</div>
+              {radar && (
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <button onClick={() => setRadarIdx((i) => (i - 1 + radar.frames.length) % radar.frames.length)} style={T.btnGhost}>‹</button>
+                  <button onClick={() => setRadarPlay((p) => !p)} style={T.btnSm}>{radarPlay ? "⏸" : "▶"}</button>
+                  <button onClick={() => setRadarIdx((i) => (i + 1) % radar.frames.length)} style={T.btnGhost}>›</button>
+                </div>
+              )}
+            </div>
+            {!radar && <div style={{ ...T.small, textAlign: "center", padding: 16 }}>⏳ Carregando radar de chuva...</div>}
+            {radar && (() => {
+              const Z = 6;
+              const lats = rota.map((p) => p.lat), lons = rota.map((p) => p.lon);
+              const maxLat = Math.max(...lats) + 0.7, minLat = Math.min(...lats) - 0.7;
+              const maxLon = Math.max(...lons) + 1.4, minLon = Math.min(...lons) - 1.4;
+              const a = tileXY(maxLat, minLon, Z), b = tileXY(minLat, maxLon, Z);
+              const x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x);
+              const y0 = Math.min(a.y, b.y), y1 = Math.max(a.y, b.y);
+              const cols = x1 - x0 + 1, rows = y1 - y0 + 1;
+              const n = 2 ** Z;
+              const pos = (lat: number, lon: number) => {
+                const xx = ((lon + 180) / 360) * n * 256;
+                const latR = (lat * Math.PI) / 180;
+                const yy = ((1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2) * n * 256;
+                return { left: xx - x0 * 256, top: yy - y0 * 256 };
+              };
+              const frame = radar.frames[radarIdx];
+              const hora = new Date(frame.time * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+              const tiles: { gx: number; gy: number }[] = [];
+              for (let gx = 0; gx < cols; gx++) for (let gy = 0; gy < rows; gy++) tiles.push({ gx, gy });
+              return (
+                <div>
+                  <div style={{ overflowX: "auto", borderRadius: 12, border: `1px solid ${T.border}` }}>
+                    <div style={{ position: "relative", width: cols * 256, height: rows * 256, background: "#0b1426" }}>
+                      {tiles.map(({ gx, gy }) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={`b${gx}-${gy}`} src={`https://basemaps.cartocdn.com/dark_all/${Z}/${x0 + gx}/${y0 + gy}.png`} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256, opacity: 0.9 }} />
+                      ))}
+                      {tiles.map(({ gx, gy }) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={`r${gx}-${gy}-${frame.path}`} src={urlTileRadar(radar.host, frame.path, Z, x0 + gx, y0 + gy)} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256, opacity: 0.7 }} />
+                      ))}
+                      {rota.map((pt, i) => {
+                        const p = pos(pt.lat, pt.lon);
+                        const cor = i === 0 ? "#ff5d62" : pt.papel === "pombal" ? "#39e58c" : "#55a3ff";
+                        return (
+                          <div key={pt.chave} style={{ position: "absolute", left: p.left, top: p.top, transform: "translate(-50%,-50%)", textAlign: "center" }}>
+                            <div style={{ width: 10, height: 10, borderRadius: "50%", background: cor, border: "2px solid white", boxShadow: "0 0 8px rgba(0,0,0,.6)" }} />
+                            <small style={{ display: "block", marginTop: 3, fontSize: 10, fontWeight: 800, color: "#fff", textShadow: "0 1px 3px #000, 0 0 6px #000" }}>
+                              {pt.papel === "pombal" ? "🏠 Pombal" : pt.nome.split(" ")[0]}
+                            </small>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, flexWrap: "wrap", gap: 6 }}>
+                    <small style={{ color: frame.previsto ? T.blue : T.gold, fontWeight: 800 }}>
+                      {frame.previsto ? "🔮 Previsão" : "🛰️ Observado"} · {hora} · quadro {radarIdx + 1}/{radar.frames.length}
+                    </small>
+                    <small style={{ color: T.dim }}> verde=fraca · amarelo=moderada · vermelho=forte · Fonte: RainViewer</small>
+                  </div>
+                </div>
+              );
+            })()}
+          </section>
+        )}
+
         {/* Pontos da rota */}
         {pontosComScore.map(({ pt, d, vento, score }) => {
           const clima = d && "clima" in d ? d.clima : null;
@@ -250,6 +409,15 @@ export default function RotaDaProva() {
                   <div style={{ padding: 10, marginTop: 10, borderRadius: 9, color: vento.cor, background: `${vento.cor}12`, border: `1px solid ${vento.cor}55`, fontSize: 12 }}>
                     {vento.emoji} <b>{vento.tipo}</b> nesta parte do percurso — o vento vem de {direcaoCardeal(clima.dirVento)} ({clima.dirVento}°) e o bando voa rumo {direcaoCardeal(bearingRota(pt.lat, pt.lon, base.lat, base.lon))} em direção ao pombal.
                   </div>
+                  {ar[pt.chave] && (() => {
+                    const info = classificarAr(ar[pt.chave]!);
+                    const dado = ar[pt.chave]!;
+                    return (
+                      <div style={{ padding: 9, marginTop: 8, borderRadius: 8, color: info.cor, background: `${info.cor}12`, border: `1px solid ${info.cor}44`, fontSize: 12 }}>
+                        🌫️ <b>{info.label}</b> — PM2.5 {dado.pm25} · PM10 {dado.pm10} µg/m³{dado.pm25 > 35 ? " · ⚠️ fumaça/queimada dificulta a respiração em voo" : ""}
+                      </div>
+                    );
+                  })()}
                   <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
                     <b style={{ color: score.cor, fontSize: 13 }}>● {score.label}</b>
                     <div style={{ height: 5, flex: 1, background: "#ffffff14", borderRadius: 3 }}>

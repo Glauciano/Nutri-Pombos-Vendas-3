@@ -120,10 +120,12 @@ export async function buscarKpNoaa(): Promise<KpReal | null> {
     if (!r.ok) return null;
     const j = await r.json();
     if (!Array.isArray(j) || j.length < 2) return null;
-    const ultimo = j[j.length - 1] as (string | number)[];
-    const kp = Number(ultimo[1]);
+    // O NOAA pode retornar objetos {"time_tag","Kp",...} ou arrays [time,kp,...]
+    const ultimo = j[j.length - 1] as Record<string, unknown> | (string | number)[];
+    const kp = Number(Array.isArray(ultimo) ? ultimo[1] : (ultimo as Record<string, unknown>).Kp);
     if (!Number.isFinite(kp)) return null;
-    const horaUTC = String(ultimo[0] || "").replace("T", " ").slice(5, 16) + " UTC";
+    const horaRaw = String(Array.isArray(ultimo) ? ultimo[0] : (ultimo as Record<string, unknown>).time_tag || "");
+    const horaUTC = horaRaw.replace("T", " ").slice(5, 16) + " UTC";
     return { kp, horaUTC };
   } catch { return null; }
 }
@@ -169,4 +171,125 @@ export function fmtHoras(h: number): string {
 export function direcaoCardeal(deg: number): string {
   const d = ["N", "NNE", "NE", "ENE", "L", "ESE", "SE", "SSE", "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"];
   return d[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
+}
+
+/* ------------------------------------------------------------------ */
+/* Rota da prova — clima por cidade do percurso                       */
+/* ------------------------------------------------------------------ */
+
+export interface ClimaPonto {
+  temp: number;             // °C
+  chuvaMm: number;          // mm
+  ventoKmh: number;
+  rajadaKmh: number;
+  dirVento: number;         // graus (de onde o vento vem)
+  umidade: number;          // %
+  pressaoMsl: number;       // hPa
+  nuvens: number;           // %
+  visibilidadeKm: number;
+  wmo: number;              // código do tempo
+  horaRef: string;          // "Agora" ou "09:00 de 30/08"
+}
+
+const VARS_CLIMA = "temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,relative_humidity_2m,pressure_msl,cloud_cover,visibility";
+
+/**
+ * Clima de um ponto da rota.
+ * Sem `dia`: condições atuais. Com `dia` (YYYY-MM-DD): previsão ~09h da manhã (até 16 dias à frente).
+ */
+export async function buscarClimaPonto(lat: number, lon: number, dia?: string): Promise<ClimaPonto> {
+  const p = new URLSearchParams({ latitude: String(lat), longitude: String(lon), timezone: "America/Sao_Paulo" });
+  let j: Record<string, Record<string, unknown> | undefined>;
+  let horaRef: string;
+  if (dia) {
+    p.set("hourly", VARS_CLIMA);
+    p.set("start_date", dia);
+    p.set("end_date", dia);
+    horaRef = `09h de ${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    j = await r.json();
+    const h = j.hourly;
+    const tempos = (h?.time as string[]) || [];
+    const idx = tempos.findIndex((t) => t.endsWith("T09:00"));
+    if (!h || idx < 0) throw new Error("Sem previsão para esta data");
+    const pegar = (k: string): number => Number((h[k] as (number | null)[])?.[idx] ?? 0);
+    return {
+      temp: Math.round(pegar("temperature_2m")),
+      chuvaMm: +pegar("precipitation").toFixed(1),
+      ventoKmh: Math.round(pegar("wind_speed_10m")),
+      rajadaKmh: Math.round(pegar("wind_gusts_10m")),
+      dirVento: Math.round(pegar("wind_direction_10m")),
+      umidade: Math.round(pegar("relative_humidity_2m")),
+      pressaoMsl: Math.round(pegar("pressure_msl")),
+      nuvens: Math.round(pegar("cloud_cover")),
+      visibilidadeKm: Math.round(pegar("visibility") / 1000),
+      wmo: pegar("weather_code"),
+      horaRef,
+    };
+  }
+  p.set("current", VARS_CLIMA);
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  j = await r.json();
+  const c = j.current;
+  if (!c) throw new Error("Resposta climática inválida");
+  return {
+    temp: Math.round(Number(c.temperature_2m)),
+    chuvaMm: +Number(c.precipitation).toFixed(1),
+    ventoKmh: Math.round(Number(c.wind_speed_10m)),
+    rajadaKmh: Math.round(Number(c.wind_gusts_10m)),
+    dirVento: Math.round(Number(c.wind_direction_10m)),
+    umidade: Math.round(Number(c.relative_humidity_2m)),
+    pressaoMsl: Math.round(Number(c.pressure_msl)),
+    nuvens: Math.round(Number(c.cloud_cover)),
+    visibilidadeKm: Math.round(Number(c.visibility) / 1000),
+    wmo: Number(c.weather_code),
+    horaRef: "Agora",
+  };
+}
+
+/** Ângulo (bearing) do trecho: da cidade atual até o destino, em graus */
+export function bearingRota(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const y = Math.sin(rad(lon2 - lon1)) * Math.cos(rad(lat2));
+  const x = Math.cos(rad(lat1)) * Math.sin(rad(lat2)) - Math.sin(rad(lat1)) * Math.cos(rad(lat2)) * Math.cos(rad(lon2 - lon1));
+  return (((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
+}
+
+export function wmoInfo(code: number): { desc: string; emoji: string } {
+  if (code === 0) return { desc: "Céu limpo", emoji: "☀️" };
+  if (code <= 2) return { desc: "Parcialmente nublado", emoji: "⛅" };
+  if (code === 3) return { desc: "Encoberto", emoji: "☁️" };
+  if (code <= 49) return { desc: "Névoa/neblina", emoji: "🌫️" };
+  if (code <= 59) return { desc: "Garoa", emoji: "🌦️" };
+  if (code <= 69) return { desc: "Chuva", emoji: "🌧️" };
+  if (code <= 79) return { desc: "Granizo/neve", emoji: "🌨️" };
+  if (code <= 86) return { desc: "Chuva forte", emoji: "⛈️" };
+  if (code >= 95) return { desc: "Tempestade", emoji: "⛈️" };
+  return { desc: "Variável", emoji: "🌤️" };
+}
+
+/** Vento relativo à rota: a favor (cauda), contra (nariz) ou lateral */
+export function ventoNaRota(dirVentoDeg: number, bearingDestino: number): { tipo: string; emoji: string; cor: string; pen: number } {
+  const r = ((dirVentoDeg - bearingDestino) % 360 + 360) % 360; // 0 = vento na cara
+  if (r >= 135 && r <= 225) return { tipo: "Vento a favor", emoji: "🟢", cor: "#39e58c", pen: 0 };
+  if (r < 45 || r > 315) return { tipo: "Vento contra", emoji: "🔴", cor: "#ff5d62", pen: 20 };
+  return { tipo: "Vento lateral", emoji: "🟡", cor: "#fbbf24", pen: 10 };
+}
+
+/** Score de segurança do ponto (0-100) */
+export function scorePonto(c: ClimaPonto, penVento: number, kpGlobal: number | null): { pts: number; label: string; cor: string } {
+  let p = 100 - penVento;
+  if (c.temp > 35) p -= 30; else if (c.temp > 30) p -= 12; else if (c.temp < 5) p -= 25; else if (c.temp < 10) p -= 8;
+  if (c.chuvaMm > 5) p -= 40; else if (c.chuvaMm > 1) p -= 20; else if (c.chuvaMm > 0) p -= 5;
+  if (c.rajadaKmh > 50) p -= 30; else if (c.rajadaKmh > 35) p -= 15;
+  if (c.wmo >= 95) p -= 30; else if (c.wmo >= 80) p -= 15;
+  if (c.visibilidadeKm < 4) p -= 25; else if (c.visibilidadeKm < 8) p -= 10;
+  if (kpGlobal !== null && kpGlobal >= 7) p -= 25; else if (kpGlobal !== null && kpGlobal >= 5) p -= 12;
+  p = Math.max(0, Math.min(100, Math.round(p)));
+  if (p >= 75) return { pts: p, label: "Ótimas condições", cor: "#39e58c" };
+  if (p >= 55) return { pts: p, label: "Condições razoáveis", cor: "#fbbf24" };
+  if (p >= 35) return { pts: p, label: "Condições difíceis", cor: "#f97316" };
+  return { pts: p, label: "Condições ruins", cor: "#ff5d62" };
 }

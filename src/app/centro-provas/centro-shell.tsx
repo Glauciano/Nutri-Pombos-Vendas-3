@@ -27,6 +27,7 @@ const groups: NavGroup[] = [
     label: "Provas",
     items: [
       { href: "/centro-provas/gerenciar-calendario", label: "Calendário de provas", icon: CalendarDays },
+      { href: "/centro-provas/rota", label: "Rota da prova (cidades)", icon: Map },
       { href: "/centro-provas/geomagnetico", label: "Radar Geomagnético Kp", icon: Radio },
       { href: "/centro-provas/clima-avancado", label: "Radar Aero-Clima & Pressão", icon: CloudSun },
       { href: "/centro-provas/dia-prova", label: "Dia da prova", icon: Target },

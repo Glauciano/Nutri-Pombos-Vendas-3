@@ -1,14 +1,32 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
+import { KpReal, buscarKpNoaa } from "../lib/apis-gratis";
 
 type NivelKp = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export default function RadarGeomagnetico() {
   const [kp, setKp] = useState<NivelKp>(1);
   const [ceuSol, setCeuSol] = useState<boolean>(true); // sol visível ajuda a compensar
+
+  // 📡 Kp real (NOAA SWPC — gratuito, sem chave)
+  const [kpReal, setKpReal] = useState<KpReal | null>(null);
+  const [carregandoKp, setCarregandoKp] = useState(false);
+
+  const atualizarKpReal = useCallback(async () => {
+    setCarregandoKp(true);
+    const r = await buscarKpNoaa();
+    setKpReal(r);
+    if (r) {
+      const nivel = Math.min(9, Math.max(0, Math.round(r.kp))) as NivelKp;
+      setKp(nivel);
+    }
+    setCarregandoKp(false);
+  }, []);
+
+  useEffect(() => { atualizarKpReal(); }, [atualizarKpReal]);
 
   const analise = useMemo(() => {
     let status = "✅ MAGNETOSFERA CALMA / NORMAL";
@@ -64,6 +82,41 @@ export default function RadarGeomagnetico() {
             ← Centro
           </Link>
         </div>
+
+        {/* 📡 KP REAL — NOAA SWPC (gratuito, sem chave) */}
+        <section style={{ ...T.card, borderColor: `${T.gold}55`, background: `${T.gold}0d` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 6 }}>
+                📡 Índice Kp Real Agora — NOAA SWPC (EUA)
+              </div>
+              {carregandoKp && !kpReal && <div style={T.small}>⏳ Consultando satélites NOAA...</div>}
+              {kpReal && (
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ fontSize: 44, fontWeight: 900, color: kpReal.kp >= 5 ? "#EF4444" : kpReal.kp >= 3 ? "#EAB308" : "#22C55E" }}>
+                    Kp {kpReal.kp.toFixed(2)}
+                  </div>
+                  <div style={{ ...T.small, fontSize: 11 }}>
+                    Medição oficial mais recente<br />
+                    <b style={{ color: T.gold }}>{kpReal.horaUTC}</b><br />
+                    {kpReal.kp <= 2 ? "✅ Magnetosfera calma" : kpReal.kp <= 4 ? "⚠️ Instável" : "🚨 Tempestade geomagnética"}
+                  </div>
+                </div>
+              )}
+              {!kpReal && !carregandoKp && (
+                <div style={{ ...T.small, color: T.orange }}>⚠️ Não foi possível obter o Kp real agora — use o seletor manual abaixo.</div>
+              )}
+            </div>
+            <button onClick={atualizarKpReal} disabled={carregandoKp} style={{ ...T.btnSm, opacity: carregandoKp ? 0.6 : 1 }}>
+              {carregandoKp ? "⏳ Atualizando..." : "↻ Atualizar"}
+            </button>
+          </div>
+          {kpReal && (
+            <div style={{ ...T.small, marginTop: 10, fontSize: 11 }}>
+              ✅ O diagnóstico abaixo foi <b>ajustado automaticamente</b> com o Kp real • Os botões continuam funcionando para simular cenários futuros
+            </div>
+          )}
+        </section>
 
         <section style={T.card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>

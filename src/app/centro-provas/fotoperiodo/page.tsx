@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
+import { COORDS, POMBAL_BASE, SolDia, buscarSol, fmtHoras } from "../lib/apis-gratis";
 
 type FaseAno = "escurecimento_borrachos" | "pre_temporada" | "temporada_oficial" | "luz_artificial_classicas";
 
@@ -87,6 +88,33 @@ export default function ControleFotoperiodo() {
   const [faseSel, setFaseSel] = useState<FaseAno>("escurecimento_borrachos");
   const info = FASES_FOTOPERIODO[faseSel];
 
+  // 🌅 Nascer/Pôr do Sol reais (Open-Meteo — gratuito, sem chave)
+  const [cidadeSol, setCidadeSol] = useState<string>(POMBAL_BASE);
+  const [sol, setSol] = useState<SolDia[] | null>(null);
+  const [solErro, setSolErro] = useState("");
+  const [solLoading, setSolLoading] = useState(false);
+
+  const consultarSol = useCallback(async (cidade: string) => {
+    const coord = COORDS[cidade];
+    if (!coord) { setSolErro("Cidade sem coordenadas cadastradas."); return; }
+    setSolLoading(true); setSolErro("");
+    try { setSol(await buscarSol(coord.lat, coord.lon)); }
+    catch (e) { setSol(null); setSolErro(`Não foi possível obter o horário do sol agora. ${e instanceof Error ? e.message : "Erro de rede"}`); }
+    finally { setSolLoading(false); }
+  }, []);
+
+  useEffect(() => { consultarSol(cidadeSol); }, [cidadeSol, consultarSol]);
+
+  const hojeSol = sol?.[0];
+  // Comparação entre a luz natural de hoje e a meta da fase selecionada
+  let paredeLuz: { texto: string; cor: string } | null = null;
+  if (hojeSol) {
+    const diffMin = Math.round((info.luzHoras - hojeSol.horasLuz) * 60);
+    if (diffMin > 15) paredeLuz = { texto: `☀️ A fase "${info.titulo}" exige ${info.luzHoras}h de luz, mas o sol de hoje só entrega ${fmtHoras(hojeSol.horasLuz)} — acenda luz artificial por ~${fmtHoras(diffMin / 60)} para completar a meta.`, cor: T.gold };
+    else if (diffMin < -15) paredeLuz = { texto: `🌙 O sol de hoje entrega ${fmtHoras(hojeSol.horasLuz)} de luz — mais que a meta de ${info.luzHoras}h da fase. Feche as cortinas ~${fmtHoras(Math.abs(diffMin) / 60)} antes do pôr do sol para escurecer.`, cor: "#A78BFA" };
+    else paredeLuz = { texto: `✅ A luz natural de hoje (${fmtHoras(hojeSol.horasLuz)}) já está de acordo com a meta da fase.`, cor: T.green };
+  }
+
   return (
     <main style={{ minHeight: "100vh", background: T.bg, color: T.white, padding: "20px 16px 60px" }}>
       <div style={{ maxWidth: 880, margin: "0 auto" }}>
@@ -127,6 +155,67 @@ export default function ControleFotoperiodo() {
               </button>
             ))}
           </div>
+        </section>
+
+        {/* 🌅 NASCER E PÔR DO SOL REAIS — Open-Meteo (gratuito, sem chave) */}
+        <section style={{ ...T.card, borderColor: `${T.gold}55`, background: `${T.gold}0d`, marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold }}>
+              🌅 Nascer e Pôr do Sol — Dados Reais (Open-Meteo)
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <select value={cidadeSol} onChange={(e) => setCidadeSol(e.target.value)} style={{ ...T.input, width: "auto", minHeight: 36, padding: "6px 10px", fontSize: 12 }}>
+                {Object.keys(COORDS).map((c) => <option key={c} value={c}>{c === POMBAL_BASE ? "🏠 Pombal (base)" : c}</option>)}
+              </select>
+              <button onClick={() => consultarSol(cidadeSol)} disabled={solLoading} style={{ ...T.btnSm, opacity: solLoading ? 0.6 : 1 }}>
+                {solLoading ? "⏳" : "↻"}
+              </button>
+            </div>
+          </div>
+
+          {solErro && <div style={{ padding: 12, borderRadius: 9, color: T.red, background: `${T.red}12`, border: `1px solid ${T.red}44`, fontSize: 12 }}>⚠️ {solErro}</div>}
+          {solLoading && !sol && <div style={{ textAlign: "center", padding: 20, color: T.dim, fontSize: 13 }}>⏳ Consultando o horário do sol...</div>}
+
+          {hojeSol && (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                <div style={{ padding: 14, borderRadius: 10, background: "rgba(245,158,11,0.12)", border: "1px solid #F59E0B55", textAlign: "center" }}>
+                  <div style={{ fontSize: 22 }}>🌅</div>
+                  <div style={{ ...T.small, fontSize: 10 }}>NASCER DO SOL</div>
+                  <b style={{ fontSize: 24, color: T.gold }}>{hojeSol.nascer}</b>
+                </div>
+                <div style={{ padding: 14, borderRadius: 10, background: "rgba(167,139,250,0.12)", border: "1px solid #A78BFA55", textAlign: "center" }}>
+                  <div style={{ fontSize: 22 }}>🌇</div>
+                  <div style={{ ...T.small, fontSize: 10 }}>PÔR DO SOL</div>
+                  <b style={{ fontSize: 24, color: "#A78BFA" }}>{hojeSol.por}</b>
+                </div>
+                <div style={{ padding: 14, borderRadius: 10, background: "rgba(85,163,255,0.12)", border: "1px solid #55a3ff55", textAlign: "center" }}>
+                  <div style={{ fontSize: 22 }}>☀️</div>
+                  <div style={{ ...T.small, fontSize: 10 }}>LUZ NATURAL HOJE</div>
+                  <b style={{ fontSize: 24, color: T.blue }}>{fmtHoras(hojeSol.horasLuz)}</b>
+                </div>
+              </div>
+
+              {paredeLuz && (
+                <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, color: paredeLuz.cor, background: `${paredeLuz.cor}12`, border: `1px solid ${paredeLuz.cor}55`, fontSize: 12, lineHeight: 1.5 }}>
+                  {paredeLuz.texto}
+                </div>
+              )}
+
+              <div style={{ marginTop: 12 }}>
+                <div style={{ ...T.small, fontSize: 11, marginBottom: 6 }}>📅 Próximos dias:</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 6 }}>
+                  {sol?.slice(1).map((d) => (
+                    <div key={d.data} style={{ padding: "8px 10px", borderRadius: 8, background: "#ffffff08", fontSize: 11 }}>
+                      <b style={{ color: T.gold }}>{new Date(`${d.data}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "numeric" })}</b>
+                      <div style={{ ...T.small, fontSize: 11 }}>🌅 {d.nascer} • 🌇 {d.por} • ☀️ {fmtHoras(d.horasLuz)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ ...T.small, marginTop: 10, fontSize: 11 }}>Fonte: Open-Meteo • horários no fuso de São Paulo (GMT-3)</div>
+            </>
+          )}
         </section>
 
         <section

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { classificarProva, diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
+import { Coords, geocodeCidade } from "../lib/apis-gratis";
 import { T } from "../theme";
 
 const MAPA_KEY = "nutripombos-mapa-v3";
@@ -67,5 +68,30 @@ export default function MapaSolturas() {
   </div>;
 }
 
-function Painel({prova,local,onEdit}:{prova:ProvaCalendario;local?:Local;onEdit:()=>void}){const c=classificarProva(prova.km),dias=diasParaProva(prova.dataSolta),vel=velocidade(local);return <section style={{...T.card,border:`2px solid ${c.cor}55`,background:`${c.cor}0d`}}><div style={{display:"flex",justifyContent:"space-between"}}><div><small style={{color:c.cor}}>#{prova.num} — {prova.categoria}</small><h2 style={{margin:"4px 0"}}>{prova.cidade} — {prova.estado}</h2><div style={T.small}>{c.emoji} {c.tipo} • {prova.km}km</div></div><b style={{color:dias<0?T.green:c.cor,fontSize:24}}>{dias<0?"✓":dias===0?"🏁":`${dias}d`}</b></div><div className="map-details" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,margin:"12px 0"}}>{[["📦 Embarque",`${prova.diaEmbarque} ${fmt(prova.dataEmbarque)}`],["🏁 Solta",`${prova.diaSolta} ${fmt(prova.dataSolta)}`],["⏱️ Tempo",local?.tempoMedio?`${local.tempoMedio} min`:"—"],["⚡ Velocidade",vel?`${vel} km/h`:"—"],["🧭 Direção",local?`${DIR_EMOJI[local.direcao]} ${local.direcao}`:"—"]].map(([l,v])=><div key={l} style={{padding:8,borderRadius:8,background:"#ffffff08"}}><div style={T.small}>{l}</div><b style={{color:T.gold,fontSize:12}}>{v}</b></div>)}</div><button onClick={onEdit} style={T.btn}>✏️ Editar dados</button></section>}
+function Painel({prova,local,onEdit}:{prova:ProvaCalendario;local?:Local;onEdit:()=>void}){
+  const c=classificarProva(prova.km),dias=diasParaProva(prova.dataSolta),vel=velocidade(local);
+  // 🗺️ Mapa real (OpenStreetMap — gratuito, sem chave)
+  const [coordsMapa,setCoordsMapa]=useState<Coords|null|false>(null);
+  const [mapaAberto,setMapaAberto]=useState(false);
+  const [carregandoMapa,setCarregandoMapa]=useState(false);
+  const abrirMapaReal=async()=>{
+    setMapaAberto(true);
+    if(coordsMapa!==null) return;
+    setCarregandoMapa(true);
+    const co=await geocodeCidade(`${prova.cidade}`);
+    setCoordsMapa(co||false);
+    setCarregandoMapa(false);
+  };
+  return <section style={{...T.card,border:`2px solid ${c.cor}55`,background:`${c.cor}0d`}}><div style={{display:"flex",justifyContent:"space-between"}}><div><small style={{color:c.cor}}>#{prova.num} — {prova.categoria}</small><h2 style={{margin:"4px 0"}}>{prova.cidade} — {prova.estado}</h2><div style={T.small}>{c.emoji} {c.tipo} • {prova.km}km</div></div><b style={{color:dias<0?T.green:c.cor,fontSize:24}}>{dias<0?"✓":dias===0?"🏁":`${dias}d`}</b></div><div className="map-details" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,margin:"12px 0"}}>{[["📦 Embarque",`${prova.diaEmbarque} ${fmt(prova.dataEmbarque)}`],["🏁 Solta",`${prova.diaSolta} ${fmt(prova.dataSolta)}`],["⏱️ Tempo",local?.tempoMedio?`${local.tempoMedio} min`:"—"],["⚡ Velocidade",vel?`${vel} km/h`:"—"],["🧭 Direção",local?`${DIR_EMOJI[local.direcao]} ${local.direcao}`:"—"]].map(([l,v])=><div key={l} style={{padding:8,borderRadius:8,background:"#ffffff08"}}><div style={T.small}>{l}</div><b style={{color:T.gold,fontSize:12}}>{v}</b></div>)}</div>
+  <div style={{display:"flex",gap:8}}>
+    <button onClick={onEdit} style={{...T.btn,flex:1}}>✏️ Editar dados</button>
+    <button onClick={abrirMapaReal} style={{...T.btn,flex:1,background:T.blue,borderColor:T.blue}}>🗺️ Mapa real</button>
+  </div>
+  {carregandoMapa&&<div style={{...T.small,textAlign:"center",marginTop:10}}>⏳ Localizando {prova.cidade} no mapa...</div>}
+  {mapaAberto&&!carregandoMapa&&coordsMapa&&<div style={{marginTop:12}}>
+    <iframe title={`Mapa de ${prova.cidade}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${coordsMapa.lon-0.35},${coordsMapa.lat-0.25},${coordsMapa.lon+0.35},${coordsMapa.lat+0.25}&layer=mapnik&marker=${coordsMapa.lat},${coordsMapa.lon}`} style={{width:"100%",height:300,border:0,borderRadius:12,marginTop:4}} loading="lazy" />
+    <a href={`https://www.openstreetmap.org/?mlat=${coordsMapa.lat}&mlon=${coordsMapa.lon}#map=11/${coordsMapa.lat}/${coordsMapa.lon}`} target="_blank" rel="noreferrer" style={{...T.small,color:T.blue,display:"block",textAlign:"center",marginTop:8}}>📍 Abrir no OpenStreetMap ↗</a>
+  </div>}
+  {mapaAberto&&!carregandoMapa&&coordsMapa===false&&<div style={{...T.small,color:T.orange,marginTop:10}}>⚠️ Não foi possível localizar {prova.cidade} automaticamente. <a href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(prova.cidade+" "+prova.estado)}`} target="_blank" rel="noreferrer" style={{color:T.blue}}>Pesquisar manualmente ↗</a></div>}
+  </section>}
 function Title({children}:{children:React.ReactNode}){return <div style={{fontSize:13,fontWeight:800,color:T.gold,marginBottom:10}}>{children}</div>}

@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
+import { AeroClimaReal, COORDS, POMBAL_BASE, buscarAeroClima, direcaoCardeal } from "../lib/apis-gratis";
 
 type PressaoTrend = "estavel" | "subindo" | "queda_leve" | "queda_brusca";
 type TetoNuvens = "limpo_alto" | "parcial_800m" | "baixo_400m" | "neblina_chao";
@@ -15,6 +16,48 @@ export default function ClimaAvancadoSoltura() {
   const [visibilidadeKm, setVisibilidadeKm] = useState<number>(15);
   const [ventoAlt, setVentoAlt] = useState<VentoAltitude>("calmo");
   const [umidade, setUmidade] = useState<number>(65);
+
+  // 📡 Dados reais (Open-Meteo — gratuito, sem chave)
+  const [cidadeReal, setCidadeReal] = useState<string>(POMBAL_BASE);
+  const [dadosReais, setDadosReais] = useState<AeroClimaReal | null>(null);
+  const [carregandoReal, setCarregandoReal] = useState(false);
+  const [erroReal, setErroReal] = useState("");
+
+  const aplicarDadosReais = useCallback((d: AeroClimaReal) => {
+    setPressaoHpa(d.pressaoMsl);
+    setVisibilidadeKm(Math.max(1, Math.min(50, d.visibilidadeKm)));
+    setUmidade(Math.max(10, Math.min(100, d.umidade)));
+    // Tendência barométrica das últimas 3h
+    if (d.tendencia3h <= -4) setTendencia("queda_brusca");
+    else if (d.tendencia3h <= -1.5) setTendencia("queda_leve");
+    else if (d.tendencia3h >= 1.5) setTendencia("subindo");
+    else setTendencia("estavel");
+    // Teto de nuvens estimado por visibilidade + cobertura
+    if (d.visibilidadeKm < 4) setTeto("neblina_chao");
+    else if (d.visibilidadeKm < 8 || d.coberturaNuvens >= 70) setTeto("baixo_400m");
+    else if (d.coberturaNuvens >= 25) setTeto("parcial_800m");
+    else setTeto("limpo_alto");
+    // Vento em altitude estimado por rajadas (nível de cruzeiro ~800m)
+    if (d.rajadaKmh >= 50) setVentoAlt("tempestade");
+    else if (d.rajadaKmh >= 35) setVentoAlt("cortante_lateral");
+    else if (d.rajadaKmh >= 20) setVentoAlt("moderado");
+    else setVentoAlt("calmo");
+  }, []);
+
+  const consultarReal = useCallback(async (cidade: string) => {
+    const coord = COORDS[cidade];
+    if (!coord) { setErroReal("Cidade sem coordenadas cadastradas."); return; }
+    setCarregandoReal(true); setErroReal("");
+    try {
+      const d = await buscarAeroClima(coord.lat, coord.lon);
+      setDadosReais(d); aplicarDadosReais(d);
+    } catch (e) {
+      setDadosReais(null);
+      setErroReal(`Não foi possível obter dados reais agora. ${e instanceof Error ? e.message : "Erro de rede"}`);
+    } finally { setCarregandoReal(false); }
+  }, [aplicarDadosReais]);
+
+  useEffect(() => { consultarReal(cidadeReal); }, [cidadeReal, consultarReal]);
 
   const analise = useMemo(() => {
     let score = 100;
@@ -106,9 +149,63 @@ export default function ClimaAvancadoSoltura() {
           </Link>
         </div>
 
+        {/* 📡 DADOS REAIS — Open-Meteo (gratuito, sem chave) */}
+        <section style={{ ...T.card, borderColor: `${T.gold}55`, background: `${T.gold}0d` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold }}>
+              📡 Dados Reais Agora — Open-Meteo (gratuito, sem chave)
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <select value={cidadeReal} onChange={(e) => setCidadeReal(e.target.value)} style={{ ...T.input, width: "auto", minHeight: 36, padding: "6px 10px", fontSize: 12 }}>
+                {Object.keys(COORDS).map((c) => <option key={c} value={c}>{c === POMBAL_BASE ? "🏠 Pombal (base)" : c}</option>)}
+              </select>
+              <button onClick={() => consultarReal(cidadeReal)} disabled={carregandoReal} style={{ ...T.btnSm, opacity: carregandoReal ? 0.6 : 1 }}>
+                {carregandoReal ? "⏳" : "↻"}
+              </button>
+            </div>
+          </div>
+
+          {erroReal && (
+            <div style={{ padding: 12, borderRadius: 9, color: T.red, background: `${T.red}12`, border: `1px solid ${T.red}44`, fontSize: 12 }}>
+              ⚠️ {erroReal} — preencha os parâmetros manualmente abaixo.
+            </div>
+          )}
+
+          {carregandoReal && !dadosReais && (
+            <div style={{ textAlign: "center", padding: 20, color: T.dim, fontSize: 13 }}>⏳ Buscando dados atmosféricos reais...</div>
+          )}
+
+          {dadosReais && (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8 }}>
+                {([
+                  ["🧭", "Pressão (mar)", `${dadosReais.pressaoMsl} hPa`],
+                  ["📉", "Tendência 3h", `${dadosReais.tendencia3h > 0 ? "+" : ""}${dadosReais.tendencia3h} hPa`],
+                  ["☁️", "Nuvens", `${dadosReais.coberturaNuvens}%`],
+                  ["👁️", "Visibilidade", `${dadosReais.visibilidadeKm} km`],
+                  ["💧", "Umidade", `${dadosReais.umidade}%`],
+                  ["💨", "Vento", `${dadosReais.ventoKmh} km/h`],
+                  ["🌪️", "Rajada", `${dadosReais.rajadaKmh} km/h`],
+                  ["🧲", "Direção", direcaoCardeal(dadosReais.direcaoVento)],
+                ] as const).map(([emoji, label, valor]) => (
+                  <div key={label} style={{ padding: 10, borderRadius: 9, background: "#ffffff08", textAlign: "center" }}>
+                    <div style={{ fontSize: 17 }}>{emoji}</div>
+                    <div style={{ ...T.small, fontSize: 10 }}>{label}</div>
+                    <b style={{ color: T.gold, fontSize: 13 }}>{valor}</b>
+                  </div>
+                ))}
+              </div>
+              <div style={{ ...T.small, marginTop: 10, fontSize: 11 }}>
+                ✅ Os parâmetros da análise abaixo foram <b>preenchidos automaticamente</b> com estes dados reais •
+                Atualizado às <b style={{ color: T.gold }}>{dadosReais.atualizado}</b> • Fonte: Open-Meteo
+              </div>
+            </>
+          )}
+        </section>
+
         <section style={T.card}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 14 }}>
-            ⚙️ Parâmetros Atmosféricos Reais no Horário da Soltura
+            ⚙️ Parâmetros Atmosféricos no Horário da Soltura
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 16 }}>

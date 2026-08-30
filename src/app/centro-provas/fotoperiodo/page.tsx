@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
-import { COORDS, POMBAL_BASE, SolDia, aplicarPombalSalvo, EVENTO_POMBAL, buscarSol, fmtHoras } from "../lib/apis-gratis";
+import { COORDS, POMBAL_BASE, SolDia, aplicarPombalSalvo, EVENTO_POMBAL, buscarSol, fmtHoras, faseLua } from "../lib/apis-gratis";
 
 type FaseAno = "escurecimento_borrachos" | "pre_temporada" | "temporada_oficial" | "luz_artificial_classicas";
 
@@ -222,6 +222,46 @@ export default function ControleFotoperiodo() {
               <div style={{ ...T.small, marginTop: 10, fontSize: 11 }}>Fonte: Open-Meteo • horários no fuso de São Paulo (GMT-3)</div>
             </>
           )}
+        </section>
+
+        {/* 🌙 Fase da lua (cálculo astronômico local — funciona offline) */}
+        <section style={{ ...T.card, marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🌙 Fase da Lua</div>
+          {(() => {
+            const hoje = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+            const lua = faseLua(hoje);
+            const proximos = (sol || []).slice(1, 7).map((d) => ({ data: d.data, l: faseLua(d.data) }));
+            return (
+              <div>
+                <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                  <div style={{ fontSize: 52 }}>{lua.emoji}</div>
+                  <div>
+                    <b style={{ fontSize: 18 }}>{lua.fase}</b>
+                    <div style={{ ...T.small }}>Iluminação: <b style={{ color: T.gold }}>{lua.iluminacao}%</b> • hoje</div>
+                    <div style={{ ...T.small, fontSize: 11, marginTop: 4, lineHeight: 1.5 }}>
+                      {lua.iluminacao >= 75
+                        ? "🌙 Lua quase cheia: noites mais claras — borrachos podem se demorar e a duração do voo muda pouco, mas o escurecimento do pombal precisa ser mais rigoroso."
+                        : lua.iluminacao <= 25
+                          ? "🌑 Lua nova/escura: noites escuras — retorno tardio fica mais difícil; solturas longas no fim da tarde pedem atenção."
+                          : "🌓 Lua intermediária: efeito luminoso noturno moderado no comportamento de retorno."}
+                    </div>
+                  </div>
+                </div>
+                {proximos.length > 0 && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 6, marginTop: 12 }}>
+                    {proximos.map((d) => (
+                      <div key={d.data} style={{ padding: 8, borderRadius: 8, background: "#ffffff08", textAlign: "center" }}>
+                        <div style={{ fontSize: 18 }}>{d.l.emoji}</div>
+                        <b style={{ fontSize: 11, color: T.gold }}>{new Date(`${d.data}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "numeric" })}</b>
+                        <div style={{ ...T.small, fontSize: 10 }}>{d.l.iluminacao}%</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ ...T.small, fontSize: 11, marginTop: 10 }}>Cálculo astronômico local — funciona até sem internet.</div>
+              </div>
+            );
+          })()}
         </section>
 
         <section

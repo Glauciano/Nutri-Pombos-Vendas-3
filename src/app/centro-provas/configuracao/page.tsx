@@ -50,6 +50,48 @@ export default function Configuracao() {
     );
   };
 
+  // 💾 Backup dos dados (exportar/importar JSON)
+  const [backupMsg, setBackupMsg] = useState("");
+
+  const exportarBackup = () => {
+    try {
+      const dados: Record<string, unknown> = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || !k.startsWith("nutripombos")) continue;
+        try { dados[k] = JSON.parse(localStorage.getItem(k) || "null"); } catch { dados[k] = localStorage.getItem(k); }
+      }
+      const blob = new Blob([JSON.stringify({ app: "nutri-pombos", versao: 1, exportadoEm: new Date().toISOString(), dados }, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `nutri-pombos-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setBackupMsg(`✅ Backup exportado com ${Object.keys(dados).length} itens!`);
+    } catch { setBackupMsg("⚠️ Falha ao exportar o backup."); }
+  };
+
+  const importarBackup = (ev: React.ChangeEvent<HTMLInputElement>) => {
+    const f = ev.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const j = JSON.parse(String(reader.result)) as { dados?: Record<string, unknown> };
+        const dados = j?.dados;
+        if (!dados || typeof dados !== "object") { setBackupMsg("⚠️ Este arquivo não parece um backup do Nutri Pombos."); return; }
+        let n = 0;
+        Object.entries(dados).forEach(([k, v]) => {
+          if (k.startsWith("nutripombos")) { localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v)); n++; }
+        });
+        setBackupMsg(`✅ ${n} itens restaurados! Recarregando a página...`);
+        window.setTimeout(() => window.location.reload(), 1400);
+      } catch { setBackupMsg("⚠️ Falha ao ler o arquivo de backup."); }
+    };
+    reader.readAsText(f);
+    ev.target.value = "";
+  };
+
   const salvarLocalPombal = () => {
     if (Math.abs(pombal.lat) > 90 || Math.abs(pombal.lon) > 180 || !Number.isFinite(pombal.lat) || !Number.isFinite(pombal.lon)) {
       setGpsMsg("⚠️ Latitude/longitude inválidas.");
@@ -107,6 +149,20 @@ export default function Configuracao() {
           <div style={{ ...T.small, fontSize: 11, marginTop: 10, lineHeight: 1.6 }}>
             💡 Não sabe as coordenadas? Abra o <a href="https://www.openstreetmap.org" target="_blank" rel="noreferrer" style={{ color: T.blue }}>OpenStreetMap</a>, clique com o botão direito no seu pombal → "Mostrar endereço" e copie os números (ex.: Limeira ≈ latitude <b>-22.8864</b>, longitude <b>-47.4017</b>). Negativo = sul/oeste.
           </div>
+        </section>
+
+        {/* 💾 BACKUP DOS DADOS — exportar / importar */}
+        <section style={T.card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>💾 Backup dos Dados</div>
+          <div style={{ ...T.small, fontSize: 12, marginBottom: 12, lineHeight: 1.6 }}>
+            Histórico, calendário, mapa, alertas, chips, treinos e configurações ficam salvos neste aparelho. Exporte um arquivo de backup de vez em quando — e use a importação para transferir tudo para outro celular sem perder nada.
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" onClick={exportarBackup} style={T.btnGhost}>📤 Exportar backup (.json)</button>
+            <input id="importar-backup" type="file" accept=".json,application/json" onChange={importarBackup} style={{ display: "none" }} />
+            <button type="button" onClick={() => document.getElementById("importar-backup")?.click()} style={{ ...T.btn, flex: 1 }}>📥 Importar backup</button>
+          </div>
+          {backupMsg && <div style={{ ...T.small, fontSize: 12, marginTop: 10, color: backupMsg.startsWith("✅") ? T.green : T.orange }}>{backupMsg}</div>}
         </section>
 
         <section style={T.card}>

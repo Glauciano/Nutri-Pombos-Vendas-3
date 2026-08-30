@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
-import { AeroClimaReal, COORDS, POMBAL_BASE, aplicarPombalSalvo, EVENTO_POMBAL, buscarAeroClima, direcaoCardeal } from "../lib/apis-gratis";
+import { AeroClimaReal, COORDS, POMBAL_BASE, aplicarPombalSalvo, EVENTO_POMBAL, buscarAeroClima, confortoTermico, direcaoCardeal } from "../lib/apis-gratis";
 
 type PressaoTrend = "estavel" | "subindo" | "queda_leve" | "queda_brusca";
 type TetoNuvens = "limpo_alto" | "parcial_800m" | "baixo_400m" | "neblina_chao";
@@ -185,6 +185,7 @@ export default function ClimaAvancadoSoltura() {
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8 }}>
                 {([
+                  ["🌡️", "Temperatura", `${dadosReais.temp}°C`],
                   ["🧭", "Pressão (mar)", `${dadosReais.pressaoMsl} hPa`],
                   ["📉", "Tendência 3h", `${dadosReais.tendencia3h > 0 ? "+" : ""}${dadosReais.tendencia3h} hPa`],
                   ["☁️", "Nuvens", `${dadosReais.coberturaNuvens}%`],
@@ -201,6 +202,14 @@ export default function ClimaAvancadoSoltura() {
                   </div>
                 ))}
               </div>
+              {(() => {
+                const ct = confortoTermico(dadosReais.temp, dadosReais.umidade);
+                return (
+                  <div style={{ padding: 10, marginTop: 10, borderRadius: 9, color: ct.cor, background: `${ct.cor}12`, border: `1px solid ${ct.cor}55`, fontSize: 12, lineHeight: 1.5 }}>
+                    {ct.emoji} <b>Conforto térmico do plantel: {ct.label}</b> — {ct.rec}
+                  </div>
+                );
+              })()}
               <div style={{ ...T.small, marginTop: 10, fontSize: 11 }}>
                 ✅ Os parâmetros da análise abaixo foram <b>preenchidos automaticamente</b> com estes dados reais •
                 Atualizado às <b style={{ color: T.gold }}>{dadosReais.atualizado}</b> • Fonte: Open-Meteo

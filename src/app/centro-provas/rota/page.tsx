@@ -11,6 +11,7 @@ import {
   buscarAr, classificarAr, buscarAltimetria, interpolarRota,
   buscarRadar, urlTileRadar, tileXY,
   aplicarPombalSalvo, getPombal, EVENTO_POMBAL, Coords,
+  HoraSolta, buscarJanelaSolta, hojeSP,
 } from "../lib/apis-gratis";
 
 type Modo = "agora" | "prova";
@@ -38,6 +39,11 @@ export default function RotaDaProva() {
   const [radar, setRadar] = useState<{ host: string; frames: FrameRadar[] } | null>(null);
   const [radarIdx, setRadarIdx] = useState(0);
   const [radarPlay, setRadarPlay] = useState(true);
+  // 🕐 Janela ideal de soltura + ⏱️ previsão de chegada
+  const [janela, setJanela] = useState<{ solta: HoraSolta[]; pombal: HoraSolta[] } | null>(null);
+  const [janelaErro, setJanelaErro] = useState("");
+  const [veloBase, setVeloBase] = useState<number | null>(null);
+
   // 🏠 Pombal configurável (Configuração → Localização do Pombal)
   const [pombal, setPombalState] = useState<Coords & { nome: string }>(() => ({ ...COORDS[POMBAL_BASE], nome: POMBAL_BASE }));
   useEffect(() => {
@@ -48,6 +54,13 @@ export default function RotaDaProva() {
   }, []);
 
   useEffect(() => {
+    try {
+      const hist = JSON.parse(localStorage.getItem("nutripombos-historico-provas-v1") || "[]");
+      if (Array.isArray(hist) && hist.length) {
+        const soma = hist.reduce((acc: number, h: { velocidade?: number }) => acc + (h.velocidade || 0), 0);
+        if (soma > 0) setVeloBase(Math.round(soma / hist.length));
+      }
+    } catch { /* sem histórico */ }
     const lista = loadCalendario().filter((p) => !p.cancelada);
     setProvas(lista);
     const hoje = new Date().toISOString().slice(0, 10);
@@ -98,6 +111,21 @@ export default function RotaDaProva() {
       setSolSolta(s1?.[0] ?? null);
       setSolPombal(s2?.[0] ?? null);
     }
+    // 🕐 Janela ideal de soltura (hora a hora na soltura e no pombal)
+    setJanela(null); setJanelaErro("");
+    const diaJanela = modoAtual === "prova" && dataSolta ? dataSolta : hojeSP();
+    const em24h = new Date(Date.now() + 24 * 3600000).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+    if (diaJanela <= em24h) {
+      try {
+        const [hs, hp] = await Promise.all([
+          buscarJanelaSolta(rotaAtual[0].lat, rotaAtual[0].lon, diaJanela),
+          buscarJanelaSolta(rotaAtual[rotaAtual.length - 1].lat, rotaAtual[rotaAtual.length - 1].lon, diaJanela),
+        ]);
+        setJanela({ solta: hs, pombal: hp });
+      } catch { setJanelaErro("previsão horária indisponível para esta data"); }
+    } else {
+      setJanelaErro("disponível a partir da véspera da prova");
+    }
     setCarregando(false);
   }, []);
 
@@ -141,6 +169,55 @@ export default function RotaDaProva() {
   const validos = pontosComScore.filter((x) => x.score);
   const pior = validos.length ? validos.reduce((a, b) => (a.score!.pts < b.score!.pts ? a : b)) : null;
   const media = validos.length ? Math.round(validos.reduce((s, x) => s + x.score!.pts, 0) / validos.length) : null;
+
+  // 🕐 Score de cada hora da manhã na cidade da soltura (vento relativo à rota)
+  const bearingSolta = rota.length > 1 && provaSel ? bearingRota(rota[0].lat, rota[0].lon, base.lat, base.lon) : 180;
+  const horasScored = (janela?.solta || []).map((h) => {
+    const v = ventoNaRota(h.dir, bearingSolta);
+    const sc = scorePonto({ temp: h.temp, chuvaMm: h.chuva, ventoKmh: h.vento, rajadaKmh: h.rajada, dirVento: h.dir, umidade: h.umidade, pressaoMsl: 1013, nuvens: 0, visibilidadeKm: 24, wmo: h.wmo, horaRef: h.hora }, v.pen, kp?.kp ?? null);
+    return { ...h, ventoR: v, sc };
+  });
+  const manha = horasScored.filter((h) => h.hora >= "05:00" && h.hora <= "11:00");
+  let janelaIdeal: { ini: string; fim: string; pts: number } | null = null;
+  if (manha.length) {
+    const melhor = manha.reduce((a, b) => (b.sc.pts > a.sc.pts ? b : a));
+    let i0 = manha.indexOf(melhor), i1 = i0;
+    while (i0 > 0 && manha[i0 - 1].sc.pts >= Math.max(60, melhor.sc.pts - 10)) i0--;
+    while (i1 < manha.length - 1 && manha[i1 + 1].sc.pts >= Math.max(60, melhor.sc.pts - 10)) i1++;
+    janelaIdeal = { ini: manha[i0].hora, fim: `${String(Number(manha[i1].hora.slice(0, 2)) + 1).padStart(2, "0")}:00`, pts: melhor.sc.pts };
+  }
+
+  // ⏱️ Previsão de chegada (média histórica ajustada pelo vento)
+  const fatorVento = pior?.vento?.tipo === "Vento contra" ? 0.82 : pior?.vento?.tipo === "Vento lateral" ? 0.95 : 1.08;
+  const veloEstimada = Math.round((veloBase || 1200) * fatorVento);
+  const horaSolta = janelaIdeal ? janelaIdeal.ini : "07:00";
+  const minutosVoo = provaSel ? Math.round((provaSel.km * 1000) / veloEstimada) : 0;
+  const chegada = (fator: number) => {
+    const [H, M] = horaSolta.split(":").map(Number);
+    const tot = H * 60 + M + Math.round(minutosVoo * fator);
+    return `${String(Math.floor(tot / 60) % 24).padStart(2, "0")}:${String(tot % 60).padStart(2, "0")}`;
+  };
+
+  // 💬 Mensagem pronta para o WhatsApp
+  const msgWhatsApp = (() => {
+    if (!provaSel) return "";
+    const L: string[] = [];
+    L.push(`🕊️ *PROVA #${provaSel.num} — ${provaSel.cidade}/${provaSel.estado} (${provaSel.km}km)*`);
+    L.push(`📅 Solta: ${provaSel.diaSolta} ${provaSel.dataSolta.split("-").reverse().slice(0, 2).join("/")}`);
+    if (media !== null) L.push(`\n🛣️ Rota com ${rota.length} pontos • score médio ${media}% • pior trecho: ${pior?.pt.nome} (${pior?.score?.pts}%)`);
+    if (kp) L.push(`🧲 Kp ${kp.kp.toFixed(2)} — ${kp.kp <= 2 ? "calmo" : kp.kp <= 4 ? "instável" : "tempestade"}`);
+    if (validos.length) {
+      L.push("\n💨 *Vento por trecho:*");
+      validos.forEach((v) => {
+        const c = v.d && "clima" in v.d ? `${v.d.clima.ventoKmh}km/h ${direcaoCardeal(v.d.clima.dirVento)}` : "";
+        L.push(`${v.vento!.emoji} ${v.pt.nome}: ${v.vento!.tipo.toLowerCase()}${c ? ` (${c})` : ""}`);
+      });
+    }
+    if (janelaIdeal) L.push(`\n🕐 *Melhor janela de soltura: ${janelaIdeal.ini}–${janelaIdeal.fim}* (${janelaIdeal.pts}%)`);
+    if (minutosVoo) L.push(`⏱️ Chegada prevista: *${chegada(0.92)} – ${chegada(1.08)}* (soltando às ${horaSolta})`);
+    L.push(`\n_${modo === "prova" ? "Previsão do dia da soltura" : "Condições atuais"} • Open-Meteo + NOAA • Nutri Pombos_`);
+    return L.join("\n");
+  })();
 
   return (
     <main style={{ minHeight: "100vh", background: T.bg, color: T.white, padding: "20px 16px 60px" }}>
@@ -329,7 +406,7 @@ export default function RotaDaProva() {
                     <div style={{ position: "relative", width: cols * 256, height: rows * 256, background: "#0b1426" }}>
                       {tiles.map(({ gx, gy }) => (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img key={`b${gx}-${gy}`} src={`https://basemaps.cartocdn.com/dark_all/${Z}/${x0 + gx}/${y0 + gy}.png`} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256, opacity: 0.9 }} />
+                        <img key={`b${gx}-${gy}`} src={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${Z}/${y0 + gy}/${x0 + gx}`} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256, opacity: 0.9 }} />
                       ))}
                       {tiles.map(({ gx, gy }) => (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -353,11 +430,72 @@ export default function RotaDaProva() {
                     <small style={{ color: frame.previsto ? T.blue : T.gold, fontWeight: 800 }}>
                       {frame.previsto ? "🔮 Previsão" : "🛰️ Observado"} · {hora} · quadro {radarIdx + 1}/{radar.frames.length}
                     </small>
-                    <small style={{ color: T.dim }}> verde=fraca · amarelo=moderada · vermelho=forte · Fonte: RainViewer</small>
+                    <small style={{ color: T.dim }}> verde=fraca · amarelo=moderada · vermelho=forte · Mapa © Esri/OSM · Chuva: RainViewer</small>
                   </div>
                 </div>
               );
             })()}
+          </section>
+        )}
+
+        {/* 🕐 Janela ideal de soltura — hora a hora (Open-Meteo, gratuito) */}
+        {provaSel && (
+          <section style={T.card}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>
+              🕐 Janela Ideal de Soltura — hora a hora em {rota[0]?.nome} ({modo === "prova" ? "dia da prova" : "hoje"})
+            </div>
+            {!janela && !janelaErro && <div style={{ ...T.small }}>⏳ Calculando a melhor janela...</div>}
+            {janelaErro && <div style={{ ...T.small, color: T.orange }}>⚠️ Janela {janelaErro}.</div>}
+            {janelaIdeal && (
+              <div style={{ padding: 12, borderRadius: 10, color: T.green, background: `${T.green}12`, border: `1px solid ${T.green}55`, marginBottom: 12, fontSize: 13 }}>
+                🟢 <b>Melhor janela: {janelaIdeal.ini} – {janelaIdeal.fim}</b> ({janelaIdeal.pts}% de score) — soltura neste intervalo pega as melhores condições de vento e clima.
+              </div>
+            )}
+            {janela && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(92px, 1fr))", gap: 6 }}>
+                {horasScored.map((h) => {
+                  const naJanela = janelaIdeal ? h.hora >= janelaIdeal.ini && h.hora < janelaIdeal.fim : false;
+                  return (
+                    <div key={h.hora} style={{ padding: 8, borderRadius: 8, background: naJanela ? `${h.sc.cor}18` : "#ffffff08", border: `1px solid ${naJanela ? `${h.sc.cor}66` : T.border}`, textAlign: "center" }}>
+                      <b style={{ fontSize: 12, color: naJanela ? h.sc.cor : T.white }}>{h.hora}</b>
+                      <div style={{ fontSize: 15 }}>{wmoInfo(h.wmo).emoji}</div>
+                      <div style={{ ...T.small, fontSize: 9 }}>{h.temp}° · 🌧️ {h.chuva}mm</div>
+                      <div style={{ ...T.small, fontSize: 9 }}>{h.ventoR.emoji} {h.vento}km/h</div>
+                      <b style={{ fontSize: 11, color: h.sc.cor }}>{h.sc.pts}%</b>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {janela && <div style={{ ...T.small, fontSize: 11, marginTop: 8 }}>Cada hora recebe um score (vento na rota + chuva + rajadas + temperatura). Fonte: Open-Meteo (gratuito, sem chave).</div>}
+          </section>
+        )}
+
+        {/* ⏱️ Previsão de chegada + 💬 WhatsApp */}
+        {provaSel && (
+          <section style={{ ...T.card, borderColor: `${T.blue}55`, background: `${T.blue}0d` }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>⏱️ Previsão de Chegada no Pombal</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
+              {([
+                ["🚀 Solta às", horaSolta],
+                ["⚡ Velocidade est.", `${veloEstimada} m/min`],
+                ["⏳ Tempo de voo", minutosVoo ? `${Math.floor(minutosVoo / 60)}h ${minutosVoo % 60}min` : "—"],
+                ["🏁 Chegada entre", minutosVoo ? `${chegada(0.92)} – ${chegada(1.08)}` : "—"],
+              ] as const).map(([l, v]) => (
+                <div key={l} style={{ padding: 10, borderRadius: 9, background: "#ffffff08", textAlign: "center" }}>
+                  <div style={{ ...T.small, fontSize: 10 }}>{l}</div>
+                  <b style={{ color: T.gold, fontSize: 14 }}>{v}</b>
+                </div>
+              ))}
+            </div>
+            <div style={{ ...T.small, fontSize: 11, marginTop: 8, lineHeight: 1.5 }}>
+              {veloBase
+                ? `Base: sua média histórica de ${veloBase} m/min, ajustada pelo vento da rota (${pior?.vento?.tipo?.toLowerCase() || "—"} no pior trecho).`
+                : "Base: 1200 m/min (estimativa padrão) — registre seus resultados no Histórico para a previsão usar a média do SEU plantel."}
+            </div>
+            <a href={`https://wa.me/?text=${encodeURIComponent(msgWhatsApp)}`} target="_blank" rel="noreferrer" style={{ ...T.btn, display: "block", textAlign: "center", textDecoration: "none", marginTop: 12, background: "#25D366", borderColor: "#25D366" }}>
+              💬 Enviar resumo da rota no WhatsApp
+            </a>
           </section>
         )}
 

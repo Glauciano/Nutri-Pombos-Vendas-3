@@ -93,6 +93,7 @@ export async function geocodeCidade(nome: string): Promise<Coords | null> {
 /* ------------------------------------------------------------------ */
 
 export interface AeroClimaReal {
+  temp: number;              // °C (conforto térmico)
   pressaoMsl: number;        // hPa ao nível do mar
   pressaoLocal: number;      // hPa na altitude do local
   tendencia3h: number;       // variação de pressão nas últimas 3h (hPa)
@@ -109,7 +110,7 @@ export async function buscarAeroClima(lat: number, lon: number): Promise<AeroCli
   const p = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
-    current: "pressure_msl,surface_pressure,cloud_cover,visibility,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m",
+    current: "temperature_2m,pressure_msl,surface_pressure,cloud_cover,visibility,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m",
     hourly: "pressure_msl",
     past_hours: "4",
     forecast_hours: "1",
@@ -135,7 +136,8 @@ export async function buscarAeroClima(lat: number, lon: number): Promise<AeroCli
   } catch { /* mantém 0 */ }
 
   return {
-    pressaoMsl: Math.round(c.pressure_msl),
+    temp: Math.round(Number(c.temperature_2m ?? 0)),
+    pressaoMsl: Math.round(c.pressao_msl),
     pressaoLocal: Math.round(c.surface_pressure),
     tendencia3h,
     coberturaNuvens: Math.round(c.cloud_cover ?? 0),
@@ -443,4 +445,78 @@ export async function buscarClimaPassado(lat: number, lon: number, data: string)
     vento: Math.round(media("wind_speed_10m")),
     dirVento: Math.round(media("wind_direction_10m")),
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* 🕐 Janela ideal de soltura (previsão hora a hora)                  */
+/* ------------------------------------------------------------------ */
+
+export interface HoraSolta { hora: string; temp: number; chuva: number; vento: number; rajada: number; dir: number; wmo: number; umidade: number }
+
+/** Data de hoje no fuso de São Paulo (YYYY-MM-DD) */
+export function hojeSP(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+}
+
+/** Previsão hora a hora (05h–18h) para o dia informado (ou hoje) */
+export async function buscarJanelaSolta(lat: number, lon: number, dia?: string): Promise<HoraSolta[]> {
+  const d = dia || hojeSP();
+  const p = new URLSearchParams({
+    latitude: String(lat), longitude: String(lon), timezone: "America/Sao_Paulo",
+    hourly: "temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,relative_humidity_2m",
+    start_date: d, end_date: d,
+  });
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  const h = j?.hourly;
+  if (!h?.time) throw new Error("Sem previsão horária");
+  const out: HoraSolta[] = [];
+  (h.time as string[]).forEach((t, i) => {
+    const hh = Number(t.slice(11, 13));
+    if (hh < 5 || hh > 18) return;
+    out.push({
+      hora: `${String(hh).padStart(2, "0")}:00`,
+      temp: Math.round(Number(h.temperature_2m?.[i] ?? 0)),
+      chuva: +Number(h.precipitation?.[i] ?? 0).toFixed(1),
+      vento: Math.round(Number(h.wind_speed_10m?.[i] ?? 0)),
+      rajada: Math.round(Number(h.wind_gusts_10m?.[i] ?? 0)),
+      dir: Math.round(Number(h.wind_direction_10m?.[i] ?? 0)),
+      wmo: Number(h.weather_code?.[i] ?? 0),
+      umidade: Math.round(Number(h.relative_humidity_2m?.[i] ?? 0)),
+    });
+  });
+  if (!out.length) throw new Error("Dia fora do alcance da previsão");
+  return out;
+}
+
+/* ------------------------------------------------------------------ */
+/* 🌙 Fase da lua (cálculo local — nem precisa de internet)           */
+/* ------------------------------------------------------------------ */
+
+export function faseLua(dataISO: string): { fase: string; emoji: string; iluminacao: number } {
+  const [y, m, d] = dataISO.split("-").map(Number);
+  const t = Date.UTC(y, m - 1, d, 12) / 86400000;
+  const ref = Date.UTC(2000, 0, 6, 18, 14) / 86400000; // lua nova conhecida
+  const idade = (((t - ref) % 29.530588853) + 29.530588853) % 29.530588853;
+  const iluminacao = Math.round(((1 - Math.cos((2 * Math.PI * idade) / 29.530588853)) / 2) * 100);
+  const f = Math.floor((idade / 29.530588853) * 8 + 0.5) % 8;
+  const nomes: [string, string][] = [
+    ["Lua nova", "🌑"], ["Lua crescente côncava", "🌒"], ["Quarto crescente", "🌓"], ["Lua crescente gibosa", "🌔"],
+    ["Lua cheia", "🌕"], ["Lua minguante gibosa", "🌖"], ["Quarto minguante", "🌗"], ["Lua minguante côncava", "🌘"],
+  ];
+  return { fase: nomes[f][0], emoji: nomes[f][1], iluminacao };
+}
+
+/* ------------------------------------------------------------------ */
+/* 🌡️ Conforto térmico (Índice de Desconforto de Thom)                */
+/* ------------------------------------------------------------------ */
+
+export function confortoTermico(temp: number, umidade: number): { label: string; cor: string; emoji: string; rec: string } {
+  const di = temp - 0.55 * (1 - umidade / 100) * (temp - 14);
+  if (di >= 30) return { label: `Calor perigoso (ID ${di.toFixed(0)})`, cor: "#ff5d62", emoji: "🥵", rec: "Estresse térmico grave: banho sempre disponível, eletrólitos na água, sombra e ventilação máxima. Evite treinos e solturas longas." };
+  if (di >= 26) return { label: `Calor alto (ID ${di.toFixed(0)})`, cor: "#f97316", emoji: "😰", rec: "Banho e eletrólitos recomendados; redobre a água limpa e voe só no início da manhã." };
+  if (di >= 21) return { label: `Calor moderado (ID ${di.toFixed(0)})`, cor: "#fbbf24", emoji: "🙂", rec: "Conforto razoável: água fresca e observação normal." };
+  if (di >= 15) return { label: `Confortável (ID ${di.toFixed(0)})`, cor: "#39e58c", emoji: "😊", rec: "Faixa ideal de conforto térmico para o plantel." };
+  return { label: `Frio (ID ${di.toFixed(0)})`, cor: "#55a3ff", emoji: "🥶", rec: "Aumente energia da mistura (milho/girassol) e proteja o pombal do vento." };
 }

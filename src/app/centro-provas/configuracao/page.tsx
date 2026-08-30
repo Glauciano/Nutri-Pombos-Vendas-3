@@ -185,7 +185,7 @@ export default function Configuracao() {
         <section style={T.card}>
           <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>🗺️ Mapa de Satélite (opcional)</div>
           <div style={{ ...T.small, fontSize: 12, marginBottom: 12, lineHeight: 1.6 }}>
-            O app já usa mapas <b>gratuitos e sem chave</b> (OpenStreetMap + Esri + radar de chuva). Se quiser <b>imagem de satélite real</b> na soltura, cole aqui uma chave do <b>Google Maps Embed API</b> — ela é gratuita para este uso. Sem chave, tudo continua funcionando normalmente.
+            📣 O mapa de <b>satélite real já é GRATUITO e sem chave</b> (Esri World Imagery) — disponível na Rota da Prova, botão 🗺️ Satélite. Esta chave do Google é <b>opcional</b>: só adiciona o modo 🧭 Rota Google (por estrada).
           </div>
           <label style={T.label}>Google Maps API Key (opcional)</label>
           <input aria-label="Google Maps API Key" type="text" placeholder="AIza..." value={cfg.mapaApiKey || ""} onChange={(e) => setCfg((prev) => ({ ...prev, mapaApiKey: e.target.value.trim() }))} style={{ ...T.input, fontSize: 14 }} />

@@ -165,7 +165,7 @@ export default function RotaDaProva() {
 
   // 🛰️ Satélite opcional (Google, com API Key) + 🌙 lua da prova
   const gKey = (loadConfig().mapaApiKey || "").trim();
-  const [modoMapa, setModoMapa] = useState<"radar" | "satelite">("radar");
+  const [modoMapa, setModoMapa] = useState<"radar" | "satelite" | "google">("radar");
   const diaLua = modo === "prova" && provaSel ? provaSel.dataSolta : hojeSP();
   const lua = provaSel ? faseLua(diaLua) : null;
   const pontosComScore = rota.map((pt, i) => {
@@ -394,19 +394,16 @@ export default function RotaDaProva() {
           </section>
         )}
 
-        {/* 🛰️ Radar de chuva ao vivo (RainViewer — gratuito) */}
+        {/* 🛰️ Radar de chuva + 🗺️ Satélite GRÁTIS (Esri World Imagery, sem chave) */}
         {provaSel && rota.length > 0 && (
           <section style={T.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: T.gold }}>🛰️ Radar de Chuva ao Vivo na Rota</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.gold }}>🛰️ Radar de Chuva & Satélite da Rota</div>
               <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                {gKey && (
-                  <>
-                    <button onClick={() => setModoMapa("radar")} style={{ ...T.btnGhost, color: modoMapa === "radar" ? T.bg : T.white, background: modoMapa === "radar" ? T.gold : "#1b283c" }}>🛰️ Radar</button>
-                    <button onClick={() => setModoMapa("satelite")} style={{ ...T.btnGhost, color: modoMapa === "satelite" ? T.bg : T.white, background: modoMapa === "satelite" ? T.gold : "#1b283c" }}>🗺️ Satélite</button>
-                  </>
-                )}
-                {radar && modoMapa === "radar" && (
+                <button onClick={() => setModoMapa("radar")} style={{ ...T.btnGhost, color: modoMapa === "radar" ? T.bg : T.white, background: modoMapa === "radar" ? T.gold : "#1b283c" }}>🌧️ Radar</button>
+                <button onClick={() => setModoMapa("satelite")} style={{ ...T.btnGhost, color: modoMapa === "satelite" ? T.bg : T.white, background: modoMapa === "satelite" ? T.gold : "#1b283c" }}>🗺️ Satélite</button>
+                {gKey && <button onClick={() => setModoMapa("google")} style={{ ...T.btnGhost, color: modoMapa === "google" ? T.bg : T.white, background: modoMapa === "google" ? T.gold : "#1b283c" }}>🧭 Rota Google</button>}
+                {radar && modoMapa !== "google" && (
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <button onClick={() => setRadarIdx((i) => (i - 1 + radar.frames.length) % radar.frames.length)} style={T.btnGhost}>‹</button>
                     <button onClick={() => setRadarPlay((p) => !p)} style={T.btnSm}>{radarPlay ? "⏸" : "▶"}</button>
@@ -415,17 +412,15 @@ export default function RotaDaProva() {
                 )}
               </div>
             </div>
-            {modoMapa === "satelite" && gKey && rota.length > 1 && (
+
+            {modoMapa === "google" && gKey && rota.length > 1 && (
               <div>
-                <iframe title="Satélite da rota" src={`https://www.google.com/maps/embed/v1/directions?key=${encodeURIComponent(gKey)}&origin=${rota[0].lat},${rota[0].lon}&destination=${pombal.lat},${pombal.lon}&language=pt-BR&region=br`} style={{ width: "100%", height: 380, border: 0, borderRadius: 12 }} loading="lazy" allowFullScreen />
-                <div style={{ ...T.small, fontSize: 11, marginTop: 6, textAlign: "center" }}>🛰️ Satélite Google — rota {rota[0].nome} → pombal (por estrada, referência) • o voo real é linha reta</div>
+                <iframe title="Rota Google" src={`https://www.google.com/maps/embed/v1/directions?key=${encodeURIComponent(gKey)}&origin=${rota[0].lat},${rota[0].lon}&destination=${pombal.lat},${pombal.lon}&language=pt-BR&region=br`} style={{ width: "100%", height: 380, border: 0, borderRadius: 12 }} loading="lazy" allowFullScreen />
+                <div style={{ ...T.small, fontSize: 11, marginTop: 6, textAlign: "center" }}>🧭 Rota por estrada (Google) — referência • o voo do pombo é linha reta até o pombal</div>
               </div>
             )}
-            {modoMapa === "radar" && !radar && <div style={{ ...T.small, textAlign: "center", padding: 16 }}>⏳ Carregando radar de chuva...</div>}
-            {modoMapa === "radar" && !gKey && radar && (
-              <div style={{ ...T.small, fontSize: 11, marginBottom: 8, textAlign: "center", color: T.dim }}>💡 Quer alternar com <b>satélite do Google</b> aqui? Configure em <b>Configuração → 🗺️ Mapa de Satélite</b></div>
-            )}
-            {modoMapa === "radar" && radar && (() => {
+
+            {modoMapa !== "google" && (radar || modoMapa === "satelite") && (() => {
               const Z = 6;
               const lats = rota.map((p) => p.lat), lons = rota.map((p) => p.lon);
               const maxLat = Math.max(...lats) + 0.7, minLat = Math.min(...lats) - 0.7;
@@ -441,21 +436,24 @@ export default function RotaDaProva() {
                 const yy = ((1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2) * n * 256;
                 return { left: xx - x0 * 256, top: yy - y0 * 256 };
               };
-              const frame = radar.frames[radarIdx];
-              const hora = new Date(frame.time * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+              const frame = radar?.frames[radarIdx];
+              const hora = frame ? new Date(frame.time * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
               const tiles: { gx: number; gy: number }[] = [];
               for (let gx = 0; gx < cols; gx++) for (let gy = 0; gy < rows; gy++) tiles.push({ gx, gy });
+              const baseTile = modoMapa === "satelite"
+                ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile`
+                : `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile`;
               return (
                 <div>
                   <div style={{ overflowX: "auto", borderRadius: 12, border: `1px solid ${T.border}` }}>
-                    <div style={{ position: "relative", width: cols * 256, height: rows * 256, background: "#0b1426" }}>
+                    <div style={{ position: "relative", width: cols * 256, height: rows * 256, background: modoMapa === "satelite" ? "#000" : "#0b1426" }}>
                       {tiles.map(({ gx, gy }) => (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img key={`b${gx}-${gy}`} src={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${Z}/${y0 + gy}/${x0 + gx}`} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256, opacity: 0.9 }} />
+                        <img key={`b${gx}-${gy}`} src={`${baseTile}/${Z}/${y0 + gy}/${x0 + gx}`} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256 }} />
                       ))}
-                      {tiles.map(({ gx, gy }) => (
+                      {frame && tiles.map(({ gx, gy }) => (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img key={`r${gx}-${gy}-${frame.path}`} src={urlTileRadar(radar.host, frame.path, Z, x0 + gx, y0 + gy)} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256, opacity: 0.7 }} />
+                        <img key={`r${gx}-${gy}-${frame.path}`} src={urlTileRadar(radar.host, frame.path, Z, x0 + gx, y0 + gy)} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256, opacity: modoMapa === "satelite" ? 0.6 : 0.7 }} />
                       ))}
                       {rota.map((pt, i) => {
                         const p = pos(pt.lat, pt.lon);
@@ -472,14 +470,18 @@ export default function RotaDaProva() {
                     </div>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, flexWrap: "wrap", gap: 6 }}>
-                    <small style={{ color: frame.previsto ? T.blue : T.gold, fontWeight: 800 }}>
-                      {frame.previsto ? "🔮 Previsão" : "🛰️ Observado"} · {hora} · quadro {radarIdx + 1}/{radar.frames.length}
+                    <small style={{ color: frame?.previsto ? T.blue : T.gold, fontWeight: 800 }}>
+                      {frame ? `${frame.previsto ? "🔮 Previsão" : "🛰️ Observado"} · ${hora} · quadro ${radarIdx + 1}/${radar.frames.length}` : "🛰️ Chuva carregando..."}
                     </small>
-                    <small style={{ color: T.dim }}> verde=fraca · amarelo=moderada · vermelho=forte · Mapa © Esri/OSM · Chuva: RainViewer</small>
+                    <small style={{ color: T.dim }}>
+                      {modoMapa === "satelite" ? "🗺️ Satélite © Esri · chuva: RainViewer" : "verde=fraca · amarelo=moderada · vermelho=forte · Mapa © Esri/OSM · Chuva: RainViewer"}
+                    </small>
                   </div>
                 </div>
               );
             })()}
+
+            {modoMapa === "radar" && !radar && <div style={{ ...T.small, textAlign: "center", padding: 16 }}>⏳ Carregando radar de chuva...</div>}
           </section>
         )}
 

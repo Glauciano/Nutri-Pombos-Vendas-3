@@ -11,7 +11,7 @@ import {
   buscarAr, classificarAr, buscarAltimetria, interpolarRota,
   buscarRadar, urlTileRadar, tileXY,
   aplicarPombalSalvo, getPombal, EVENTO_POMBAL, Coords,
-  HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM, faseLua, distanciaKmHaversine,
+  HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM, faseLua
 } from "../lib/apis-gratis";
 import { loadConfig } from "../config";
 
@@ -67,10 +67,8 @@ export default function RotaDaProva() {
   // 📅 Comparação sábado × domingo
   const [compDias, setCompDias] = useState<CompDia[] | null>(null);
   const [compCarregando, setCompCarregando] = useState(false);
-  // 🧭 Bússola da soltura
-  const [bussola, setBussola] = useState<{ lat: number; lon: number; distKm: number; bearing: number } | null>(null);
-  const [bussolaErro, setBussolaErro] = useState("");
-  const [heading, setHeading] = useState<number | null>(null);
+  // 🧭 Bússola da chegada (quem espera no pombal)
+  const [tick, setTick] = useState(0);
 
   // 🏠 Pombal configurável (Configuração → Localização do Pombal)
   const [pombal, setPombalState] = useState<Coords & { nome: string }>(() => ({ ...COORDS[POMBAL_BASE], nome: POMBAL_BASE }));
@@ -386,39 +384,26 @@ export default function RotaDaProva() {
     setCompCarregando(false);
   };
 
-  // 🧭 BÚSSOLA DA SOLTURA — seta apontando o pombal a partir do GPS
-  const ativarBussola = () => {
-    if (typeof navigator === "undefined" || !("geolocation" in navigator)) { setBussolaErro("GPS não suportado neste aparelho."); return; }
-    setBussolaErro("");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude, lon = pos.coords.longitude;
-        setBussola({ lat, lon, distKm: distanciaKmHaversine(lat, lon, pombal.lat, pombal.lon), bearing: bearingRota(lat, lon, pombal.lat, pombal.lon) });
-      },
-      () => setBussolaErro("Não foi possível obter o GPS — verifique a permissão de localização."),
-      { enableHighAccuracy: true, timeout: 15000 }
-    );
-  };
-
+  // relógio da bússola da chegada (contagem atualiza a cada 30s)
   useEffect(() => {
-    if (!bussola) return;
-    const handler = (e: Event) => {
-      const ev = e as unknown as { webkitCompassHeading?: number; alpha?: number | null; absolute?: boolean };
-      let h: number | null = null;
-      if (typeof ev.webkitCompassHeading === "number") h = ev.webkitCompassHeading;
-      else if (ev.absolute && ev.alpha != null) h = (360 - ev.alpha) % 360;
-      if (h != null) setHeading(h);
-    };
-    window.addEventListener("deviceorientationabsolute", handler as EventListener);
-    window.addEventListener("deviceorientation", handler as EventListener);
-    return () => {
-      window.removeEventListener("deviceorientationabsolute", handler as EventListener);
-      window.removeEventListener("deviceorientation", handler as EventListener);
-    };
-  }, [bussola]);
+    const t = window.setInterval(() => setTick((v) => v + 1), 30000);
+    return () => window.clearInterval(t);
+  }, []);
+  void tick;
 
-  const dadoSolta = rota.length ? dados[rota[0].chave] : undefined;
-  const climaSoltaBussola = dadoSolta && "clima" in dadoSolta ? dadoSolta.clima : null;
+  // 🧭 Bússola da Chegada: horizonte certo + vento na reta final
+  const dadoPombal = rota.length ? dados[rota[rota.length - 1].chave] : undefined;
+  const climaPombal = dadoPombal && "clima" in dadoPombal ? dadoPombal.clima : null;
+  const rumoSoltura = rota.length > 1 && provaSel ? bearingRota(pombal.lat, pombal.lon, rota[0].lat, rota[0].lon) : null;
+  const ventoFinal = climaPombal && rumoSoltura != null ? ventoNaRota(climaPombal.dirVento, (rumoSoltura + 180) % 360, climaPombal.ventoKmh) : null;
+  const contagem = (() => {
+    const [H, M] = chegada(0.92).split(":").map(Number);
+    const agora2 = new Date();
+    const diff = H * 60 + M - (agora2.getHours() * 60 + agora2.getMinutes());
+    if (diff > 0) return `faltam ${Math.floor(diff / 60)}h ${diff % 60}min`;
+    if (diff > -180) return "é agora — hora da chegada! 👀";
+    return "janela prevista já passou — fique atento";
+  })();
   // 🖨️ Relatório da prova — abre versão pra imprimir / salvar PDF
   const gerarRelatorio = () => {
     if (!provaSel) return;
@@ -454,8 +439,6 @@ export default function RotaDaProva() {
     win.document.write(html);
     win.document.close();
   };
-
-  const vereditoBussola = bussola && climaSoltaBussola ? ventoNaRota(climaSoltaBussola.dirVento, bussola.bearing, climaSoltaBussola.ventoKmh) : null;
 
   return (
     <main style={{ minHeight: "100vh", background: T.bg, color: T.white, padding: "20px 16px 60px" }}>
@@ -836,53 +819,48 @@ export default function RotaDaProva() {
           </section>
         )}
 
-        {/* 🧭 Bússola da soltura — aponta o pombal pelo GPS */}
-        {provaSel && (
-          <section style={T.card}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🧭 Bússola da Soltura</div>
-            <div style={{ ...T.small, fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>
-              Na hora de abrir os cestos: toque em 📍 e a <b style={{ color: T.gold }}>seta dourada 🏠</b> aponta o SEU pombal a partir de onde você está. A <b style={{ color: T.blue }}>seta azul 💨</b> mostra pra onde o vento empurra — comparando as duas, você sabe na hora se o vento está a favor.
+        {/* 🧭 Bússola da Chegada — para quem espera no pombal */}
+        {provaSel && rota.length > 1 && rumoSoltura != null && (
+          <section style={{ ...T.card, borderColor: `${T.blue}55`, background: `${T.blue}0d` }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🧭 Bússola da Chegada — onde olhar no céu</div>
+            <div style={{ ...T.small, fontSize: 12, marginBottom: 12, lineHeight: 1.6 }}>
+              Pra quem espera <b>no pombal</b> (o caminhão do clube leva os pombos!): o 🕊️ marca o horizonte por onde o bando vai surgir e o 💨 pra onde o vento empurra na reta final.
             </div>
-            <button type="button" onClick={ativarBussola} style={T.btn}>📍 Usar meu GPS agora</button>
-            {bussolaErro && <div style={{ ...T.small, color: T.orange, marginTop: 8 }}>⚠️ {bussolaErro}</div>}
-            {bussola && (() => {
-              const rotPombal = (bussola.bearing - (heading ?? 0) + 360) % 360;
-              const rotVento = climaSoltaBussola ? (climaSoltaBussola.dirVento + 180 - (heading ?? 0) + 360) % 360 : 0;
-              return (
-                <div style={{ marginTop: 12 }}>
-                  <svg viewBox="0 0 200 200" style={{ width: "100%", maxWidth: 280, display: "block", margin: "0 auto" }}>
-                    <circle cx="100" cy="100" r="92" fill="#0b1529" stroke={T.border} strokeWidth="2" />
-                    <circle cx="100" cy="100" r="68" fill="none" stroke={T.border} strokeWidth="1" />
-                    {(["N", "L", "S", "O"] as const).map((d, i) => {
-                      const ang = (i * 90 * Math.PI) / 180;
-                      const x = 100 + 80 * Math.sin(ang), y = 100 - 80 * Math.cos(ang);
-                      return <text key={d} x={x} y={y + 4} textAnchor="middle" fontSize="13" fontWeight="900" fill={d === "N" ? T.red : T.dim}>{d}</text>;
-                    })}
-                    <g transform={`rotate(${rotPombal} 100 100)`}>
-                      <path d="M100 24 L86 110 L100 96 L114 110 Z" fill={T.gold} stroke="#fff" strokeWidth="1.5" />
-                      <text x="100" y="20" textAnchor="middle" fontSize="12">🏠</text>
-                    </g>
-                    {climaSoltaBussola && (
-                      <g transform={`rotate(${rotVento} 100 100)`}>
-                        <path d="M100 56 L91 96 L100 89 L109 96 Z" fill={T.blue} />
-                        <text x="100" y="52" textAnchor="middle" fontSize="10">💨</text>
-                      </g>
-                    )}
-                    <circle cx="100" cy="100" r="5" fill="#fff" />
-                  </svg>
-                  <div style={{ textAlign: "center", marginTop: 10 }}>
-                    <b style={{ fontSize: 14 }}>🏠 Pombal a {bussola.distKm}km — rumo {direcaoCardeal(bussola.bearing)} ({Math.round(bussola.bearing)}°)</b>
-                    {climaSoltaBussola && (
-                      <div style={{ ...T.small, marginTop: 4 }}>
-                        💨 Vento vem de {direcaoCardeal(climaSoltaBussola.dirVento)} a {climaSoltaBussola.ventoKmh}km/h
-                        {vereditoBussola && <> — <b style={{ color: vereditoBussola.cor }}>{vereditoBussola.emoji} {vereditoBussola.tipo.toLowerCase()} para o voo de casa</b></>}
-                      </div>
-                    )}
-                    {heading === null && <div style={{ ...T.small, fontSize: 10, marginTop: 6, color: T.dim }}>🧭 Sem bússola no aparelho — o topo do celular está apontando o Norte</div>}
-                  </div>
+            <svg viewBox="0 0 200 200" style={{ width: "100%", maxWidth: 280, display: "block", margin: "0 auto" }}>
+              <circle cx="100" cy="100" r="92" fill="#0b1529" stroke={T.border} strokeWidth="2" />
+              <circle cx="100" cy="100" r="68" fill="none" stroke={T.border} strokeWidth="1" />
+              {(["N", "L", "S", "O"] as const).map((d, i) => {
+                const ang = (i * 90 * Math.PI) / 180;
+                const x = 100 + 80 * Math.sin(ang), y = 100 - 80 * Math.cos(ang);
+                return <text key={d} x={x} y={y + 4} textAnchor="middle" fontSize="13" fontWeight="900" fill={d === "N" ? T.red : T.dim}>{d}</text>;
+              })}
+              <line x1="100" y1="14" x2="100" y2="186" stroke="#ffffff10" strokeWidth="1" />
+              <line x1="14" y1="100" x2="186" y2="100" stroke="#ffffff10" strokeWidth="1" />
+              <g transform={`rotate(${rumoSoltura} 100 100)`}>
+                <circle cx="100" cy="30" r="15" fill={`${T.gold}22`} stroke={T.gold} strokeWidth="1.5" />
+                <text x="100" y="36" textAnchor="middle" fontSize="14">🕊️</text>
+                <text x="100" y="62" textAnchor="middle" fontSize="9" fontWeight="800" fill={T.gold}>VEM DAQUI</text>
+              </g>
+              {climaPombal && (
+                <g transform={`rotate(${(climaPombal.dirVento + 180) % 360} 100 100)`}>
+                  <path d="M100 122 L94 90 L100 97 L106 90 Z" fill={T.blue} />
+                  <text x="100" y="80" textAnchor="middle" fontSize="10">💨</text>
+                </g>
+              )}
+              <circle cx="100" cy="100" r="20" fill={`${T.green}22`} stroke={T.green} strokeWidth="1.5" />
+              <text x="100" y="106" textAnchor="middle" fontSize="16">🏠</text>
+            </svg>
+            <div style={{ textAlign: "center", marginTop: 10, lineHeight: 1.7 }}>
+              <b style={{ fontSize: 14, color: T.gold }}>👀 Espere o bando surgir no horizonte {direcaoCardeal(rumoSoltura).toUpperCase()} ({Math.round(rumoSoltura)}°)</b>
+              <div style={T.small}>A soltura ({rota[0].nome}) fica a {provaSel.km}km nesse lado — o bando vem direto pra cá 🏠</div>
+              {climaPombal && (
+                <div style={{ ...T.small, marginTop: 4 }}>
+                  💨 Vento no pombal vem de {direcaoCardeal(climaPombal.dirVento)} a {climaPombal.ventoKmh}km/h
+                  {ventoFinal && <> — <b style={{ color: ventoFinal.cor }}>{ventoFinal.emoji} {ventoFinal.tipo.toLowerCase()} na reta final</b>{ventoFinal.tipo === "Vento contra" ? " (chegam mais baixas e cansadas)" : ventoFinal.tipo === "Vento a favor" ? " (chegam altas e velozes!)" : ""}</>}
                 </div>
-              );
-            })()}
+              )}
+              <div style={{ ...T.small, marginTop: 4 }}>⏱️ Chegada prevista {chegada(0.92)}–{chegada(1.08)} — <b style={{ color: T.gold }}>{contagem}</b></div>
+            </div>
           </section>
         )}
 

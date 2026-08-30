@@ -63,7 +63,7 @@ export default function ClimaDesempenho() {
       try {
         const clima = await buscarClimaPassado(coord.lat, coord.lon, h.data);
         linha.clima = clima;
-        linha.vento = ventoNaRota(clima.dirVento, bearingRota(coord.lat, coord.lon, base.lat, base.lon));
+        linha.vento = ventoNaRota(clima.dirVento, bearingRota(coord.lat, coord.lon, base.lat, base.lon), clima.vento);
       } catch (e) {
         linha.erro = e instanceof Error ? e.message : "falhou";
       }

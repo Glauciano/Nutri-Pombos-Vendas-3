@@ -320,7 +320,10 @@ export function wmoInfo(code: number): { desc: string; emoji: string } {
 }
 
 /** Vento relativo à rota: a favor (cauda), contra (nariz) ou lateral */
-export function ventoNaRota(dirVentoDeg: number, bearingDestino: number): { tipo: string; emoji: string; cor: string; pen: number } {
+export function ventoNaRota(dirVentoDeg: number, bearingDestino: number, velocidadeKmh?: number): { tipo: string; emoji: string; cor: string; pen: number } {
+  if (velocidadeKmh !== undefined && velocidadeKmh < 4) {
+    return { tipo: "Vento calmo", emoji: "⚪", cor: "#9aa8bc", pen: 0 }; // vento fraco demais: direção irrelevante
+  }
   const r = ((dirVentoDeg - bearingDestino) % 360 + 360) % 360; // 0 = vento na cara
   if (r >= 135 && r <= 225) return { tipo: "Vento a favor", emoji: "🟢", cor: "#39e58c", pen: 0 };
   if (r < 45 || r > 315) return { tipo: "Vento contra", emoji: "🔴", cor: "#ff5d62", pen: 20 };

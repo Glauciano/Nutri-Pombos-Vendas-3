@@ -72,7 +72,12 @@ export default function RotaDaProva() {
     const lista = loadCalendario().filter((p) => !p.cancelada);
     setProvas(lista);
     const hoje = new Date().toISOString().slice(0, 10);
-    setProvaSel(lista.find((p) => p.dataSolta >= hoje) || lista[lista.length - 1] || null);
+    const prox = lista.find((p) => p.dataSolta >= hoje) || lista[lista.length - 1] || null;
+    setProvaSel(prox);
+    if (prox) {
+      const d = Math.ceil((new Date(`${prox.dataSolta}T00:00:00`).getTime() - new Date(`${hoje}T00:00:00`).getTime()) / 86_400_000);
+      if (d >= 0 && d <= LIMITE_PREVISAO_DIAS) setModo("prova"); // já abre na previsão do dia da soltura
+    }
   }, []);
 
   const rota = useMemo<PontoRota[]>(() => {
@@ -174,7 +179,7 @@ export default function RotaDaProva() {
       // No pombal (chegada) o rumo correto é o do TRECHO FINAL: da última cidade até o pombal
       const origem = pt.papel === "pombal" && i > 0 ? rota[i - 1] : pt;
       const bearing = bearingRota(origem.lat, origem.lon, base.lat, base.lon);
-      const vento = ventoNaRota(d.clima.dirVento, bearing);
+      const vento = ventoNaRota(d.clima.dirVento, bearing, d.clima.ventoKmh);
       const score = scorePonto(d.clima, vento.pen, kp?.kp ?? null);
       return { pt, d, vento, score, bearing, trechoFinal: pt.papel === "pombal" && i > 0 ? rota[i - 1].nome : null };
     }
@@ -187,7 +192,7 @@ export default function RotaDaProva() {
   // 🕐 Score de cada hora da manhã na cidade da soltura (vento relativo à rota)
   const bearingSolta = rota.length > 1 && provaSel ? bearingRota(rota[0].lat, rota[0].lon, base.lat, base.lon) : 180;
   const horasScored = (janela?.solta || []).map((h) => {
-    const v = ventoNaRota(h.dir, bearingSolta);
+    const v = ventoNaRota(h.dir, bearingSolta, h.vento);
     const sc = scorePonto({ temp: h.temp, chuvaMm: h.chuva, ventoKmh: h.vento, rajadaKmh: h.rajada, dirVento: h.dir, umidade: h.umidade, pressaoMsl: 1013, nuvens: 0, visibilidadeKm: 24, wmo: h.wmo, horaRef: h.hora }, v.pen, kp?.kp ?? null);
     return { ...h, ventoR: v, sc };
   });
@@ -223,6 +228,9 @@ export default function RotaDaProva() {
     const L: string[] = [];
     L.push(`🕊️ *PROVA #${provaSel.num} — ${provaSel.cidade}/${provaSel.estado} (${provaSel.km}km)*`);
     L.push(`📅 Solta: ${provaSel.diaSolta} ${provaSel.dataSolta.split("-").reverse().slice(0, 2).join("/")}`);
+    L.push(modo === "prova"
+      ? `🌡️ Previsão para o dia da soltura (${provaSel.dataSolta.split("-").reverse().slice(0, 2).join("/")})`
+      : `🌡️ Condições de AGORA (${hojeSP().split("-").reverse().slice(0, 2).join("/")}) — NÃO é a previsão do dia da prova`);
     if (media !== null) L.push(`\n🛣️ Rota com ${rota.length} pontos • score médio ${media}% • pior trecho: ${pior?.pt.nome} (${pior?.score?.pts}%)`);
     if (kp) L.push(`🧲 Kp ${kp.kp.toFixed(2)} — ${kp.kp <= 2 ? "calmo" : kp.kp <= 4 ? "instável" : "tempestade"}`);
     if (validos.length) {
@@ -245,7 +253,7 @@ export default function RotaDaProva() {
     if (janelaIdeal) L.push(`\n🕐 *Melhor janela de soltura: ${janelaIdeal.ini}–${janelaIdeal.fim}* (${janelaIdeal.pts}%)`);
     if (solSolta) L.push(`🌅 Nascer do sol na soltura: ${solSolta.nascer} → solta às ${horaSolta} (${infoSolta.replace("☀️ ", "")})`);
     if (minutosVoo) L.push(`⏱️ Chegada prevista: *${chegada(0.92)} – ${chegada(1.08)}*`);
-    L.push(`\n_${modo === "prova" ? "Previsão do dia da soltura" : "Condições atuais"} • Open-Meteo + NOAA • Nutri Pombos_`);
+    L.push(`\n_${modo === "prova" ? "Previsão do dia da soltura" : "ATENÇÃO: condições de agora, não do dia da prova"} • Open-Meteo + NOAA • Nutri Pombos_`);
     return L.join("\n");
   })();
 
@@ -278,7 +286,7 @@ export default function RotaDaProva() {
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             <span style={T.small}>Consultar:</span>
-            {([["agora", "📡 Agora"], ["prova", `🏁 Dia da soltura${provaSel ? ` (${provaSel.dataSolta.slice(8, 10)}/${provaSel.dataSolta.slice(5, 7)})` : ""}`]] as const).map(([k, lbl]) => (
+            {([["prova", `🏁 Dia da soltura${provaSel ? ` (${provaSel.dataSolta.slice(8, 10)}/${provaSel.dataSolta.slice(5, 7)})` : ""}`], ["agora", "📡 Agora"]] as const).map(([k, lbl]) => (
               <button key={k} onClick={() => setModo(k)} disabled={k === "prova" && !previsivel}
                 style={{ padding: "8px 12px", borderRadius: 9, fontSize: 11, fontWeight: 800, cursor: "pointer", color: modo === k ? T.bg : T.dim, background: modo === k ? T.gold : T.bgInput, border: `1px solid ${modo === k ? T.gold : T.border}`, opacity: k === "prova" && !previsivel ? 0.45 : 1 }}>
                 {lbl}
@@ -286,6 +294,11 @@ export default function RotaDaProva() {
             ))}
             <button onClick={() => provaSel && consultar(rota, modo, provaSel.dataSolta)} disabled={carregando} style={{ ...T.btnSm, opacity: carregando ? 0.6 : 1 }}>{carregando ? "⏳" : "↻ Atualizar"}</button>
           </div>
+          {modo === "agora" && previsivel && provaSel && (
+            <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 9, color: T.orange, background: "#f9731612", border: "1px solid #f9731655", fontSize: 12, lineHeight: 1.5 }}>
+              ⚠️ Você está vendo as condições de <b>AGORA ({hojeSP().split("-").reverse().slice(0, 2).join("/")})</b> — e não do dia da prova! A previsão de <b>{provaSel.dataSolta.split("-").reverse().slice(0, 2).join("/")}</b> já está disponível: toque em <b>🏁 Dia da soltura</b>.
+            </div>
+          )}
           {modo === "prova" && !previsivel && provaSel && (
             <div style={{ ...T.small, marginTop: 8, fontSize: 11, color: T.orange }}>
               ⚠️ A previsão do dia da soltura só fica disponível até {LIMITE_PREVISAO_DIAS} dias antes da prova {diasAte < 0 ? "(esta prova já foi realizada)" : `(faltam ${diasAte} dias)`}.

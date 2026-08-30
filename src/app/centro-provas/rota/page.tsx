@@ -11,7 +11,7 @@ import {
   buscarAr, classificarAr, buscarAltimetria, interpolarRota,
   buscarRadar, urlTileRadar, tileXY,
   aplicarPombalSalvo, getPombal, EVENTO_POMBAL, Coords,
-  HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM,
+  HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM, faseLua,
 } from "../lib/apis-gratis";
 import { loadConfig } from "../config";
 
@@ -162,6 +162,12 @@ export default function RotaDaProva() {
   }, [radar, radarPlay]);
 
   const base = pombal;
+
+  // 🛰️ Satélite opcional (Google, com API Key) + 🌙 lua da prova
+  const gKey = (loadConfig().mapaApiKey || "").trim();
+  const [modoMapa, setModoMapa] = useState<"radar" | "satelite">("radar");
+  const diaLua = modo === "prova" && provaSel ? provaSel.dataSolta : hojeSP();
+  const lua = provaSel ? faseLua(diaLua) : null;
   const pontosComScore = rota.map((pt, i) => {
     const d = dados[pt.chave];
     if (d && "clima" in d) {
@@ -317,6 +323,14 @@ export default function RotaDaProva() {
                 <div style={{ ...T.small, fontSize: 10 }}>SOL NO POMBAL</div>
                 <b style={{ color: T.gold, fontSize: 12 }}>{solPombal ? `${solPombal.nascer} → ${solPombal.por}` : "—"}</b>
               </div>
+              {lua && (
+                <div style={{ padding: 10, borderRadius: 9, background: "#ffffff08", textAlign: "center" }}>
+                  <div style={{ fontSize: 16 }}>{lua.emoji}</div>
+                  <div style={{ ...T.small, fontSize: 10 }}>LUA {modo === "prova" ? "NA PROVA" : "HOJE"}</div>
+                  <b style={{ color: T.gold, fontSize: 12 }}>{lua.iluminacao}%</b>
+                  <div style={{ ...T.small, fontSize: 9 }}>{lua.fase}</div>
+                </div>
+              )}
               {pior?.score && (
                 <div style={{ padding: 10, borderRadius: 9, background: `${pior.score.cor}12`, border: `1px solid ${pior.score.cor}55`, textAlign: "center" }}>
                   <div style={{ fontSize: 16 }}>⚠️</div>
@@ -385,16 +399,33 @@ export default function RotaDaProva() {
           <section style={T.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: T.gold }}>🛰️ Radar de Chuva ao Vivo na Rota</div>
-              {radar && (
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <button onClick={() => setRadarIdx((i) => (i - 1 + radar.frames.length) % radar.frames.length)} style={T.btnGhost}>‹</button>
-                  <button onClick={() => setRadarPlay((p) => !p)} style={T.btnSm}>{radarPlay ? "⏸" : "▶"}</button>
-                  <button onClick={() => setRadarIdx((i) => (i + 1) % radar.frames.length)} style={T.btnGhost}>›</button>
-                </div>
-              )}
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                {gKey && (
+                  <>
+                    <button onClick={() => setModoMapa("radar")} style={{ ...T.btnGhost, color: modoMapa === "radar" ? T.bg : T.white, background: modoMapa === "radar" ? T.gold : "#1b283c" }}>🛰️ Radar</button>
+                    <button onClick={() => setModoMapa("satelite")} style={{ ...T.btnGhost, color: modoMapa === "satelite" ? T.bg : T.white, background: modoMapa === "satelite" ? T.gold : "#1b283c" }}>🗺️ Satélite</button>
+                  </>
+                )}
+                {radar && modoMapa === "radar" && (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <button onClick={() => setRadarIdx((i) => (i - 1 + radar.frames.length) % radar.frames.length)} style={T.btnGhost}>‹</button>
+                    <button onClick={() => setRadarPlay((p) => !p)} style={T.btnSm}>{radarPlay ? "⏸" : "▶"}</button>
+                    <button onClick={() => setRadarIdx((i) => (i + 1) % radar.frames.length)} style={T.btnGhost}>›</button>
+                  </div>
+                )}
+              </div>
             </div>
-            {!radar && <div style={{ ...T.small, textAlign: "center", padding: 16 }}>⏳ Carregando radar de chuva...</div>}
-            {radar && (() => {
+            {modoMapa === "satelite" && gKey && rota.length > 1 && (
+              <div>
+                <iframe title="Satélite da rota" src={`https://www.google.com/maps/embed/v1/directions?key=${encodeURIComponent(gKey)}&origin=${rota[0].lat},${rota[0].lon}&destination=${pombal.lat},${pombal.lon}&language=pt-BR&region=br`} style={{ width: "100%", height: 380, border: 0, borderRadius: 12 }} loading="lazy" allowFullScreen />
+                <div style={{ ...T.small, fontSize: 11, marginTop: 6, textAlign: "center" }}>🛰️ Satélite Google — rota {rota[0].nome} → pombal (por estrada, referência) • o voo real é linha reta</div>
+              </div>
+            )}
+            {modoMapa === "radar" && !radar && <div style={{ ...T.small, textAlign: "center", padding: 16 }}>⏳ Carregando radar de chuva...</div>}
+            {modoMapa === "radar" && !gKey && radar && (
+              <div style={{ ...T.small, fontSize: 11, marginBottom: 8, textAlign: "center", color: T.dim }}>💡 Quer alternar com <b>satélite do Google</b> aqui? Configure em <b>Configuração → 🗺️ Mapa de Satélite</b></div>
+            )}
+            {modoMapa === "radar" && radar && (() => {
               const Z = 6;
               const lats = rota.map((p) => p.lat), lons = rota.map((p) => p.lon);
               const maxLat = Math.max(...lats) + 0.7, minLat = Math.min(...lats) - 0.7;

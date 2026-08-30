@@ -239,15 +239,15 @@ export default function RotaDaProva() {
       validos.forEach((v) => {
         const cl = climaDe(v);
         const c = cl ? `${cl.ventoKmh}km/h ${direcaoCardeal(cl.dirVento)}` : "";
-        const chuva = cl ? ` · 🌧️ ${cl.chuvaMm}mm${cl.wmo >= 95 ? " ⛈️" : cl.chuvaMm > 1 ? " ☔" : ""}` : "";
+        const chuva = cl ? ` · 🌧️ ${cl.chuvaMm}mm${cl.chuvaPct != null ? ` (${cl.chuvaPct}%)` : ""}${cl.wmo >= 95 ? " ⛈️" : cl.chuvaMm > 1 ? " ☔" : ""}` : "";
         const temp = cl ? ` · ${cl.temp}°C` : "";
         L.push(`${v.vento!.emoji} ${v.pt.nome}: ${v.vento!.tipo.toLowerCase()}${c ? ` (${c})` : ""}${temp}${chuva}`);
       });
-      const comChuva = validos.filter((v) => (climaDe(v)?.chuvaMm ?? 0) > 0.5);
+      const comChuva = validos.filter((v) => ((climaDe(v)?.chuvaMm ?? 0) > 0.5 || (climaDe(v)?.chuvaPct ?? 0) >= 50));
       if (comChuva.length) {
-        L.push(`\n☔ *Atenção — chuva em:* ${comChuva.map((v) => `${v.pt.nome} (${climaDe(v)!.chuvaMm}mm)`).join(", ")}`);
+        L.push(`\n☔ *Atenção — chuva em:* ${comChuva.map((v) => { const cl = climaDe(v)!; return `${v.pt.nome} (${cl.chuvaMm}mm${cl.chuvaPct != null ? ` · ${cl.chuvaPct}%` : ""})`; }).join(", ")}`);
       } else {
-        L.push("☂️ Sem chuva em nenhum ponto da rota");
+        L.push("☂️ Sem chuva prevista na janela do voo em nenhum ponto da rota");
       }
     }
     if (janelaIdeal) L.push(`\n🕐 *Melhor janela de soltura: ${janelaIdeal.ini}–${janelaIdeal.fim}* (${janelaIdeal.pts}%)`);
@@ -614,7 +614,7 @@ export default function RotaDaProva() {
                     {([
                       ["💨", "Vento", `${clima.ventoKmh} km/h ${direcaoCardeal(clima.dirVento)}`],
                       ["🌪️", "Rajada", `${clima.rajadaKmh} km/h`],
-                      ["🌧️", "Chuva", `${clima.chuvaMm} mm`],
+                      ["🌧️", "Chuva", `${clima.chuvaMm} mm${clima.chuvaPct != null ? ` (${clima.chuvaPct}%)` : ""}`],
                       ["💧", "Umidade", `${clima.umidade}%`],
                       ["🧭", "Pressão", `${clima.pressaoMsl} hPa`],
                       ["☁️", "Nuvens", `${clima.nuvens}%`],

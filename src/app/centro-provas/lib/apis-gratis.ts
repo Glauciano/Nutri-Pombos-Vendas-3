@@ -228,7 +228,8 @@ export function direcaoCardeal(deg: number): string {
 
 export interface ClimaPonto {
   temp: number;             // °C
-  chuvaMm: number;          // mm
+  chuvaMm: number;          // mm acumulados na janela do voo
+  chuvaPct?: number;        // % probabilidade máxima no dia
   ventoKmh: number;
   rajadaKmh: number;
   dirVento: number;         // graus (de onde o vento vem)
@@ -251,29 +252,35 @@ export async function buscarClimaPonto(lat: number, lon: number, dia?: string): 
   let j: Record<string, Record<string, unknown> | undefined>;
   let horaRef: string;
   if (dia) {
-    p.set("hourly", VARS_CLIMA);
+    p.set("hourly", `${VARS_CLIMA},precipitation_probability`);
     p.set("start_date", dia);
     p.set("end_date", dia);
-    horaRef = `09h de ${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
+    horaRef = `06h–20h de ${dia.slice(8, 10)}/${dia.slice(5, 7)} (janela do voo)`;
     const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     j = await r.json();
     const h = j.hourly;
     const tempos = (h?.time as string[]) || [];
-    const idx = tempos.findIndex((t) => t.endsWith("T09:00"));
-    if (!h || idx < 0) throw new Error("Sem previsão para esta data");
-    const pegar = (k: string): number => Number((h[k] as (number | null)[])?.[idx] ?? 0);
+    // Janela do voo: das 06h às 19h (o bando voa o dia todo, não só às 9h)
+    const janela: number[] = [];
+    tempos.forEach((t, i) => { const hh = Number(t.slice(11, 13)); if (hh >= 6 && hh <= 19) janela.push(i); });
+    if (!h || !janela.length) throw new Error("Sem previsão para esta data");
+    const pegar = (k: string, i: number): number => Number((h[k] as (number | null)[])?.[i] ?? 0);
+    const maxNa = (k: string): number => janela.reduce((m, i) => Math.max(m, pegar(k, i)), 0);
+    const minNa = (k: string): number => janela.reduce((m, i) => Math.min(m, pegar(k, i)), Infinity);
+    const idxRep = Math.max(0, tempos.findIndex((t) => t.endsWith("T12:00"))); // meio-dia como referência
     return {
-      temp: Math.round(pegar("temperature_2m")),
-      chuvaMm: +pegar("precipitation").toFixed(1),
-      ventoKmh: Math.round(pegar("wind_speed_10m")),
-      rajadaKmh: Math.round(pegar("wind_gusts_10m")),
-      dirVento: Math.round(pegar("wind_direction_10m")),
-      umidade: Math.round(pegar("relative_humidity_2m")),
-      pressaoMsl: Math.round(pegar("pressure_msl")),
-      nuvens: Math.round(pegar("cloud_cover")),
-      visibilidadeKm: Math.round(pegar("visibility") / 1000),
-      wmo: pegar("weather_code"),
+      temp: Math.round(pegar("temperature_2m", idxRep)),
+      chuvaMm: +janela.reduce((soma, i) => soma + pegar("precipitation", i), 0).toFixed(1),
+      chuvaPct: Math.round(maxNa("precipitation_probability")),
+      ventoKmh: Math.round(maxNa("wind_speed_10m")),
+      rajadaKmh: Math.round(maxNa("wind_gusts_10m")),
+      dirVento: Math.round(pegar("wind_direction_10m", idxRep)),
+      umidade: Math.round(pegar("relative_humidity_2m", idxRep)),
+      pressaoMsl: Math.round(pegar("pressure_msl", idxRep)),
+      nuvens: Math.round(maxNa("cloud_cover")),
+      visibilidadeKm: Math.round(minNa("visibility") / 1000),
+      wmo: janela.reduce((m, i) => Math.max(m, pegar("weather_code", i)), 0), // pior condição do dia de voo
       horaRef,
     };
   }

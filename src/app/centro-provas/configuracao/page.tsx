@@ -181,6 +181,19 @@ export default function Configuracao() {
           )}
         </section>
 
+        {/* 🗺️ MAPA DE SATÉLITE (Google) — opcional, com API Key própria */}
+        <section style={T.card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>🗺️ Mapa de Satélite (opcional)</div>
+          <div style={{ ...T.small, fontSize: 12, marginBottom: 12, lineHeight: 1.6 }}>
+            O app já usa mapas <b>gratuitos e sem chave</b> (OpenStreetMap + Esri + radar de chuva). Se quiser <b>imagem de satélite real</b> na soltura, cole aqui uma chave do <b>Google Maps Embed API</b> — ela é gratuita para este uso. Sem chave, tudo continua funcionando normalmente.
+          </div>
+          <label style={T.label}>Google Maps API Key (opcional)</label>
+          <input aria-label="Google Maps API Key" type="text" placeholder="AIza..." value={cfg.mapaApiKey || ""} onChange={(e) => setCfg((prev) => ({ ...prev, mapaApiKey: e.target.value.trim() }))} style={{ ...T.input, fontSize: 14 }} />
+          <div style={{ ...T.small, fontSize: 11, marginTop: 8, lineHeight: 1.6 }}>
+            Como obter: <a href="https://console.cloud.google.com/google/maps-embed-api" target="_blank" rel="noreferrer" style={{ color: T.blue }}>console.cloud.google.com</a> → ativar <b>Maps Embed API</b> → Credenciais → Criar chave. Depois toque em <b>💾 Salvar Configuração</b> lá embaixo.
+          </div>
+        </section>
+
         {/* 💾 BACKUP DOS DADOS — exportar / importar */}
         <section style={T.card}>
           <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>💾 Backup dos Dados</div>

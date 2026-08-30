@@ -12,6 +12,8 @@ export interface ConfigPlantel {
   soltaModo?: "auto" | "manual";
   soltaMinAposNascer?: number;
   soltaHoraManual?: string;
+  /** Chave do Google Maps Embed API (opcional — habilita mapa de satélite na soltura) */
+  mapaApiKey?: string;
 }
 
 export const DEFAULT_CONFIG: ConfigPlantel = {

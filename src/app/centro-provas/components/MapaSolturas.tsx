@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { classificarProva, diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
-import { Coords, geocodeCidade } from "../lib/apis-gratis";
+import { Coords, geocodeCidade, getPombal } from "../lib/apis-gratis";
+import { loadConfig } from "../config";
 import { T } from "../theme";
 
 const MAPA_KEY = "nutripombos-mapa-v3";
@@ -89,8 +90,21 @@ function Painel({prova,local,onEdit}:{prova:ProvaCalendario;local?:Local;onEdit:
   </div>
   {carregandoMapa&&<div style={{...T.small,textAlign:"center",marginTop:10}}>⏳ Localizando {prova.cidade} no mapa...</div>}
   {mapaAberto&&!carregandoMapa&&coordsMapa&&<div style={{marginTop:12}}>
-    <iframe title={`Mapa de ${prova.cidade}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${coordsMapa.lon-0.35},${coordsMapa.lat-0.25},${coordsMapa.lon+0.35},${coordsMapa.lat+0.25}&layer=mapnik&marker=${coordsMapa.lat},${coordsMapa.lon}`} style={{width:"100%",height:300,border:0,borderRadius:12,marginTop:4}} loading="lazy" />
-    <a href={`https://www.openstreetmap.org/?mlat=${coordsMapa.lat}&mlon=${coordsMapa.lon}#map=11/${coordsMapa.lat}/${coordsMapa.lon}`} target="_blank" rel="noreferrer" style={{...T.small,color:T.blue,display:"block",textAlign:"center",marginTop:8}}>📍 Abrir no OpenStreetMap ↗</a>
+    {(() => {
+      const gKey = (loadConfig().mapaApiKey || "").trim();
+      const pombal = getPombal();
+      if (gKey) {
+        return <div>
+          <iframe title={`Satélite de ${prova.cidade}`} src={`https://www.google.com/maps/embed/v1/directions?key=${encodeURIComponent(gKey)}&origin=${coordsMapa.lat},${coordsMapa.lon}&destination=${pombal.lat},${pombal.lon}&language=pt-BR&region=br`} style={{width:"100%",height:320,border:0,borderRadius:12,marginTop:4}} loading="lazy" allowFullScreen />
+          <div style={{...T.small,fontSize:11,marginTop:6,textAlign:"center"}}>🛰️ Satélite/rota Google (estrada — referência) • o voo real é linha reta até o pombal</div>
+        </div>;
+      }
+      return <div>
+        <iframe title={`Mapa de ${prova.cidade}`} src={`https://www.openstreetmap.org/export/embed.html?bbox=${coordsMapa.lon-0.35},${coordsMapa.lat-0.25},${coordsMapa.lon+0.35},${coordsMapa.lat+0.25}&layer=mapnik&marker=${coordsMapa.lat},${coordsMapa.lon}`} style={{width:"100%",height:300,border:0,borderRadius:12,marginTop:4}} loading="lazy" />
+        <a href={`https://www.openstreetmap.org/?mlat=${coordsMapa.lat}&mlon=${coordsMapa.lon}#map=11/${coordsMapa.lat}/${coordsMapa.lon}`} target="_blank" rel="noreferrer" style={{...T.small,color:T.blue,display:"block",textAlign:"center",marginTop:8}}>📍 Abrir no OpenStreetMap ↗</a>
+        <div style={{...T.small,fontSize:10,marginTop:6,textAlign:"center",color:T.dim}}>💡 Quer satélite do Google aqui? Configure em Configuração → 🗺️ Mapa de Satélite</div>
+      </div>;
+    })()}
   </div>}
   {mapaAberto&&!carregandoMapa&&coordsMapa===false&&<div style={{...T.small,color:T.orange,marginTop:10}}>⚠️ Não foi possível localizar {prova.cidade} automaticamente. <a href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(prova.cidade+" "+prova.estado)}`} target="_blank" rel="noreferrer" style={{color:T.blue}}>Pesquisar manualmente ↗</a></div>}
   </section>}

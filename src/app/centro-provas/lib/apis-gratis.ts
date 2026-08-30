@@ -107,29 +107,36 @@ export interface AeroClimaReal {
 }
 
 export async function buscarAeroClima(lat: number, lon: number): Promise<AeroClimaReal> {
+  const CURRENT_VARS = "temperature_2m,pressure_msl,surface_pressure,cloud_cover,visibility,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m";
   const p = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
-    current: "temperature_2m,pressure_msl,surface_pressure,cloud_cover,visibility,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m",
+    current: CURRENT_VARS,
     hourly: "pressure_msl",
     past_hours: "4",
     forecast_hours: "1",
     timezone: "America/Sao_Paulo",
   });
-  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
+  // 1ª tentativa (com tendência); se falhar, retry simplificado só com dados atuais
+  let r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
+  if (!r.ok) {
+    const p2 = new URLSearchParams({ latitude: String(lat), longitude: String(lon), current: CURRENT_VARS, timezone: "America/Sao_Paulo" });
+    r = await fetch(`https://api.open-meteo.com/v1/forecast?${p2}`);
+  }
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const j = await r.json();
   const c = j?.current;
   if (!c) throw new Error("Resposta climática inválida");
 
-  // Tendência barométrica: compara a pressão atual com a de 3 horas atrás
+  // Tendência barométrica: compara a hora atual com a de 3 horas atrás (tolerância a minutos)
   let tendencia3h = 0;
   try {
     const tempos: string[] = j.hourly?.time || [];
     const pressoes: number[] = j.hourly?.pressure_msl || [];
     if (pressoes.length > 1) {
-      let idx = tempos.findIndex((t) => t === c.time);
-      if (idx < 0) idx = pressoes.length - 1;
+      const agora = String(c.time || "");
+      let idx = tempos.findIndex((t) => t === agora);
+      if (idx < 0) idx = tempos.reduce((acc, t, i) => (t.slice(0, 13) <= agora.slice(0, 13) ? i : acc), 0);
       const idxPassado = Math.max(0, idx - 3);
       tendencia3h = +(pressoes[idx] - pressoes[idxPassado]).toFixed(1);
     }

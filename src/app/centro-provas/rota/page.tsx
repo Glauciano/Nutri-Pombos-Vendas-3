@@ -226,11 +226,21 @@ export default function RotaDaProva() {
     if (media !== null) L.push(`\n🛣️ Rota com ${rota.length} pontos • score médio ${media}% • pior trecho: ${pior?.pt.nome} (${pior?.score?.pts}%)`);
     if (kp) L.push(`🧲 Kp ${kp.kp.toFixed(2)} — ${kp.kp <= 2 ? "calmo" : kp.kp <= 4 ? "instável" : "tempestade"}`);
     if (validos.length) {
-      L.push("\n💨 *Vento por trecho:*");
+      L.push("\n💨🌧️ *Vento e chuva por trecho:*");
+      const climaDe = (v: typeof validos[number]) => (v.d && "clima" in v.d ? v.d.clima : null);
       validos.forEach((v) => {
-        const c = v.d && "clima" in v.d ? `${v.d.clima.ventoKmh}km/h ${direcaoCardeal(v.d.clima.dirVento)}` : "";
-        L.push(`${v.vento!.emoji} ${v.pt.nome}: ${v.vento!.tipo.toLowerCase()}${c ? ` (${c})` : ""}`);
+        const cl = climaDe(v);
+        const c = cl ? `${cl.ventoKmh}km/h ${direcaoCardeal(cl.dirVento)}` : "";
+        const chuva = cl ? ` · 🌧️ ${cl.chuvaMm}mm${cl.wmo >= 95 ? " ⛈️" : cl.chuvaMm > 1 ? " ☔" : ""}` : "";
+        const temp = cl ? ` · ${cl.temp}°C` : "";
+        L.push(`${v.vento!.emoji} ${v.pt.nome}: ${v.vento!.tipo.toLowerCase()}${c ? ` (${c})` : ""}${temp}${chuva}`);
       });
+      const comChuva = validos.filter((v) => (climaDe(v)?.chuvaMm ?? 0) > 0.5);
+      if (comChuva.length) {
+        L.push(`\n☔ *Atenção — chuva em:* ${comChuva.map((v) => `${v.pt.nome} (${climaDe(v)!.chuvaMm}mm)`).join(", ")}`);
+      } else {
+        L.push("☂️ Sem chuva em nenhum ponto da rota");
+      }
     }
     if (janelaIdeal) L.push(`\n🕐 *Melhor janela de soltura: ${janelaIdeal.ini}–${janelaIdeal.fim}* (${janelaIdeal.pts}%)`);
     if (solSolta) L.push(`🌅 Nascer do sol na soltura: ${solSolta.nascer} → solta às ${horaSolta} (${infoSolta.replace("☀️ ", "")})`);

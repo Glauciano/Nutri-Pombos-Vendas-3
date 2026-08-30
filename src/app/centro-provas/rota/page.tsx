@@ -126,15 +126,17 @@ export default function RotaDaProva() {
   }, [radar, radarPlay]);
 
   const base = pombal;
-  const pontosComScore = rota.map((pt) => {
+  const pontosComScore = rota.map((pt, i) => {
     const d = dados[pt.chave];
     if (d && "clima" in d) {
-      const bearing = bearingRota(pt.lat, pt.lon, base.lat, base.lon);
+      // No pombal (chegada) o rumo correto é o do TRECHO FINAL: da última cidade até o pombal
+      const origem = pt.papel === "pombal" && i > 0 ? rota[i - 1] : pt;
+      const bearing = bearingRota(origem.lat, origem.lon, base.lat, base.lon);
       const vento = ventoNaRota(d.clima.dirVento, bearing);
       const score = scorePonto(d.clima, vento.pen, kp?.kp ?? null);
-      return { pt, d, vento, score };
+      return { pt, d, vento, score, bearing, trechoFinal: pt.papel === "pombal" && i > 0 ? rota[i - 1].nome : null };
     }
-    return { pt, d, vento: null, score: null };
+    return { pt, d, vento: null, score: null, bearing: null, trechoFinal: null };
   });
   const validos = pontosComScore.filter((x) => x.score);
   const pior = validos.length ? validos.reduce((a, b) => (a.score!.pts < b.score!.pts ? a : b)) : null;
@@ -360,7 +362,7 @@ export default function RotaDaProva() {
         )}
 
         {/* Pontos da rota */}
-        {pontosComScore.map(({ pt, d, vento, score }) => {
+        {pontosComScore.map(({ pt, d, vento, score, bearing, trechoFinal }) => {
           const clima = d && "clima" in d ? d.clima : null;
           const wi = clima ? wmoInfo(clima.wmo) : null;
           return (
@@ -416,7 +418,7 @@ export default function RotaDaProva() {
                     ))}
                   </div>
                   <div style={{ padding: 10, marginTop: 10, borderRadius: 9, color: vento.cor, background: `${vento.cor}12`, border: `1px solid ${vento.cor}55`, fontSize: 12 }}>
-                    {vento.emoji} <b>{vento.tipo}</b> nesta parte do percurso — o vento vem de {direcaoCardeal(clima.dirVento)} ({clima.dirVento}°) e o bando voa rumo {direcaoCardeal(bearingRota(pt.lat, pt.lon, base.lat, base.lon))} em direção ao pombal.
+                    {vento.emoji} <b>{vento.tipo}</b> {trechoFinal ? `no trecho final (${trechoFinal} → pombal)` : "nesta parte do percurso"} — o vento vem de {direcaoCardeal(clima.dirVento)} ({clima.dirVento}°), o bando voa rumo {direcaoCardeal(bearing ?? 0)} ({bearing ?? 0}°) e o vento {vento.tipo === "Vento a favor" ? "🔥 EMPURRA o bando na direção do voo" : vento.tipo === "Vento contra" ? "🛑 FREIA o bando de frente" : "↔️ EMPURRA o bando de lado"}.
                   </div>
                   {ar[pt.chave] && (() => {
                     const info = classificarAr(ar[pt.chave]!);

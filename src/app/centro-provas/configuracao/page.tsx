@@ -102,6 +102,8 @@ export default function Configuracao() {
             <button type="button" onClick={salvarLocalPombal} style={{ ...T.btn, flex: 1 }}>{pombalSalvo ? "✅ Salvo! Todas as páginas atualizam sozinhas" : "💾 Salvar localização"}</button>
           </div>
           {gpsMsg && <div style={{ ...T.small, fontSize: 12, marginTop: 10, color: gpsMsg.startsWith("✅") ? T.green : T.orange }}>{gpsMsg}</div>}
+          {pombal.lat > 0 && <div style={{ ...T.small, fontSize: 12, marginTop: 10, color: T.red }}>⚠️ Latitude positiva fica no hemisfério NORTE — no Brasil ela é negativa (ex.: Limeira = <b>-22.8864</b>). Confira antes de salvar!</div>}
+          {pombal.lat >= -34 && pombal.lat <= 5 && pombal.lon >= -74 && pombal.lon <= -30 ? null : <div style={{ ...T.small, fontSize: 12, marginTop: 10, color: T.orange }}>⚠️ Essas coordenadas estão fora do Brasil — confira os sinais (sul = latitude negativa, oeste = longitude negativa).</div>}
           <div style={{ ...T.small, fontSize: 11, marginTop: 10, lineHeight: 1.6 }}>
             💡 Não sabe as coordenadas? Abra o <a href="https://www.openstreetmap.org" target="_blank" rel="noreferrer" style={{ color: T.blue }}>OpenStreetMap</a>, clique com o botão direito no seu pombal → "Mostrar endereço" e copie os números (ex.: Limeira ≈ latitude <b>-22.8864</b>, longitude <b>-47.4017</b>). Negativo = sul/oeste.
           </div>

@@ -24,7 +24,7 @@ export default function ClimaAvancadoSoltura() {
   const [erroReal, setErroReal] = useState("");
 
   const aplicarDadosReais = useCallback((d: AeroClimaReal) => {
-    setPressaoHpa(d.pressaoMsl);
+    if (d.pressaoMsl > 0) setPressaoHpa(d.pressaoMsl);
     setVisibilidadeKm(Math.max(1, Math.min(50, d.visibilidadeKm)));
     setUmidade(Math.max(10, Math.min(100, d.umidade)));
     // Tendência barométrica das últimas 3h
@@ -186,7 +186,7 @@ export default function ClimaAvancadoSoltura() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8 }}>
                 {([
                   ["🌡️", "Temperatura", `${dadosReais.temp}°C`],
-                  ["🧭", "Pressão (mar)", `${dadosReais.pressaoMsl} hPa`],
+                  ["🧭", "Pressão (mar)", dadosReais.pressaoMsl > 0 ? `${dadosReais.pressaoMsl} hPa` : "—"],
                   ["📉", "Tendência 3h", `${dadosReais.tendencia3h > 0 ? "+" : ""}${dadosReais.tendencia3h} hPa`],
                   ["☁️", "Nuvens", `${dadosReais.coberturaNuvens}%`],
                   ["👁️", "Visibilidade", `${dadosReais.visibilidadeKm} km`],

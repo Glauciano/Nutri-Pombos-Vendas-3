@@ -144,8 +144,8 @@ export async function buscarAeroClima(lat: number, lon: number): Promise<AeroCli
 
   return {
     temp: Math.round(Number(c.temperature_2m ?? 0)),
-    pressaoMsl: Math.round(c.pressao_msl),
-    pressaoLocal: Math.round(c.surface_pressure),
+    pressaoMsl: Math.round(Number(c.pressure_msl ?? c.surface_pressure ?? 0)) || 0,
+    pressaoLocal: Math.round(Number(c.surface_pressure ?? 0)) || 0,
     tendencia3h,
     coberturaNuvens: Math.round(c.cloud_cover ?? 0),
     visibilidadeKm: Math.max(0, Math.round((c.visibility ?? 0) / 1000)),
@@ -290,7 +290,7 @@ export async function buscarClimaPonto(lat: number, lon: number, dia?: string): 
     rajadaKmh: Math.round(Number(c.wind_gusts_10m)),
     dirVento: Math.round(Number(c.wind_direction_10m)),
     umidade: Math.round(Number(c.relative_humidity_2m)),
-    pressaoMsl: Math.round(Number(c.pressure_msl)),
+    pressaoMsl: Math.round(Number(c.pressure_msl ?? 0)) || 0,
     nuvens: Math.round(Number(c.cloud_cover)),
     visibilidadeKm: Math.round(Number(c.visibility) / 1000),
     wmo: Number(c.weather_code),

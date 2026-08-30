@@ -8,12 +8,18 @@ export interface ConfigPlantel {
   pombalNome?: string;
   pombalLat?: number;
   pombalLon?: number;
+  /** Horário da soltura: automático (minutos após o nascer do sol) ou manual */
+  soltaModo?: "auto" | "manual";
+  soltaMinAposNascer?: number;
+  soltaHoraManual?: string;
 }
 
 export const DEFAULT_CONFIG: ConfigPlantel = {
   consumoDiario: 30,
   quantidadePombos: 20,
   condicaoCorporal: "Ideal",
+  soltaModo: "auto",
+  soltaMinAposNascer: 20,
 };
 
 export function loadConfig(): ConfigPlantel {

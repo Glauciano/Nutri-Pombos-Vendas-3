@@ -11,8 +11,9 @@ import {
   buscarAr, classificarAr, buscarAltimetria, interpolarRota,
   buscarRadar, urlTileRadar, tileXY,
   aplicarPombalSalvo, getPombal, EVENTO_POMBAL, Coords,
-  HoraSolta, buscarJanelaSolta, hojeSP,
+  HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM,
 } from "../lib/apis-gratis";
+import { loadConfig } from "../config";
 
 type Modo = "agora" | "prova";
 
@@ -39,6 +40,13 @@ export default function RotaDaProva() {
   const [radar, setRadar] = useState<{ host: string; frames: FrameRadar[] } | null>(null);
   const [radarIdx, setRadarIdx] = useState(0);
   const [radarPlay, setRadarPlay] = useState(true);
+  // 🏁 Configuração de soltura (Configuração → Horário da Soltura)
+  const [cfgSolta, setCfgSolta] = useState<{ modo: "auto" | "manual"; min: number; manual: string }>({ modo: "auto", min: 20, manual: "07:00" });
+  useEffect(() => {
+    const c = loadConfig();
+    setCfgSolta({ modo: c.soltaModo === "manual" ? "manual" : "auto", min: c.soltaMinAposNascer ?? 20, manual: c.soltaHoraManual || "07:00" });
+  }, []);
+
   // 🕐 Janela ideal de soltura + ⏱️ previsão de chegada
   const [janela, setJanela] = useState<{ solta: HoraSolta[]; pombal: HoraSolta[] } | null>(null);
   const [janelaErro, setJanelaErro] = useState("");
@@ -190,7 +198,12 @@ export default function RotaDaProva() {
   // ⏱️ Previsão de chegada (média histórica ajustada pelo vento)
   const fatorVento = pior?.vento?.tipo === "Vento contra" ? 0.82 : pior?.vento?.tipo === "Vento lateral" ? 0.95 : 1.08;
   const veloEstimada = Math.round((veloBase || 1200) * fatorVento);
-  const horaSolta = janelaIdeal ? janelaIdeal.ini : "07:00";
+  // 🏁 horário de soltura configurável: automático (nascer do sol real + minutos) ou manual
+  const horaSoltaAuto = solSolta?.nascer ? somarMinutosHHMM(solSolta.nascer, cfgSolta.min) : janelaIdeal?.ini || "07:00";
+  const horaSolta = cfgSolta.modo === "manual" && cfgSolta.manual ? cfgSolta.manual : horaSoltaAuto;
+  const infoSolta = cfgSolta.modo === "manual"
+    ? "horário fixo configurado"
+    : solSolta?.nascer ? `☀️ nascer ${solSolta.nascer} + ${cfgSolta.min}min` : "aguardando nascer do sol";
   const minutosVoo = provaSel ? Math.round((provaSel.km * 1000) / veloEstimada) : 0;
   const chegada = (fator: number) => {
     const [H, M] = horaSolta.split(":").map(Number);
@@ -214,7 +227,8 @@ export default function RotaDaProva() {
       });
     }
     if (janelaIdeal) L.push(`\n🕐 *Melhor janela de soltura: ${janelaIdeal.ini}–${janelaIdeal.fim}* (${janelaIdeal.pts}%)`);
-    if (minutosVoo) L.push(`⏱️ Chegada prevista: *${chegada(0.92)} – ${chegada(1.08)}* (soltando às ${horaSolta})`);
+    if (solSolta) L.push(`🌅 Nascer do sol na soltura: ${solSolta.nascer} → solta às ${horaSolta} (${infoSolta.replace("☀️ ", "")})`);
+    if (minutosVoo) L.push(`⏱️ Chegada prevista: *${chegada(0.92)} – ${chegada(1.08)}*`);
     L.push(`\n_${modo === "prova" ? "Previsão do dia da soltura" : "Condições atuais"} • Open-Meteo + NOAA • Nutri Pombos_`);
     return L.join("\n");
   })();
@@ -455,9 +469,10 @@ export default function RotaDaProva() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(92px, 1fr))", gap: 6 }}>
                 {horasScored.map((h) => {
                   const naJanela = janelaIdeal ? h.hora >= janelaIdeal.ini && h.hora < janelaIdeal.fim : false;
+                  const eHoraSolta = h.hora.slice(0, 2) === horaSolta.slice(0, 2);
                   return (
-                    <div key={h.hora} style={{ padding: 8, borderRadius: 8, background: naJanela ? `${h.sc.cor}18` : "#ffffff08", border: `1px solid ${naJanela ? `${h.sc.cor}66` : T.border}`, textAlign: "center" }}>
-                      <b style={{ fontSize: 12, color: naJanela ? h.sc.cor : T.white }}>{h.hora}</b>
+                    <div key={h.hora} style={{ padding: 8, borderRadius: 8, background: naJanela ? `${h.sc.cor}18` : "#ffffff08", border: `1px solid ${naJanela ? `${h.sc.cor}66` : T.border}`, textAlign: "center", outline: eHoraSolta ? `2px solid ${T.gold}` : "none" }}>
+                      <b style={{ fontSize: 12, color: naJanela ? h.sc.cor : T.white }}>{h.hora}{eHoraSolta ? " 🏁" : ""}</b>
                       <div style={{ fontSize: 15 }}>{wmoInfo(h.wmo).emoji}</div>
                       <div style={{ ...T.small, fontSize: 9 }}>{h.temp}° · 🌧️ {h.chuva}mm</div>
                       <div style={{ ...T.small, fontSize: 9 }}>{h.ventoR.emoji} {h.vento}km/h</div>
@@ -467,7 +482,7 @@ export default function RotaDaProva() {
                 })}
               </div>
             )}
-            {janela && <div style={{ ...T.small, fontSize: 11, marginTop: 8 }}>Cada hora recebe um score (vento na rota + chuva + rajadas + temperatura). Fonte: Open-Meteo (gratuito, sem chave).</div>}
+            {janela && <div style={{ ...T.small, fontSize: 11, marginTop: 8 }}>Cada hora recebe um score (vento na rota + chuva + rajadas + temperatura). 🏁 = hora da sua soltura ({horaSolta} — {infoSolta}). Fonte: Open-Meteo (gratuito, sem chave).</div>}
           </section>
         )}
 
@@ -489,6 +504,7 @@ export default function RotaDaProva() {
               ))}
             </div>
             <div style={{ ...T.small, fontSize: 11, marginTop: 8, lineHeight: 1.5 }}>
+              ⚙️ Soltura: <b>{infoSolta}</b> — ajustável em <b>Configuração → 🏁 Horário da Soltura</b>.<br />
               {veloBase
                 ? `Base: sua média histórica de ${veloBase} m/min, ajustada pelo vento da rota (${pior?.vento?.tipo?.toLowerCase() || "—"} no pior trecho).`
                 : "Base: 1200 m/min (estimativa padrão) — registre seus resultados no Histórico para a previsão usar a média do SEU plantel."}

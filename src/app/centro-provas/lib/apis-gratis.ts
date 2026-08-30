@@ -520,3 +520,10 @@ export function confortoTermico(temp: number, umidade: number): { label: string;
   if (di >= 15) return { label: `Confortável (ID ${di.toFixed(0)})`, cor: "#39e58c", emoji: "😊", rec: "Faixa ideal de conforto térmico para o plantel." };
   return { label: `Frio (ID ${di.toFixed(0)})`, cor: "#55a3ff", emoji: "🥶", rec: "Aumente energia da mistura (milho/girassol) e proteja o pombal do vento." };
 }
+
+/** Soma minutos a um horário HH:MM (com virada de dia) */
+export function somarMinutosHHMM(hhmm: string, minutos: number): string {
+  const [H, M] = hhmm.split(":").map(Number);
+  const tot = ((H || 0) * 60 + (M || 0) + minutos + 1440 * 7) % 1440;
+  return `${String(Math.floor(tot / 60)).padStart(2, "0")}:${String(tot % 60).padStart(2, "0")}`;
+}

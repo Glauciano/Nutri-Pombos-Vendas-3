@@ -151,6 +151,36 @@ export default function Configuracao() {
           </div>
         </section>
 
+        {/* 🏁 HORÁRIO DA SOLTURA — automático (pós nascer do sol) ou manual */}
+        <section style={T.card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>🏁 Horário da Soltura</div>
+          <div style={{ ...T.small, fontSize: 12, marginBottom: 12, lineHeight: 1.6 }}>
+            A previsão de chegada na <b>Rota da Prova</b> usa este horário. No modo automático, o app soma os minutos ao <b>nascer do sol real</b> da cidade da soltura naquele dia.
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+            {([["auto", "☀️ Automático (após o nascer do sol)"], ["manual", "✏️ Manual (horário fixo)"]] as const).map(([val, lbl]) => (
+              <button key={val} type="button" onClick={() => setCfg((prev) => ({ ...prev, soltaModo: val }))} style={{ padding: "12px 8px", borderRadius: 10, cursor: "pointer", fontSize: 12, fontWeight: 800, background: (cfg.soltaModo || "auto") === val ? T.gold : T.bgInput, color: (cfg.soltaModo || "auto") === val ? T.bg : T.dim, border: (cfg.soltaModo || "auto") === val ? `2px solid ${T.gold}` : `1px solid ${T.border}` }}>{lbl}</button>
+            ))}
+          </div>
+          {(cfg.soltaModo || "auto") === "auto" ? (
+            <div>
+              <label style={T.label}>Minutos após o nascer do sol</label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 6, marginBottom: 8 }}>
+                {[0, 10, 15, 20, 30, 45].map((m) => (
+                  <button key={m} type="button" onClick={() => setCfg((prev) => ({ ...prev, soltaMinAposNascer: m }))} style={{ padding: "10px 4px", borderRadius: 9, cursor: "pointer", fontSize: 13, fontWeight: 800, background: (cfg.soltaMinAposNascer ?? 20) === m ? T.gold : T.bgInput, color: (cfg.soltaMinAposNascer ?? 20) === m ? T.bg : T.dim, border: (cfg.soltaMinAposNascer ?? 20) === m ? `2px solid ${T.gold}` : `1px solid ${T.border}` }}>{m === 0 ? "Junto" : `+${m}`}</button>
+                ))}
+              </div>
+              <input aria-label="Minutos após o nascer do sol" type="number" min={0} max={180} value={cfg.soltaMinAposNascer ?? 20} onChange={(e) => setCfg((prev) => ({ ...prev, soltaMinAposNascer: Math.max(0, Math.min(180, Number(e.target.value))) }))} style={{ ...T.input, textAlign: "center", fontSize: 16, fontWeight: 700 }} />
+              <div style={{ ...T.small, fontSize: 11, marginTop: 6 }}>Ex.: nascer às 06:22 + {cfg.soltaMinAposNascer ?? 20}min = solta às <b style={{ color: T.gold }}>{(() => { const [h, m] = "06:22".split(":").map(Number); const t = h * 60 + m + (cfg.soltaMinAposNascer ?? 20); return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`; })()}</b></div>
+            </div>
+          ) : (
+            <div>
+              <label style={T.label}>Horário fixo da soltura</label>
+              <input aria-label="Horário fixo da soltura" type="time" value={cfg.soltaHoraManual || "07:00"} onChange={(e) => setCfg((prev) => ({ ...prev, soltaHoraManual: e.target.value }))} style={{ ...T.input, textAlign: "center", fontSize: 20, fontWeight: 800 }} />
+            </div>
+          )}
+        </section>
+
         {/* 💾 BACKUP DOS DADOS — exportar / importar */}
         <section style={T.card}>
           <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>💾 Backup dos Dados</div>

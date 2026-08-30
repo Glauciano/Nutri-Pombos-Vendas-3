@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { classificarProva, diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
 import { T } from "../theme";
@@ -11,7 +11,7 @@ import {
   buscarAr, classificarAr, buscarAltimetria, interpolarRota,
   buscarRadar, urlTileRadar, tileXY,
   aplicarPombalSalvo, getPombal, EVENTO_POMBAL, Coords,
-  HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM, faseLua,
+  HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM, faseLua, distanciaKmHaversine,
 } from "../lib/apis-gratis";
 import { loadConfig } from "../config";
 
@@ -21,6 +21,13 @@ type PontoRota = { chave: string; nome: string; estado: string; km: number; lat:
 type DadosPonto = { clima: ClimaPonto } | { erro: string };
 
 const LIMITE_PREVISAO_DIAS = 16;
+
+type CompDia = { data: string; label: string; media: number; chuvaTotal: number; pior: { nome: string; pts: number } | null; scoreSolta: number | null; vencedor?: boolean };
+
+function nomeDiaSemana(dataISO: string): string {
+  const s = new Date(`${dataISO}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "long" });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export default function RotaDaProva() {
   const [provas, setProvas] = useState<ProvaCalendario[]>([]);
@@ -52,6 +59,18 @@ export default function RotaDaProva() {
   const [janelaErro, setJanelaErro] = useState("");
   const [veloBase, setVeloBase] = useState<number | null>(null);
   const [copiado, setCopiado] = useState(false);
+  // 🔔 Alarme de chegada
+  const [alarmeAtivo, setAlarmeAtivo] = useState(false);
+  const [alarmeHora, setAlarmeHora] = useState<string | null>(null);
+  const [alarmeMsg, setAlarmeMsg] = useState("");
+  const alarmeDisparadoRef = useRef(false);
+  // 📅 Comparação sábado × domingo
+  const [compDias, setCompDias] = useState<CompDia[] | null>(null);
+  const [compCarregando, setCompCarregando] = useState(false);
+  // 🧭 Bússola da soltura
+  const [bussola, setBussola] = useState<{ lat: number; lon: number; distKm: number; bearing: number } | null>(null);
+  const [bussolaErro, setBussolaErro] = useState("");
+  const [heading, setHeading] = useState<number | null>(null);
 
   // 🏠 Pombal configurável (Configuração → Localização do Pombal)
   const [pombal, setPombalState] = useState<Coords & { nome: string }>(() => ({ ...COORDS[POMBAL_BASE], nome: POMBAL_BASE }));
@@ -283,6 +302,161 @@ export default function RotaDaProva() {
     return L.join("\n");
   })();
 
+  // 🔔 ALARME DE CHEGADA — toca 15 min antes da chegada prevista (página aberta)
+  const ativarAlarme = async () => {
+    if (alarmeAtivo) { setAlarmeAtivo(false); setAlarmeMsg(""); return; }
+    const hora = somarMinutosHHMM(chegada(0.92), -15);
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      try { await Notification.requestPermission(); } catch { /* segue sem notificação */ }
+    }
+    alarmeDisparadoRef.current = false;
+    setAlarmeHora(hora);
+    setAlarmeAtivo(true);
+  };
+
+  useEffect(() => {
+    if (!alarmeAtivo || !alarmeHora) return;
+    const checar = () => {
+      if (alarmeDisparadoRef.current) return;
+      const agora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
+      if (agora >= alarmeHora) {
+        alarmeDisparadoRef.current = true;
+        try { navigator.vibrate?.([300, 150, 300]); } catch { /* sem vibração */ }
+        try {
+          const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+          const ctx = new Ctx();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.frequency.value = 880; g.gain.value = 0.25;
+          o.start();
+          window.setTimeout(() => { try { o.stop(); ctx.close(); } catch { /* ignora */ } }, 500);
+        } catch { /* sem som */ }
+        const corpo = `Chegada prevista ${chegada(0.92)}–${chegada(1.08)} — fica de olho no céu!`;
+        (async () => {
+          try {
+            const reg = await navigator.serviceWorker?.getRegistration();
+            if (reg) reg.showNotification("👀 Chegada próxima!", { body: corpo, icon: "/icon.svg", tag: "nutripombos-chegada" });
+            else if (typeof Notification !== "undefined") new Notification("👀 Chegada próxima!", { body: corpo, icon: "/icon.svg" });
+          } catch { /* ignora */ }
+        })();
+        setAlarmeMsg(`👀 HORA DE OLHAR O CÉU! Chegada prevista ${chegada(0.92)}–${chegada(1.08)}`);
+      }
+    };
+    checar();
+    const t = window.setInterval(checar, 15000);
+    return () => window.clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alarmeAtivo, alarmeHora]);
+
+  // 📅 SÁBADO × DOMINGO — mesma rota nos dois dias, qual é melhor?
+  const compararDias = async () => {
+    if (!provaSel || !rota.length) return;
+    setCompCarregando(true);
+    setCompDias(null);
+    const d2 = new Date(`${provaSel.dataSolta}T12:00:00`);
+    d2.setDate(d2.getDate() + 1);
+    const dia2 = d2.toISOString().slice(0, 10);
+    const alvo: [string, string][] = [[provaSel.dataSolta, provaSel.diaSolta || nomeDiaSemana(provaSel.dataSolta)], [dia2, nomeDiaSemana(dia2)]];
+    const saida: CompDia[] = [];
+    for (const [data, label] of alvo) {
+      const pontos = await Promise.all(rota.map(async (pt, i) => {
+        try {
+          const clima = await buscarClimaPonto(pt.lat, pt.lon, data);
+          const origem = pt.papel === "pombal" && i > 0 ? rota[i - 1] : pt;
+          const b = bearingRota(origem.lat, origem.lon, base.lat, base.lon);
+          const v = ventoNaRota(clima.dirVento, b, clima.ventoKmh);
+          const sc = scorePonto(clima, v.pen, null);
+          return { nome: pt.nome, pts: sc.pts, chuva: clima.chuvaMm, solta: i === 0 };
+        } catch { return null; }
+      }));
+      const ok2 = pontos.filter((x): x is NonNullable<typeof x> => x !== null);
+      if (!ok2.length) { saida.push({ data, label, media: 0, chuvaTotal: 0, pior: null, scoreSolta: null }); continue; }
+      saida.push({
+        data, label,
+        media: Math.round(ok2.reduce((soma, x) => soma + x.pts, 0) / ok2.length),
+        chuvaTotal: +ok2.reduce((soma, x) => soma + x.chuva, 0).toFixed(1),
+        pior: ok2.reduce((p, x) => (x.pts < p.pts ? x : p)),
+        scoreSolta: ok2.find((x) => x.solta)?.pts ?? null,
+      });
+    }
+    if (saida[0].media !== saida[1].media) (saida[0].media > saida[1].media ? saida[0] : saida[1]).vencedor = true;
+    else (saida[0].chuvaTotal <= saida[1].chuvaTotal ? saida[0] : saida[1]).vencedor = true;
+    setCompDias(saida);
+    setCompCarregando(false);
+  };
+
+  // 🧭 BÚSSOLA DA SOLTURA — seta apontando o pombal a partir do GPS
+  const ativarBussola = () => {
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) { setBussolaErro("GPS não suportado neste aparelho."); return; }
+    setBussolaErro("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude, lon = pos.coords.longitude;
+        setBussola({ lat, lon, distKm: distanciaKmHaversine(lat, lon, pombal.lat, pombal.lon), bearing: bearingRota(lat, lon, pombal.lat, pombal.lon) });
+      },
+      () => setBussolaErro("Não foi possível obter o GPS — verifique a permissão de localização."),
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  };
+
+  useEffect(() => {
+    if (!bussola) return;
+    const handler = (e: Event) => {
+      const ev = e as unknown as { webkitCompassHeading?: number; alpha?: number | null; absolute?: boolean };
+      let h: number | null = null;
+      if (typeof ev.webkitCompassHeading === "number") h = ev.webkitCompassHeading;
+      else if (ev.absolute && ev.alpha != null) h = (360 - ev.alpha) % 360;
+      if (h != null) setHeading(h);
+    };
+    window.addEventListener("deviceorientationabsolute", handler as EventListener);
+    window.addEventListener("deviceorientation", handler as EventListener);
+    return () => {
+      window.removeEventListener("deviceorientationabsolute", handler as EventListener);
+      window.removeEventListener("deviceorientation", handler as EventListener);
+    };
+  }, [bussola]);
+
+  const dadoSolta = rota.length ? dados[rota[0].chave] : undefined;
+  const climaSoltaBussola = dadoSolta && "clima" in dadoSolta ? dadoSolta.clima : null;
+  // 🖨️ Relatório da prova — abre versão pra imprimir / salvar PDF
+  const gerarRelatorio = () => {
+    if (!provaSel) return;
+    const linhasTabela = pontosComScore.map(({ pt, d, vento, score }) => {
+      const cl = d && "clima" in d ? d.clima : null;
+      return `<tr>
+        <td><b>${pt.papel === "pombal" ? "🏠 " : pt.papel === "solta" ? "🏁 " : ""}${pt.nome}</b></td>
+        <td>${pt.papel === "pombal" ? "—" : pt.km + "km"}</td>
+        <td>${cl ? cl.temp + "°C" : "—"}</td>
+        <td>${cl ? cl.chuvaMm + "mm" + (cl.chuvaPct != null ? " (" + cl.chuvaPct + "%)" : "") : "—"}</td>
+        <td>${cl ? cl.ventoKmh + "km/h " + direcaoCardeal(cl.dirVento) : "—"}</td>
+        <td>${vento ? vento.tipo.replace("Vento ", "") : "—"}</td>
+        <td style="color:${score ? score.cor : "#000"}"><b>${score ? score.pts + "%" : "—"}</b></td>
+      </tr>`;
+    }).join("");
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório Prova #${provaSel.num}</title>
+      <style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px;max-width:800px}
+      h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 6px;color:#555}
+      .sub{color:#555;font-size:12px;margin-bottom:14px}
+      .box{border:1px solid #ccc;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px}
+      table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:6px 8px;text-align:left}th{background:#f5f5f5}
+      .destaque{background:#fff8e1;border-color:#e6c200}</style></head><body>
+      <h1>🕊️ Prova #${provaSel.num} — ${provaSel.cidade}/${provaSel.estado} (${provaSel.km}km)</h1>
+      <div class="sub">Solta: ${provaSel.diaSolta} ${provaSel.dataSolta.split("-").reverse().slice(0, 2).join("/")} • Gerado em ${new Date().toLocaleString("pt-BR")} • Nutri Pombos</div>
+      <div class="box ${media !== null && media < 55 ? "" : "destaque"}"><b>Resumo:</b> ${media !== null ? `score médio da rota ${media}% • pior trecho: ${pior?.pt.nome} (${pior?.score?.pts}%)` : "—"}${kp ? ` • Kp ${kp.kp.toFixed(2)}` : ""}${lua ? ` • Lua ${lua.emoji} ${lua.iluminacao}%` : ""}${solSolta ? ` • Nascer do sol ${solSolta.nascer} → solta às ${horaSolta}` : ""}${minutosVoo ? ` • Chegada prevista ${chegada(0.92)}–${chegada(1.08)}` : ""}</div>
+      ${janelaIdeal ? `<div class="box destaque"><b>🕐 Melhor janela de soltura:</b> ${janelaIdeal.ini}–${janelaIdeal.fim} (${janelaIdeal.pts}%)</div>` : ""}
+      <h2>Vento e chuva por cidade ${modo === "prova" ? "(previsão do dia da soltura)" : "(condições atuais)"}</h2>
+      <table><tr><th>Cidade</th><th>Dist.</th><th>Temp.</th><th>Chuva</th><th>Vento</th><th>Na rota</th><th>Score</th></tr>${linhasTabela}</table>
+      <div class="sub" style="margin-top:14px">Fontes: Open-Meteo • NOAA SWPC • Esri — dados gratuitos. Previsões sujeitas a alteração; confira na véspera.</div>
+      <script>window.onload=()=>{window.print()}</script></body></html>`;
+    const win = window.open("", "_blank");
+    if (!win) { alert("Permita pop-ups para gerar o relatório (ou toque novamente)."); return; }
+    win.document.write(html);
+    win.document.close();
+  };
+
+  const vereditoBussola = bussola && climaSoltaBussola ? ventoNaRota(climaSoltaBussola.dirVento, bussola.bearing, climaSoltaBussola.ventoKmh) : null;
+
   return (
     <main style={{ minHeight: "100vh", background: T.bg, color: T.white, padding: "20px 16px 60px" }}>
       <div style={{ maxWidth: 880, margin: "0 auto" }}>
@@ -388,6 +562,35 @@ export default function RotaDaProva() {
                 </div>
               )}
             </div>
+          </section>
+        )}
+
+        {/* 📅 Sábado × Domingo — qual dia soltar? */}
+        {provaSel && modo === "prova" && previsivel && (
+          <section style={T.card}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>
+              📅 {provaSel.diaSolta} × Dia Seguinte — qual dia soltar?
+            </div>
+            <div style={{ ...T.small, fontSize: 12, marginBottom: 10, lineHeight: 1.5 }}>
+              Roda a mesma análise da rota nos <b>dois dias</b> do fim de semana e aponta o melhor — útil quando o clube dá opção de soltar em outro dia.
+            </div>
+            <button type="button" onClick={compararDias} disabled={compCarregando} style={{ ...T.btn, opacity: compCarregando ? 0.6 : 1 }}>
+              {compCarregando ? "⏳ Analisando os dois dias..." : "⚖️ Comparar os dois dias"}
+            </button>
+            {compDias && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+                {compDias.map((d) => (
+                  <div key={d.data} style={{ padding: 12, borderRadius: 10, background: d.vencedor ? `${T.green}12` : "#ffffff08", border: `2px solid ${d.vencedor ? T.green : T.border}` }}>
+                    {d.vencedor && <div style={{ fontSize: 11, fontWeight: 900, color: T.green, marginBottom: 4 }}>🏆 MELHOR DIA</div>}
+                    <b style={{ fontSize: 13 }}>{d.label} ({d.data.split("-").reverse().slice(0, 2).join("/")})</b>
+                    <div style={{ ...T.small, marginTop: 6 }}>Média da rota: <b style={{ color: d.media >= 75 ? T.green : d.media >= 55 ? "#fbbf24" : T.red }}>{d.media}%</b></div>
+                    <div style={T.small}>🌧️ Chuva acumulada: {d.chuvaTotal}mm</div>
+                    <div style={T.small}>⚠️ Pior trecho: {d.pior ? `${d.pior.nome} (${d.pior.pts}%)` : "—"}</div>
+                    {d.scoreSolta != null && <div style={T.small}>🏁 Score na soltura: {d.scoreSolta}%</div>}
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
@@ -615,10 +818,71 @@ export default function RotaDaProva() {
               <a href={`https://wa.me/?text=${encodeURIComponent(msgCompacta)}`} target="_blank" rel="noreferrer" style={{ ...T.btn, flex: 1, minWidth: 180, display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", background: "#25D366", borderColor: "#25D366" }}>
                 💬 Enviar resumo no WhatsApp
               </a>
+              <button type="button" onClick={gerarRelatorio} style={{ ...T.btnGhost, flex: "1 1 100%", fontWeight: 800 }}>
+                🖨️ Relatório da prova (imprimir / salvar PDF)
+              </button>
             </div>
             <div style={{ ...T.small, fontSize: 11, marginTop: 8, textAlign: "center", lineHeight: 1.5 }}>
               💡 <b>Copiar</b> cola a versão completa com emojis (recomendado — funciona em qualquer grupo).<br />O botão verde abre o WhatsApp com a versão resumida (links têm limite de tamanho e quebram emojis).
             </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <button type="button" onClick={ativarAlarme} style={{ ...T.btnGhost, color: alarmeAtivo ? T.red : T.gold, fontWeight: 800 }}>
+                {alarmeAtivo ? "🔕 Desativar alarme" : "🔔 Alarme de chegada"}
+              </button>
+              {alarmeAtivo && alarmeHora && <small style={{ color: T.gold, fontWeight: 700 }}>⏰ Vai tocar às {alarmeHora} (15 min antes da prevista)</small>}
+            </div>
+            {alarmeAtivo && <div style={{ ...T.small, fontSize: 10, marginTop: 6, textAlign: "center" }}>Mantenha esta página aberta — o alarme toca com aviso no celular, som e vibração 🔔</div>}
+            {alarmeMsg && <div style={{ marginTop: 10, padding: 12, borderRadius: 10, color: T.green, background: `${T.green}12`, border: `1px solid ${T.green}55`, fontWeight: 800, textAlign: "center" }}>{alarmeMsg}</div>}
+          </section>
+        )}
+
+        {/* 🧭 Bússola da soltura — aponta o pombal pelo GPS */}
+        {provaSel && (
+          <section style={T.card}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🧭 Bússola da Soltura</div>
+            <div style={{ ...T.small, fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>
+              Na hora de abrir os cestos: toque em 📍 e a <b style={{ color: T.gold }}>seta dourada 🏠</b> aponta o SEU pombal a partir de onde você está. A <b style={{ color: T.blue }}>seta azul 💨</b> mostra pra onde o vento empurra — comparando as duas, você sabe na hora se o vento está a favor.
+            </div>
+            <button type="button" onClick={ativarBussola} style={T.btn}>📍 Usar meu GPS agora</button>
+            {bussolaErro && <div style={{ ...T.small, color: T.orange, marginTop: 8 }}>⚠️ {bussolaErro}</div>}
+            {bussola && (() => {
+              const rotPombal = (bussola.bearing - (heading ?? 0) + 360) % 360;
+              const rotVento = climaSoltaBussola ? (climaSoltaBussola.dirVento + 180 - (heading ?? 0) + 360) % 360 : 0;
+              return (
+                <div style={{ marginTop: 12 }}>
+                  <svg viewBox="0 0 200 200" style={{ width: "100%", maxWidth: 280, display: "block", margin: "0 auto" }}>
+                    <circle cx="100" cy="100" r="92" fill="#0b1529" stroke={T.border} strokeWidth="2" />
+                    <circle cx="100" cy="100" r="68" fill="none" stroke={T.border} strokeWidth="1" />
+                    {(["N", "L", "S", "O"] as const).map((d, i) => {
+                      const ang = (i * 90 * Math.PI) / 180;
+                      const x = 100 + 80 * Math.sin(ang), y = 100 - 80 * Math.cos(ang);
+                      return <text key={d} x={x} y={y + 4} textAnchor="middle" fontSize="13" fontWeight="900" fill={d === "N" ? T.red : T.dim}>{d}</text>;
+                    })}
+                    <g transform={`rotate(${rotPombal} 100 100)`}>
+                      <path d="M100 24 L86 110 L100 96 L114 110 Z" fill={T.gold} stroke="#fff" strokeWidth="1.5" />
+                      <text x="100" y="20" textAnchor="middle" fontSize="12">🏠</text>
+                    </g>
+                    {climaSoltaBussola && (
+                      <g transform={`rotate(${rotVento} 100 100)`}>
+                        <path d="M100 56 L91 96 L100 89 L109 96 Z" fill={T.blue} />
+                        <text x="100" y="52" textAnchor="middle" fontSize="10">💨</text>
+                      </g>
+                    )}
+                    <circle cx="100" cy="100" r="5" fill="#fff" />
+                  </svg>
+                  <div style={{ textAlign: "center", marginTop: 10 }}>
+                    <b style={{ fontSize: 14 }}>🏠 Pombal a {bussola.distKm}km — rumo {direcaoCardeal(bussola.bearing)} ({Math.round(bussola.bearing)}°)</b>
+                    {climaSoltaBussola && (
+                      <div style={{ ...T.small, marginTop: 4 }}>
+                        💨 Vento vem de {direcaoCardeal(climaSoltaBussola.dirVento)} a {climaSoltaBussola.ventoKmh}km/h
+                        {vereditoBussola && <> — <b style={{ color: vereditoBussola.cor }}>{vereditoBussola.emoji} {vereditoBussola.tipo.toLowerCase()} para o voo de casa</b></>}
+                      </div>
+                    )}
+                    {heading === null && <div style={{ ...T.small, fontSize: 10, marginTop: 6, color: T.dim }}>🧭 Sem bússola no aparelho — o topo do celular está apontando o Norte</div>}
+                  </div>
+                </div>
+              );
+            })()}
           </section>
         )}
 

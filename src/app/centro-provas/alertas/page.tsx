@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
+import { Madrugada, alertaMadrugada, buscarMadrugada, getPombal, buscarClimaPassado, direcaoCardeal } from "../lib/apis-gratis";
 import { T } from "../theme";
 
 type Tab="hoje"|"semana"|"preventivo";
@@ -111,6 +112,8 @@ export default function Alertas(){
   return <main style={{minHeight:"100vh",background:T.bg,color:T.white,padding:"18px 12px 50px"}}><div style={{maxWidth:760,margin:"0 auto"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",marginBottom:14}}><h1 style={T.h1}>🔔 Central de Alertas</h1><Link href="/centro-provas" style={{...T.btnGhost,textDecoration:"none"}}>← Centro</Link></div>
     <VesperaProva provas={provas.filter(p=>!p.cancelada)}/>
+    <AlertaMadrugadaCard/>
+    <ModoExtravio/>
     <section style={{...T.card,display:"flex",justifyContent:"space-between",alignItems:"center",borderColor:`${T.gold}55`,background:`${T.gold}0d`}}><div><div style={{fontSize:40,lineHeight:1,fontWeight:900,color:T.gold,fontVariantNumeric:"tabular-nums"}}>{horaStr(agora)}</div><div style={{...T.small,marginTop:5}}>{agora.toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div></div>{avisos.length>0&&<b style={{padding:"4px 10px",borderRadius:20,background:T.red}}>{avisos.length} alertas</b>}</section>
     <section style={{...T.card,border:`2px solid ${atual?T.gold:T.blue}`,background:atual?`${T.gold}12`:`${T.blue}0d`}}><small style={{color:atual?T.gold:T.blue,fontWeight:800}}>{atual?"🔴 TAREFA DE REFERÊNCIA AGORA":"🔵 PRÓXIMA TAREFA"}</small><h3 style={{margin:"5px 0"}}>{(atual||proxima).emoji} {(atual||proxima).titulo}</h3><div style={T.small}>{(atual||proxima).desc}</div><div style={{color:T.gold,fontSize:11,marginTop:5}}>⏰ {(atual||proxima).hora}</div></section>
     {avisos.length>0&&<section style={T.card}><Title color={T.red}>⚠️ Alertas Ativos</Title>{avisos.map(a=><div key={a.texto} style={{padding:"6px 0",borderBottom:`1px solid ${T.border}`,color:a.cor,fontSize:12}}>{a.texto}</div>)}</section>}
@@ -142,6 +145,106 @@ export default function Alertas(){
 
 function Check({id,feito,emoji,title,desc,time,toggle}:{id:string;feito:boolean;emoji:string;title:string;desc?:string;time?:string;toggle:(id:string)=>void}){return <button onClick={()=>toggle(id)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 13px",marginBottom:5,textAlign:"left",borderRadius:9,color:feito?T.green:T.white,background:feito?`${T.green}12`:"#ffffff05",border:`1px solid ${feito?T.green:T.border}`}}><span style={{width:27,height:27,display:"grid",placeItems:"center",borderRadius:"50%",background:feito?T.green:T.bgInput,color:T.bg}}>{feito?"✓":emoji}</span><span style={{flex:1}}><b style={{fontSize:13}}>{title}</b>{desc&&<span style={{...T.small,display:"block",marginTop:2}}>{desc}</span>}</span>{time&&<small style={{color:T.dim}}>{time}</small>}</button>}
 function Title({children,color=T.gold}:{children:React.ReactNode;color?:string}){return <div style={{fontSize:13,fontWeight:800,color,marginBottom:8}}>{children}</div>}
+
+/* Modo Extravio: pombo nao voltou da prova */
+type Extravio={id:string;anilha:string;nome?:string;desde:string};
+const KEY_EXTRA="nutripombos-extravios-v1";
+function ModoExtravio(){
+  const[abrir,setAbrir]=useState(false);
+  const[lista,setLista]=useState<Extravio[]>([]);
+  const[anilha,setAnilha]=useState("");
+  const[nome,setNome]=useState("");
+  const[desde,setDesde]=useState(new Date().toLocaleDateString("en-CA",{timeZone:"America/Sao_Paulo"}));
+  const[analises,setAnalises]=useState<Record<string,{dir:number;vento:number}|null|undefined>>({});
+  const[analisando,setAnalisando]=useState<string|null>(null);
+  useEffect(()=>{try{setLista(JSON.parse(localStorage.getItem(KEY_EXTRA)||"[]"))}catch{}},[]);
+  const salvar=(l:Extravio[])=>{setLista(l);try{localStorage.setItem(KEY_EXTRA,JSON.stringify(l))}catch{}};
+  const add=()=>{if(!anilha.trim())return;const id=typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():String(Date.now());salvar([...lista,{id,anilha:anilha.trim(),nome:nome.trim()||undefined,desde}]);setAnilha("");setNome("")};
+  const remover=(id:string)=>{salvar(lista.filter(x=>x.id!==id));setAnalises(a=>{const c={...a};delete c[id];return c})};
+  const diasFora=(d:string)=>Math.max(0,Math.floor((Date.now()-new Date(d+"T12:00:00").getTime())/86400000));
+  const analisar=async(ev:Extravio)=>{
+    setAnalisando(ev.id);
+    try{const p=getPombal();const c=await buscarClimaPassado(p.lat,p.lon,ev.desde);setAnalises(a=>({...a,[ev.id]:{dir:c.dirVento,vento:c.vento}}))}
+    catch{setAnalises(a=>({...a,[ev.id]:null}))}
+    finally{setAnalisando(null)}
+  };
+  const fmt=(d:string)=>d.split("-").reverse().slice(0,2).join("/");
+  return <section style={{...T.card,marginBottom:10,borderColor:lista.length?T.red+"55":T.border,background:lista.length?T.red+"0d":undefined}}>
+    <div onClick={()=>setAbrir(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,cursor:"pointer"}}>
+      <Title color={lista.length?T.red:T.gold}>{"🚨 Modo Extravio"+(lista.length?" — "+lista.length+" pombo(s) fora":" — pombo não voltou?")}</Title>
+      <small style={{color:T.dim}}>{abrir?"fechar ▲":"abrir ▼"}</small>
+    </div>
+    {abrir&&<div>
+      <div style={{...T.small,fontSize:12,marginBottom:10,lineHeight:1.5}}>Registre os pombos que não voltaram: o app conta os dias fora, calcula <b>pra onde o vento do dia provavelmente desviou</b> e monta o checklist de busca. Fica salvo neste aparelho.</div>
+      {lista.length===0&&<div style={{...T.small,fontSize:12,color:T.dim,marginBottom:10}}>Nenhum extravio registrado. 🎉</div>}
+      {lista.map(ev=>{
+        const d=diasFora(ev.desde);
+        const an=analises[ev.id];
+        const corDias=d>=7?T.red:d>=3?T.orange:T.gold;
+        return <div key={ev.id} style={{padding:10,borderRadius:9,background:"#ffffff08",marginBottom:8,border:"1px solid "+T.border}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>
+            <div><b style={{fontSize:13}}>🐦 {ev.anilha}{ev.nome?" — "+ev.nome:""}</b>
+            <div style={T.small}>Fora há <b style={{color:corDias}}>{d} dia(s)</b> (desde {fmt(ev.desde)})</div></div>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>analisar(ev)} disabled={analisando===ev.id} style={T.btnGhost}>{analisando===ev.id?"⏳":"🧭 Pra onde foi?"}</button>
+              <button onClick={()=>remover(ev.id)} style={{...T.btnGhost,color:T.green}}>✅ Voltou!</button>
+            </div>
+          </div>
+          {an===null&&<div style={{...T.small,fontSize:11,color:T.orange,marginTop:6}}>⚠️ Sem dados de vento dessa data ainda (o arquivo climático leva uns 5 dias).</div>}
+          {an&&<div style={{marginTop:8,padding:"8px 12px",borderRadius:8,fontSize:12,lineHeight:1.6,color:T.blue,background:T.blue+"12",border:"1px solid "+T.blue+"44"}}>
+            💨 No dia {fmt(ev.desde)} o vento no pombal vinha de <b>{direcaoCardeal(an.dir)}</b> ({an.vento}km/h) — pombo cansado tende a desviar pro lado <b>{direcaoCardeal((an.dir+180)%360)}</b> do pombal. Priorize busca e anúncio nessa direção e ao longo da rota.
+          </div>}
+        </div>;
+      })}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:6,marginBottom:10}}>
+        <input placeholder="Anilha (ex.: BRP-2024-1234)" value={anilha} onChange={e=>setAnilha(e.target.value)} style={{...T.input,minHeight:38}}/>
+        <input placeholder="Nome/apelido (opcional)" value={nome} onChange={e=>setNome(e.target.value)} style={{...T.input,minHeight:38}}/>
+        <input type="date" value={desde} onChange={e=>setDesde(e.target.value)} style={{...T.input,minHeight:38,width:140}}/>
+      </div>
+      <button onClick={add} style={{...T.btn,padding:10}}>➕ Registrar extravio</button>
+      <div style={{marginTop:12,padding:"10px 12px",borderRadius:9,background:"#ffffff08",fontSize:12,lineHeight:1.7}}>
+        <b style={{color:T.gold}}>📋 Checklist de extravio:</b><br />
+        • Avisar o clube e columbófilos da região com anilha e foto do pombo<br />
+        • Postar a anilha nos grupos e páginas de achados (o chip pode ser lido por qualquer criador)<br />
+        • Deixar no pombal água com eletrólito e mistura leve — a rotina ajuda o retorno<br />
+        • Manter portinola aberta nas primeiras horas da manhã<br />
+        • <b>Ao voltar:</b> não dar ração pesada — siga o <Link href="/centro-provas/resgate" style={{color:T.blue}}>Protocolo de Resgate</Link> (desidratado/exausto)
+      </div>
+    </div>}
+  </section>;
+}
+
+/* 🌙 Alerta de madrugada — manejo noturno do pombal com dados reais */
+function AlertaMadrugadaCard(){
+  const[dados,setDados]=useState<Madrugada|null>(null);
+  const[erro,setErro]=useState("");
+  const[loading,setLoading]=useState(true);
+  const consultar=useCallback(async()=>{
+    setLoading(true);setErro("");
+    try{const p=getPombal();setDados(await buscarMadrugada(p.lat,p.lon))}
+    catch(e){setDados(null);setErro(e instanceof Error?e.message:"falhou")}
+    finally{setLoading(false)}
+  },[]);
+  useEffect(()=>{consultar()},[consultar]);
+  const info=dados?alertaMadrugada(dados):null;
+  return <section style={{...T.card,marginBottom:10,borderColor:info?`${info.cor}55`:T.border,background:info?`${info.cor}0d`:undefined}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+      <Title>🌙 Alerta de Madrugada no Pombal (20h–06h)</Title>
+      <button onClick={consultar} style={T.btnSm} disabled={loading}>{loading?"⏳":"↻"}</button>
+    </div>
+    {loading&&!dados&&<div style={{...T.small}}>⏳ Consultando a madrugada no seu pombal...</div>}
+    {erro&&<div style={{...T.small,color:T.orange}}>⚠️ Não foi possível obter a previsão da madrugada ({erro}).</div>}
+    {info&&dados&&<div>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+        <span style={{fontSize:34}}>{info.emoji}</span>
+        <div><b style={{fontSize:14,color:info.cor}}>{info.titulo}</b>
+        <div style={T.small}>Mínima às {dados.horaMin} • máx. {dados.maxTemp}°C na virada • umidade média {dados.umidade}%{dados.chuvaMm>0?` • chuva ${dados.chuvaMm}mm`:""}</div></div>
+      </div>
+      {info.dicas.map((d,i)=><div key={i} style={{padding:"8px 12px",borderRadius:8,background:"#ffffff08",fontSize:12,marginBottom:5,lineHeight:1.5}}>• {d}</div>)}
+      <div style={{...T.small,fontSize:10,marginTop:8}}>Usa a localização configurada em Configuração → 🏠 Localização do Pombal • Fonte: Open-Meteo</div>
+    </div>}
+  </section>;
+}
 
 /* 🔔 Alerta de véspera de prova — notifica no navegador (gratuito, sem servidor) */
 const KEY_VESPERA="nutripombos-alerta-vespera-v1";

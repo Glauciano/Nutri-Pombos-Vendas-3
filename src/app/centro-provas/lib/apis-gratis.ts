@@ -544,3 +544,76 @@ export function somarMinutosHHMM(hhmm: string, minutos: number): string {
   const tot = ((H || 0) * 60 + (M || 0) + minutos + 1440 * 7) % 1440;
   return `${String(Math.floor(tot / 60)).padStart(2, "0")}:${String(tot % 60).padStart(2, "0")}`;
 }
+
+/** Distância em linha reta entre dois pontos (km) */
+export function distanciaKmHaversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1), dLon = rad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return +(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
+}
+
+/* ------------------------------------------------------------------ */
+/* 🌙 Madrugada no pombal (20h–06h) — manejo noturno                  */
+/* ------------------------------------------------------------------ */
+
+export interface Madrugada { minTemp: number; horaMin: string; maxTemp: number; chuvaMm: number; umidade: number }
+
+export async function buscarMadrugada(lat: number, lon: number): Promise<Madrugada> {
+  const hoje = hojeSP();
+  const amanha = new Date(Date.now() + 86_400_000).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  const p = new URLSearchParams({
+    latitude: String(lat), longitude: String(lon), timezone: "America/Sao_Paulo",
+    hourly: "temperature_2m,precipitation,relative_humidity_2m",
+    start_date: hoje, end_date: amanha,
+  });
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  const h = j?.hourly;
+  if (!h?.time) throw new Error("Sem previsão");
+  const idx: number[] = [];
+  (h.time as string[]).forEach((t, i) => {
+    const d = t.slice(0, 10), hh = Number(t.slice(11, 13));
+    if ((d === hoje && hh >= 20) || (d === amanha && hh <= 6)) idx.push(i);
+  });
+  if (!idx.length) throw new Error("Janela noturna indisponível");
+  const pegar = (k: string, i: number) => Number(h[k]?.[i] ?? 0);
+  const temps = idx.map((i) => pegar("temperature_2m", i));
+  const iMin = idx[temps.indexOf(Math.min(...temps))];
+  const iMax = idx[temps.indexOf(Math.max(...temps))];
+  const hhmm = (i: number) => h.time[i].slice(11, 16);
+  return {
+    minTemp: Math.round(Math.min(...temps)),
+    horaMin: hhmm(iMin),
+    maxTemp: Math.round(Math.max(...temps)),
+    chuvaMm: +idx.reduce((s, i) => s + pegar("precipitation", i), 0).toFixed(1),
+    umidade: Math.round(idx.reduce((s, i) => s + pegar("relative_humidity_2m", i), 0) / idx.length),
+  };
+}
+
+export function alertaMadrugada(m: Madrugada): { titulo: string; emoji: string; cor: string; dicas: string[] } {
+  let base: { titulo: string; emoji: string; cor: string; dicas: string[] };
+  if (m.minTemp <= 8) base = { titulo: `Madrugada MUITO FRIA — mínima ${m.minTemp}°C`, emoji: "🥶", cor: "#55a3ff", dicas: [
+    "Aumente a energia da mistura de tarde: milho e girassol extras (gordura de combustão noturna)",
+    "Bloqueie correntes de vento direto nos poleiros — o frio no peito gasta reserva",
+    "Água trocada no fim da tarde — água gelada de madrugada reduz o consumo",
+  ] };
+  else if (m.minTemp <= 13) base = { titulo: `Madrugada fria — mínima ${m.minTemp}°C`, emoji: "🧥", cor: "#55a3ff", dicas: [
+    "Levemente mais energia na mistura de tarde (milho)",
+    "Confira se não há entrada de vento frio no pombal",
+  ] };
+  else if (m.minTemp <= 20) base = { titulo: `Madrugada confortável — mínima ${m.minTemp}°C`, emoji: "😊", cor: "#39e58c", dicas: ["Condições ideais de descanso noturno — manejo padrão"] };
+  else if (m.minTemp <= 23) base = { titulo: `Madrugada abafada — mínima ${m.minTemp}°C`, emoji: "😕", cor: "#fbbf24", dicas: [
+    "Garanta ventilação cruzada sem corrente direta",
+    "Água fresca disponível até a última hora",
+  ] };
+  else base = { titulo: `Madrugada QUENTE — mínima ${m.minTemp}°C`, emoji: "🥵", cor: "#ff5d62", dicas: [
+    "Ventilação máxima no pombal — calor noturno impede recuperação e derrete a forma",
+    "Água à vontade e banho liberado no fim da tarde",
+    "Atenção redobrada com borrachos: calor noturno atrasa o crescimento",
+  ] };
+  if (m.chuvaMm > 1) base = { ...base, dicas: [...base.dicas, `🌧️ Chuva prevista na madrugada (${m.chuvaMm}mm): proteja rações e evite bandeja de banho exposta`] };
+  return base;
+}

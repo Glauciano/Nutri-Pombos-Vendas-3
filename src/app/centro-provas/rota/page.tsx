@@ -51,6 +51,7 @@ export default function RotaDaProva() {
   const [janela, setJanela] = useState<{ solta: HoraSolta[]; pombal: HoraSolta[] } | null>(null);
   const [janelaErro, setJanelaErro] = useState("");
   const [veloBase, setVeloBase] = useState<number | null>(null);
+  const [copiado, setCopiado] = useState(false);
 
   // 🏠 Pombal configurável (Configuração → Localização do Pombal)
   const [pombal, setPombalState] = useState<Coords & { nome: string }>(() => ({ ...COORDS[POMBAL_BASE], nome: POMBAL_BASE }));
@@ -254,6 +255,31 @@ export default function RotaDaProva() {
     if (solSolta) L.push(`🌅 Nascer do sol na soltura: ${solSolta.nascer} → solta às ${horaSolta} (${infoSolta.replace("☀️ ", "")})`);
     if (minutosVoo) L.push(`⏱️ Chegada prevista: *${chegada(0.92)} – ${chegada(1.08)}*`);
     L.push(`\n_${modo === "prova" ? "Previsão do dia da soltura" : "ATENÇÃO: condições de agora, não do dia da prova"} • Open-Meteo + NOAA • Nutri Pombos_`);
+    return L.join("\n");
+  })();
+
+  // Versão compacta (sem emojis) para o link wa.me — imune ao limite/quebra de caracteres
+  const msgCompacta = (() => {
+    if (!provaSel) return "";
+    const L: string[] = [];
+    const climaDe = (v: typeof validos[number]) => (v.d && "clima" in v.d ? v.d.clima : null);
+    L.push(`PROVA #${provaSel.num} — ${provaSel.cidade}/${provaSel.estado} (${provaSel.km}km)`);
+    L.push(`Solta: ${provaSel.diaSolta} ${provaSel.dataSolta.split("-").reverse().slice(0, 2).join("/")} — previsão do dia`);
+    if (media !== null) L.push(`Rota ${rota.length} pts • média ${media}% • pior: ${pior?.pt.nome} (${pior?.score?.pts}%)`);
+    if (kp) L.push(`Kp ${kp.kp.toFixed(2)} (${kp.kp <= 2 ? "calmo" : kp.kp <= 4 ? "instável" : "tempestade"})`);
+    if (validos.length) {
+      L.push("Vento e chuva por trecho:");
+      validos.forEach((v) => {
+        const cl = climaDe(v);
+        const vento = v.vento!.tipo.replace("Vento ", "").toLowerCase();
+        L.push(`${v.pt.nome}: ${vento}${cl ? ` ${cl.ventoKmh}km/h • ${cl.chuvaMm}mm${cl.chuvaPct != null ? ` ${cl.chuvaPct}%` : ""}` : ""}`);
+      });
+      const comChuva = validos.filter((v) => ((climaDe(v)?.chuvaMm ?? 0) > 0.5 || (climaDe(v)?.chuvaPct ?? 0) >= 50));
+      if (comChuva.length) L.push(`ATENÇÃO chuva: ${comChuva.map((v) => v.pt.nome).join(", ")}`);
+    }
+    if (solSolta) L.push(`Nascer ${solSolta.nascer} • solta ${horaSolta}`);
+    if (minutosVoo) L.push(`Chegada prevista: ${chegada(0.92)}–${chegada(1.08)}`);
+    L.push("Nutri Pombos • Open-Meteo + NOAA");
     return L.join("\n");
   })();
 
@@ -565,9 +591,34 @@ export default function RotaDaProva() {
                 ? `Base: sua média histórica de ${veloBase} m/min, ajustada pelo vento da rota (${pior?.vento?.tipo?.toLowerCase() || "—"} no pior trecho).`
                 : "Base: 1200 m/min (estimativa padrão) — registre seus resultados no Histórico para a previsão usar a média do SEU plantel."}
             </div>
-            <a href={`https://wa.me/?text=${encodeURIComponent(msgWhatsApp)}`} target="_blank" rel="noreferrer" style={{ ...T.btn, display: "block", textAlign: "center", textDecoration: "none", marginTop: 12, background: "#25D366", borderColor: "#25D366" }}>
-              💬 Enviar resumo da rota no WhatsApp
-            </a>
+            <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(msgWhatsApp);
+                  } catch {
+                    const ta = document.createElement("textarea");
+                    ta.value = msgWhatsApp;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    try { document.execCommand("copy"); } catch { /* ignora */ }
+                    document.body.removeChild(ta);
+                  }
+                  setCopiado(true);
+                  window.setTimeout(() => setCopiado(false), 2500);
+                }}
+                style={{ ...T.btn, flex: 1, minWidth: 180 }}
+              >
+                {copiado ? "✅ Mensagem copiada!" : "📋 Copiar mensagem completa"}
+              </button>
+              <a href={`https://wa.me/?text=${encodeURIComponent(msgCompacta)}`} target="_blank" rel="noreferrer" style={{ ...T.btn, flex: 1, minWidth: 180, display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", background: "#25D366", borderColor: "#25D366" }}>
+                💬 Enviar resumo no WhatsApp
+              </a>
+            </div>
+            <div style={{ ...T.small, fontSize: 11, marginTop: 8, textAlign: "center", lineHeight: 1.5 }}>
+              💡 <b>Copiar</b> cola a versão completa com emojis (recomendado — funciona em qualquer grupo).<br />O botão verde abre o WhatsApp com a versão resumida (links têm limite de tamanho e quebram emojis).
+            </div>
           </section>
         )}
 

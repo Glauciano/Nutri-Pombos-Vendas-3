@@ -714,3 +714,66 @@ export function vereditoTreino(c: { ventoKmh: number; rajadaKmh: number; chuvaMm
   } as const;
   return { nivel, ...map[nivel], motivos };
 }
+
+/* ------------------------------------------------------------------ */
+/* 🐦 Risco de extravio (0-100%) — estimativa honesta                 */
+/* ------------------------------------------------------------------ */
+
+export function riscoExtravio(input: {
+  km: number;
+  scoreMedio: number | null;   // 0-100 da rota
+  idp: number | null;          // 0-10
+  kp: number | null;
+}): { pct: number; nivel: string; cor: string; emoji: string; fatores: string[] } {
+  let r = 2; // base da modalidade
+  const fatores: string[] = [];
+  if (input.km > 600) { r += 6; fatores.push(`Fundo extremo (${input.km}km): +6% base`); }
+  else if (input.km > 300) { r += 3; fatores.push(`Meio fundo (${input.km}km): +3% base`); }
+  else fatores.push(`Velocidade (${input.km}km): base baixa`);
+  if (input.scoreMedio != null) {
+    const add = Math.round((100 - input.scoreMedio) * 0.3);
+    r += add; fatores.push(`Clima da rota (${input.scoreMedio}%): +${add}%`);
+  }
+  if (input.idp != null) { const add = Math.round(input.idp * 0.8); r += add; fatores.push(`Dificuldade IDP ${input.idp.toFixed(1)}: +${add}%`); }
+  if (input.kp != null && input.kp >= 5) { r += input.kp >= 7 ? 8 : 4; fatores.push(`Kp ${input.kp.toFixed(2)} (tempestade magnética): +${input.kp >= 7 ? 8 : 4}%`); }
+  const pct = Math.max(1, Math.min(85, Math.round(r)));
+  const nivel = pct < 10 ? "Baixo" : pct < 20 ? "Moderado" : pct < 35 ? "Alto" : "Muito alto";
+  const cor = pct < 10 ? "#39e58c" : pct < 20 ? "#fbbf24" : pct < 35 ? "#f97316" : "#ff5d62";
+  const emoji = pct < 10 ? "🟢" : pct < 20 ? "🟡" : pct < 35 ? "🟠" : "🔴";
+  return { pct, nivel, cor, emoji, fatores };
+}
+
+/* ------------------------------------------------------------------ */
+/* 📆 Arquivo ICS — provas no calendário do celular                    */
+/* ------------------------------------------------------------------ */
+
+export function gerarIcsProvas(provas: { num: number; cidade: string; estado: string; km: number; dataEmbarque: string; dataSolta: string; diaEmbarque: string; diaSolta: string; cancelada?: boolean }[]): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dt = (iso: string, h: number, m: number) => iso.replace(/-/g, "") + "T" + pad(h) + pad(m) + "00";
+  const linhas: string[] = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Nutri Pombos//Calendario de Provas//PT-BR", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Nutri Pombos — Provas", "X-WR-TIMEZONE:America/Sao_Paulo"];
+  provas.filter((p) => !p.cancelada).forEach((p) => {
+    const id = `nutripombos-prova-${p.num}@nutripombos`;
+    linhas.push(
+      "BEGIN:VEVENT",
+      `UID:${id}`,
+      `DTSTAMP:${dt(new Date().toISOString().slice(0, 10), 12, 0)}`,
+      // evento 1: embarque
+      `DTSTART;VALUE=DATE:${p.dataEmbarque.replace(/-/g, "")}`,
+      `SUMMARY:📦 Embarque Prova #${p.num} — ${p.cidade}/${p.estado} (${p.km}km)`,
+      `DESCRIPTION:Pombos no clube para o embarque da prova #${p.num}. Solta em ${p.dataSolta.split("-").reverse().slice(0, 2).join("/")}.`,
+      "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", `DESCRIPTION:Lembrete: embarque da prova #${p.num} hoje!`, "END:VALARM",
+      "END:VEVENT",
+      // evento 2: solta
+      "BEGIN:VEVENT",
+      `UID:${id}-solta`,
+      `DTSTAMP:${dt(new Date().toISOString().slice(0, 10), 12, 0)}`,
+      `DTSTART;VALUE=DATE:${p.dataSolta.replace(/-/g, "")}`,
+      `SUMMARY:🏁 Prova #${p.num} — solta em ${p.cidade}/${p.estado} (${p.km}km)`,
+      `DESCRIPTION:Dia da solta da prova #${p.num}. Confira a rota e as condições no app Nutri Pombos.`,
+      "BEGIN:VALARM", "TRIGGER:-PT12H", "ACTION:DISPLAY", `DESCRIPTION:Véspera/dia: prova #${p.num} em ${p.cidade}!`, "END:VALARM",
+      "END:VEVENT",
+    );
+  });
+  linhas.push("END:VCALENDAR");
+  return linhas.join("\r\n");
+}

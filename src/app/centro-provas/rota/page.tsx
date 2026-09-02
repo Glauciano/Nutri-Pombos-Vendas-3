@@ -12,7 +12,8 @@ import {
   buscarRadar, urlTileRadar, tileXY,
   aplicarPombalSalvo, getPombal, EVENTO_POMBAL, Coords,
   HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM, faseLua,
-  NowcastPasso, buscarNowcastChuva, calcularIdp, confiancaPrevisao, protocoloRecepcao
+  NowcastPasso, buscarNowcastChuva, calcularIdp, confiancaPrevisao, protocoloRecepcao,
+  riscoExtravio, gerarIcsProvas,
 } from "../lib/apis-gratis";
 import { loadConfig } from "../config";
 
@@ -70,6 +71,10 @@ export default function RotaDaProva() {
   const [compCarregando, setCompCarregando] = useState(false);
   // 🧭 Bússola da chegada (quem espera no pombal)
   const [tick, setTick] = useState(0);
+
+  // 🔢 Matriz cidade × hora (onda do clima) + 🐦 risco de extravio + 📆 ICS
+  const [matriz, setMatriz] = useState<{ horas: string[]; celulas: Record<string, (number | null)[]> } | null>(null);
+  const [matrizCarregando, setMatrizCarregando] = useState(false);
 
   // 🌧️ Nowcast de chuva no pombal + 📖 crônica
   const [nowcast, setNowcast] = useState<NowcastPasso[] | null>(null);
@@ -223,8 +228,9 @@ export default function RotaDaProva() {
     return calcularIdp({ km: provaSel.km, penVentoMedio: penMedio, chuvaMaxMm: chuvaMax, kp: kp?.kp ?? null, relevoDesnivelM: d });
   }, [provaSel, validos, kp, altimetria]);
 
-  // 📊 confiança da previsão
+  // 📊 confiança da previsão + 🐦 risco de extravio
   const conf = confiancaPrevisao(Math.max(0, diasAte));
+  const risco = provaSel ? riscoExtravio({ km: provaSel.km, scoreMedio: media, idp: idp?.idp ?? null, kp: kp?.kp ?? null }) : null;
 
   // 🕐 Score de cada hora da manhã na cidade da soltura (vento relativo à rota)
   const bearingSolta = rota.length > 1 && provaSel ? bearingRota(rota[0].lat, rota[0].lon, base.lat, base.lon) : 180;
@@ -293,6 +299,7 @@ export default function RotaDaProva() {
     if (media !== null) L.push(`\n🛣️ Rota com ${rota.length} pontos • score médio ${media}% • pior trecho: ${pior?.pt.nome} (${pior?.score?.pts}%)`);
     if (kp) L.push(`🧲 Kp ${kp.kp.toFixed(2)} — ${kp.kp <= 2 ? "calmo" : kp.kp <= 4 ? "instável" : "tempestade"}`);
     if (idp) L.push(`🎯 IDP ${idp.idp.toFixed(1)}/10 — ${idp.label}`);
+    if (risco) L.push(`🐦 Risco de extravio: ~${risco.pct}% (${risco.nivel.toLowerCase()})`);
     if (validos.length) {
       L.push("\n💨🌧️ *Vento e chuva por trecho:*");
       const climaDe = (v: typeof validos[number]) => (v.d && "clima" in v.d ? v.d.clima : null);
@@ -329,6 +336,7 @@ export default function RotaDaProva() {
     if (media !== null) L.push(`Rota ${rota.length} pts • média ${media}% • pior: ${pior?.pt.nome} (${pior?.score?.pts}%)`);
     if (kp) L.push(`Kp ${kp.kp.toFixed(2)} (${kp.kp <= 2 ? "calmo" : kp.kp <= 4 ? "instável" : "tempestade"})`);
     if (idp) L.push(`IDP ${idp.idp.toFixed(1)}/10 (${idp.label})`);
+    if (risco) L.push(`Risco de extravio ~${risco.pct}%`);
     if (validos.length) {
       L.push("Vento e chuva por trecho:");
       validos.forEach((v) => {
@@ -461,6 +469,41 @@ export default function RotaDaProva() {
     if (diff > -180) return "é agora — hora da chegada! 👀";
     return "janela prevista já passou — fique atento";
   })();
+  // 🔢 MATRIZ CIDADE × HORA — a onda do clima pela rota
+  const carregarMatriz = async () => {
+    if (!provaSel || !rota.length) return;
+    setMatrizCarregando(true); setMatriz(null);
+    const dia = modo === "prova" ? provaSel.dataSolta : hojeSP();
+    const horas = Array.from({ length: 12 }, (_, i) => `${String(7 + i).padStart(2, "0")}:00`); // 07h–18h
+    const fracos = await Promise.all(rota.map(async (pt, idx) => {
+      try {
+        const hs = await buscarJanelaSolta(pt.lat, pt.lon, dia);
+        const ref = idx > 0 && idx === rota.length - 1 ? rota[idx - 1] : pt;
+        const b = bearingRota(ref.lat, ref.lon, base.lat, base.lon);
+        const vals = horas.map((hAlvo) => {
+          const h = hs.find((x) => x.hora === hAlvo);
+          if (!h) return null;
+          const v = ventoNaRota(h.dir, b, h.vento);
+          return scorePonto({ temp: h.temp, chuvaMm: h.chuva, ventoKmh: h.vento, rajadaKmh: h.rajada, dirVento: h.dir, umidade: h.umidade, pressaoMsl: 1013, nuvens: 0, visibilidadeKm: 24, wmo: h.wmo, horaRef: h.hora }, v.pen, null).pts;
+        });
+        return [pt.chave, vals] as const;
+      } catch { return [pt.chave, horas.map(() => null)] as const; }
+    }));
+    setMatriz({ horas, celulas: Object.fromEntries(fracos) });
+    setMatrizCarregando(false);
+  };
+
+  // 📆 baixar calendário .ics (provas + embarques no celular)
+  const baixarIcs = () => {
+    const ics = gerarIcsProvas(provas);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "nutri-pombos-provas.ics";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   // 📖 Crônica — arquiva o panorama desta prova (previsão vs realizado depois)
   const arquivarCronica = () => {
     if (!provaSel) return;
@@ -659,6 +702,19 @@ export default function RotaDaProva() {
                   <div style={{ ...T.small, fontSize: 9, color: idp.cor }}>{idp.label}</div>
                 </div>
               )}
+              {risco && (
+                <div style={{ padding: 10, borderRadius: 9, background: `${risco.cor}12`, border: `1px solid ${risco.cor}55`, textAlign: "center" }}>
+                  <div style={{ fontSize: 16 }}>🐦</div>
+                  <div style={{ ...T.small, fontSize: 10 }}>RISCO DE EXTRAVIO</div>
+                  <b style={{ color: risco.cor, fontSize: 14 }}>~{risco.pct}%</b>
+                  <div style={{ ...T.small, fontSize: 9, color: risco.cor }}>{risco.nivel}</div>
+                </div>
+              )}
+              <button type="button" onClick={baixarIcs} style={{ padding: 10, borderRadius: 9, background: "#ffffff08", border: `1px solid ${T.border}`, textAlign: "center", cursor: "pointer" }}>
+                <div style={{ fontSize: 16 }}>📆</div>
+                <div style={{ ...T.small, fontSize: 10 }}>PROVAS NO CELULAR</div>
+                <b style={{ color: T.blue, fontSize: 10 }}>baixar .ics</b>
+              </button>
               {pior?.score && (
                 <div style={{ padding: 10, borderRadius: 9, background: `${pior.score.cor}12`, border: `1px solid ${pior.score.cor}55`, textAlign: "center" }}>
                   <div style={{ fontSize: 16 }}>⚠️</div>
@@ -942,6 +998,47 @@ export default function RotaDaProva() {
             </div>
             {alarmeAtivo && <div style={{ ...T.small, fontSize: 10, marginTop: 6, textAlign: "center" }}>Mantenha esta página aberta — o alarme toca com aviso no celular, som e vibração 🔔</div>}
             {alarmeMsg && <div style={{ marginTop: 10, padding: 12, borderRadius: 10, color: T.green, background: `${T.green}12`, border: `1px solid ${T.green}55`, fontWeight: 800, textAlign: "center" }}>{alarmeMsg}</div>}
+          </section>
+        )}
+
+        {/* 🔢 Matriz Cidade × Hora — a onda do clima pela rota */}
+        {provaSel && (
+          <section style={T.card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.gold }}>🔢 Matriz Cidade × Hora — a onda do clima</div>
+              <button type="button" onClick={carregarMatriz} disabled={matrizCarregando} style={T.btnSm}>{matrizCarregando ? "⏳ Montando..." : "Ver a onda"}</button>
+            </div>
+            <div style={{ ...T.small, fontSize: 11, marginBottom: 10, lineHeight: 1.5 }}>
+              Score de cada cidade a cada hora do dia {modo === "prova" ? "da soltura" : "de hoje"} — veja a frente ruim entrando pela rota e planeje a soltura antes dela chegar. Cada quadrado = condições naquela cidade naquela hora.
+            </div>
+            {matrizCarregando && <div style={{ ...T.small, textAlign: "center", padding: 14 }}>⏳ Consultando {rota.length} cidades × {matriz?.horas.length ?? 12} horas...</div>}
+            {matriz && (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ borderCollapse: "collapse", fontSize: 9, minWidth: 560 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: "5px 7px", textAlign: "left", color: T.dim, borderBottom: `1px solid ${T.border}` }}>Cidade</th>
+                      {matriz.horas.map((h) => <th key={h} style={{ padding: "5px 3px", color: T.dim, borderBottom: `1px solid ${T.border}`, fontWeight: 700 }}>{h.slice(0, 2)}h</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rota.map((pt) => (
+                      <tr key={pt.chave}>
+                        <td style={{ padding: "4px 7px", whiteSpace: "nowrap", borderBottom: `1px solid ${T.border}` }}>
+                          <b style={{ fontSize: 10 }}>{pt.papel === "pombal" ? "🏠 " : pt.papel === "solta" ? "🏁 " : ""}{pt.nome.split(" ")[0]}</b>
+                        </td>
+                        {(matriz.celulas[pt.chave] || []).map((v, i) => {
+                          const cor = v == null ? "#1b283c" : v >= 75 ? "#39e58c" : v >= 55 ? "#fbbf24" : v >= 35 ? "#f97316" : "#ff5d62";
+                          const opac = v == null ? 1 : 0.25 + (v / 100) * 0.75;
+                          return <td key={i} title={v == null ? "sem dado" : `${pt.nome} ${matriz.horas[i]}: ${v}%`} style={{ padding: 0, borderBottom: `1px solid ${T.border}` }}><div style={{ width: "100%", minWidth: 26, height: 22, background: cor, opacity: opac, display: "grid", placeItems: "center", fontSize: 8, fontWeight: 800, color: "#0b1426" }}>{v ?? "–"}</div></td>;
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ ...T.small, fontSize: 10, marginTop: 8, lineHeight: 1.5 }}>🟢 ≥75 ótima · 🟡 55–74 razoável · 🟠 35–54 difícil · 🔴 &lt;35 ruim · Fonte: Open-Meteo por hora. Cruze com a ⏱️ linha do tempo: a hora que o bando passa em cada cidade precisa estar verde!</div>
+              </div>
+            )}
           </section>
         )}
 

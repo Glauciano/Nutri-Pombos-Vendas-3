@@ -7,6 +7,9 @@ import { DISTRIBUICAO } from "../calculadora/page";
 import { DEFAULT_CONFIG, loadConfig, saveConfig, type ConfigPlantel } from "../config";
 import { getPombal, salvarPombal } from "../lib/apis-gratis";
 
+const KEY_POMBAIS = "nutripombos-pombais-v1";
+type PombalSalvo = { nome: string; lat: number; lon: number };
+
 function escalar(base: number, consumo: number) {
   return Math.round((base / 30) * consumo * 10) / 10;
 }
@@ -27,6 +30,19 @@ export default function Configuracao() {
   const [pombalNome, setPombalNome] = useState("");
   const [pombalSalvo, setPombalSalvo] = useState(false);
   const [gpsMsg, setGpsMsg] = useState("");
+  // 👨‍🌾 Multi-pombal
+  const [pombais, setPombais] = useState<PombalSalvo[]>([]);
+  const [novoNome, setNovoNome] = useState("");
+  useEffect(() => {
+    try { setPombais(JSON.parse(localStorage.getItem(KEY_POMBAIS) || "[]")); } catch { setPombais([]); }
+  }, []);
+  const salvarListaPombais = (l: PombalSalvo[]) => { setPombais(l); try { localStorage.setItem(KEY_POMBAIS, JSON.stringify(l)); } catch { /* ignora */ } };
+  const salvarPombalAtual = () => {
+    if (Math.abs(pombal.lat) > 90 || Math.abs(pombal.lon) > 180) return;
+    const nome = (pombalNome.trim() || `Pombal ${pombais.length + 1}`);
+    const nova = [...pombais.filter((x) => x.nome !== nome), { nome, lat: pombal.lat, lon: pombal.lon }];
+    salvarListaPombais(nova);
+  };
 
   useEffect(() => {
     const stored = loadConfig();
@@ -148,6 +164,27 @@ export default function Configuracao() {
           {pombal.lat >= -34 && pombal.lat <= 5 && pombal.lon >= -74 && pombal.lon <= -30 ? null : <div style={{ ...T.small, fontSize: 12, marginTop: 10, color: T.orange }}>⚠️ Essas coordenadas estão fora do Brasil — confira os sinais (sul = latitude negativa, oeste = longitude negativa).</div>}
           <div style={{ ...T.small, fontSize: 11, marginTop: 10, lineHeight: 1.6 }}>
             💡 Não sabe as coordenadas? Abra o <a href="https://www.openstreetmap.org" target="_blank" rel="noreferrer" style={{ color: T.blue }}>OpenStreetMap</a>, clique com o botão direito no seu pombal → "Mostrar endereço" e copie os números (ex.: Limeira ≈ latitude <b>-22.8864</b>, longitude <b>-47.4017</b>). Negativo = sul/oeste.
+          </div>
+
+          {/* 👨‍🌾 MULTI-POMBAL — trocar com 1 toque */}
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: T.gold, marginBottom: 8 }}>👨‍🌾 Meus Pombais (troca com 1 toque)</div>
+            {pombais.length === 0 && <div style={{ ...T.small, fontSize: 11, marginBottom: 8 }}>Salve o pombal atual com um nome (ex.: "Casa", "Sítio") e ele aparece aqui pra alternar rápido.</div>}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+              {pombais.map((pp) => {
+                const ativo = Math.abs(pp.lat - pombal.lat) < 0.0001 && Math.abs(pp.lon - pombal.lon) < 0.0001;
+                return (
+                  <span key={pp.nome} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 20, fontSize: 11, fontWeight: 800, color: ativo ? T.bg : T.dim, background: ativo ? T.gold : T.bgInput, border: `1px solid ${ativo ? T.gold : T.border}` }}>
+                    <button type="button" onClick={() => { salvarPombal(pp.lat, pp.lon, pp.nome); setPombalState({ lat: pp.lat, lon: pp.lon, nome: pp.nome }); setPombalNome(pp.nome); setGpsMsg(`✅ Pombal trocado para ${pp.nome}!`); window.setTimeout(() => setGpsMsg(""), 2500); }} style={{ background: "none", border: 0, color: "inherit", font: "inherit", cursor: "pointer", padding: 0 }}>🏠 {pp.nome}</button>
+                    <button type="button" onClick={() => salvarListaPombais(pombais.filter((x) => x.nome !== pp.nome))} style={{ background: "none", border: 0, color: ativo ? T.bg : T.red, cursor: "pointer", padding: 0, fontSize: 13 }}>×</button>
+                  </span>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <input aria-label="Nome do pombal pra salvar" type="text" placeholder="Nome (ex.: Casa, Sítio do Zé)" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} style={{ ...T.input, flex: 1, minHeight: 38 }} />
+              <button type="button" onClick={() => { const nome = novoNome.trim() || pombalNome.trim() || `Pombal ${pombais.length + 1}`; setPombalNome(nome); salvarPombal(pombal.lat, pombal.lon, nome); const nova = [...pombais.filter((x) => x.nome !== nome), { nome, lat: pombal.lat, lon: pombal.lon }]; salvarListaPombais(nova); setNovoNome(""); setGpsMsg("✅ Pombal salvo na lista!"); window.setTimeout(() => setGpsMsg(""), 2000); }} style={T.btnGhost}>💾 Salvar atual na lista</button>
+            </div>
           </div>
         </section>
 

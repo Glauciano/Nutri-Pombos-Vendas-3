@@ -54,6 +54,12 @@ export default function Historico() {
   const [editId, setEditId] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [form, setForm] = useState<Form>(novoForm);
+  // 📥 importador de resultado oficial
+  const [impTexto, setImpTexto] = useState("");
+  const [impAberto, setImpAberto] = useState(false);
+  const [impMsg, setImpMsg] = useState("");
+  const [impData, setImpData] = useState(new Date().toISOString().slice(0, 10));
+  const [impKm, setImpKm] = useState(300);
 
   useEffect(() => {
     setProvas(loadHistorico());
@@ -63,6 +69,36 @@ export default function Historico() {
   useEffect(() => {
     if (ready) localStorage.setItem(HIST_KEY, JSON.stringify(provas));
   }, [provas, ready]);
+
+  // 📥 extrai anilha + hora do texto do resultado oficial; cria registros
+  const importar = () => {
+    const linhasValidas: Form[] = [];
+    let coloc = 1;
+    const distancia = impKm || 300;
+    const [hh0, mm0] = ["07", "00"];
+    const soltaMin = Number(hh0) * 60 + Number(mm0);
+    impTexto.split(/\n/).forEach((linha) => {
+      const anilha = linha.match(/([A-Z]{2,4}[-\s]?\d{2,4}[-\s]?\d{3,6})/i);
+      const hora = linha.match(/(\d{1,2}[:h](\d{2}))(?::(\d{2}))?/);
+      if (!anilha) return;
+      let velocidade = 1200;
+      if (hora) {
+        const H = Number(hora[1].replace("h", ":").split(":")[0]);
+        const M = Number(hora[2]);
+        const min = H * 60 + M - soltaMin;
+        if (min > 10) velocidade = Math.round((distancia * 1000) / min);
+      }
+      linhasValidas.push({
+        data: impData, competicao: `Importado ${new Date(impData).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`,
+        distancia, colocacao: coloc++, velocidade, observacoes: `anilha ${anilha[1]}${hora ? ` • chegada ${hora[1]}` : ""} (importado)`,
+      });
+    });
+    if (!linhasValidas.length) { setImpMsg("⚠️ Não achei anilhas no texto — cole o resultado do clube (com anilha e hora)."); return; }
+    const novos = linhasValidas.map((f) => ({ ...f, id: crypto.randomUUID(), competicao: f.competicao || "", prova: f.competicao || "", observacoes: f.observacoes || "" } as ProvaHistorico));
+    setProvas((atuais) => [...novos, ...atuais]);
+    setImpMsg(`✅ ${novos.length} registro(s) importado(s)!`);
+    setImpTexto("");
+  };
 
   const abrir = (item?: ProvaHistorico) => {
     setForm(item ? {
@@ -112,6 +148,23 @@ export default function Historico() {
           <div>
             <Link href="/centro-provas" style={{ ...T.small, textDecoration: "none" }}>← Centro de Provas</Link>
             <h1 style={{ ...T.h1, marginTop: 9 }}>📜 Histórico de Provas</h1>
+            <button type="button" onClick={() => setImpAberto((v) => !v)} style={{ ...T.btnGhost, marginTop: 8 }}>📥 Importar resultado do clube</button>
+            {impAberto && (
+              <section style={{ ...T.card, marginTop: 10, borderColor: `${T.gold}55`, background: `${T.gold}0d` }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.gold, marginBottom: 8 }}>📥 Importar resultado oficial</div>
+                <div style={{ ...T.small, fontSize: 11, marginBottom: 8, lineHeight: 1.5 }}>Cole o resultado do site do clube/FBPU (linhas com <b>anilha</b> e <b>hora de chegada</b>). O app cria os registros sozinho — velocidade calculada da distância × hora (solta padrão 07:00, ajuste depois se precisar).</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+                  <div><label style={T.label}>Data da prova</label><input type="date" value={impData} onChange={(e) => setImpData(e.target.value)} style={T.input} /></div>
+                  <div><label style={T.label}>Distância (km)</label><input type="number" value={impKm} onChange={(e) => setImpKm(Number(e.target.value))} style={T.input} /></div>
+                </div>
+                <textarea value={impTexto} onChange={(e) => setImpTexto(e.target.value)} placeholder={"1º  BRP-2024-1234  10:42:15\n2º  BRP-2024-0987  10:51:03\n..."} style={{ ...T.input, minHeight: 110, fontFamily: "monospace", fontSize: 12 }} />
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <button type="button" onClick={importar} style={{ ...T.btn, flex: 1 }}>📥 Importar</button>
+                  <button type="button" onClick={() => { setImpAberto(false); setImpMsg(""); }} style={T.btnGhost}>Fechar</button>
+                </div>
+                {impMsg && <div style={{ ...T.small, fontSize: 12, marginTop: 8, color: impMsg.startsWith("✅") ? T.green : T.orange }}>{impMsg}</div>}
+              </section>
+            )}
             <p style={{ ...T.small, marginTop: 4 }}>{provas.length} resultados registrados</p>
           </div>
           <button onClick={() => abrir()} style={T.btnSm}>+ Prova</button>

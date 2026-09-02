@@ -11,7 +11,8 @@ import {
   buscarAr, classificarAr, buscarAltimetria, interpolarRota,
   buscarRadar, urlTileRadar, tileXY,
   aplicarPombalSalvo, getPombal, EVENTO_POMBAL, Coords,
-  HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM, faseLua
+  HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM, faseLua,
+  NowcastPasso, buscarNowcastChuva, calcularIdp, confiancaPrevisao, protocoloRecepcao
 } from "../lib/apis-gratis";
 import { loadConfig } from "../config";
 
@@ -69,6 +70,11 @@ export default function RotaDaProva() {
   const [compCarregando, setCompCarregando] = useState(false);
   // 🧭 Bússola da chegada (quem espera no pombal)
   const [tick, setTick] = useState(0);
+
+  // 🌧️ Nowcast de chuva no pombal + 📖 crônica
+  const [nowcast, setNowcast] = useState<NowcastPasso[] | null>(null);
+  const [cronicaSalva, setCronicaSalva] = useState(false);
+  const [cronicaMsg, setCronicaMsg] = useState("");
 
   // 🏠 Pombal configurável (Configuração → Localização do Pombal)
   const [pombal, setPombalState] = useState<Coords & { nome: string }>(() => ({ ...COORDS[POMBAL_BASE], nome: POMBAL_BASE }));
@@ -186,6 +192,7 @@ export default function RotaDaProva() {
 
   const base = pombal;
 
+
   // 🛰️ Satélite opcional (Google, com API Key) + 🌙 lua da prova
   const gKey = (loadConfig().mapaApiKey || "").trim();
   const [modoMapa, setModoMapa] = useState<"radar" | "satelite" | "google">("radar");
@@ -206,6 +213,18 @@ export default function RotaDaProva() {
   const validos = pontosComScore.filter((x) => x.score);
   const pior = validos.length ? validos.reduce((a, b) => (a.score!.pts < b.score!.pts ? a : b)) : null;
   const media = validos.length ? Math.round(validos.reduce((s, x) => s + x.score!.pts, 0) / validos.length) : null;
+
+  // 🎯 IDP — Índice de Dificuldade da Prova (0-10)
+  const idp = useMemo(() => {
+    if (!provaSel) return null;
+    const penMedio = validos.length ? validos.reduce((soma, v) => soma + (v.vento?.pen ?? 0), 0) / validos.length : 5;
+    const chuvaMax = validos.reduce((m, v) => Math.max(m, (v.d && "clima" in v.d ? v.d.clima.chuvaMm : 0)), 0);
+    const d = altimetria && altimetria.length ? Math.max(...altimetria) - Math.min(...altimetria) : null;
+    return calcularIdp({ km: provaSel.km, penVentoMedio: penMedio, chuvaMaxMm: chuvaMax, kp: kp?.kp ?? null, relevoDesnivelM: d });
+  }, [provaSel, validos, kp, altimetria]);
+
+  // 📊 confiança da previsão
+  const conf = confiancaPrevisao(Math.max(0, diasAte));
 
   // 🕐 Score de cada hora da manhã na cidade da soltura (vento relativo à rota)
   const bearingSolta = rota.length > 1 && provaSel ? bearingRota(rota[0].lat, rota[0].lon, base.lat, base.lon) : 180;
@@ -273,6 +292,7 @@ export default function RotaDaProva() {
       : `🌡️ Condições de AGORA (${hojeSP().split("-").reverse().slice(0, 2).join("/")}) — NÃO é a previsão do dia da prova`);
     if (media !== null) L.push(`\n🛣️ Rota com ${rota.length} pontos • score médio ${media}% • pior trecho: ${pior?.pt.nome} (${pior?.score?.pts}%)`);
     if (kp) L.push(`🧲 Kp ${kp.kp.toFixed(2)} — ${kp.kp <= 2 ? "calmo" : kp.kp <= 4 ? "instável" : "tempestade"}`);
+    if (idp) L.push(`🎯 IDP ${idp.idp.toFixed(1)}/10 — ${idp.label}`);
     if (validos.length) {
       L.push("\n💨🌧️ *Vento e chuva por trecho:*");
       const climaDe = (v: typeof validos[number]) => (v.d && "clima" in v.d ? v.d.clima : null);
@@ -308,6 +328,7 @@ export default function RotaDaProva() {
     L.push(`Solta: ${provaSel.diaSolta} ${provaSel.dataSolta.split("-").reverse().slice(0, 2).join("/")} — previsão do dia`);
     if (media !== null) L.push(`Rota ${rota.length} pts • média ${media}% • pior: ${pior?.pt.nome} (${pior?.score?.pts}%)`);
     if (kp) L.push(`Kp ${kp.kp.toFixed(2)} (${kp.kp <= 2 ? "calmo" : kp.kp <= 4 ? "instável" : "tempestade"})`);
+    if (idp) L.push(`IDP ${idp.idp.toFixed(1)}/10 (${idp.label})`);
     if (validos.length) {
       L.push("Vento e chuva por trecho:");
       validos.forEach((v) => {
@@ -412,18 +433,26 @@ export default function RotaDaProva() {
     setCompCarregando(false);
   };
 
-  // relógio da bússola da chegada (contagem atualiza a cada 30s)
+  // relógio da bússola da chegada (contagem atualiza a cada 30s) + nowcast de chuva
   useEffect(() => {
     const t = window.setInterval(() => setTick((v) => v + 1), 30000);
     return () => window.clearInterval(t);
   }, []);
   void tick;
+  useEffect(() => {
+    buscarNowcastChuva(pombal.lat, pombal.lon).then(setNowcast).catch(() => setNowcast(null));
+    const t = window.setInterval(() => { buscarNowcastChuva(pombal.lat, pombal.lon).then(setNowcast).catch(() => {}); }, 600000);
+    return () => window.clearInterval(t);
+  }, [pombal.lat, pombal.lon]);
 
   // 🧭 Bússola da Chegada: horizonte certo + vento na reta final
   const dadoPombal = rota.length ? dados[rota[rota.length - 1].chave] : undefined;
   const climaPombal = dadoPombal && "clima" in dadoPombal ? dadoPombal.clima : null;
   const rumoSoltura = rota.length > 1 && provaSel ? bearingRota(pombal.lat, pombal.lon, rota[0].lat, rota[0].lon) : null;
   const ventoFinal = climaPombal && rumoSoltura != null ? ventoNaRota(climaPombal.dirVento, (rumoSoltura + 180) % 360, climaPombal.ventoKmh) : null;
+
+  // 🌡️ protocolo de recepção (clima na hora da chegada)
+  const recepcao = climaPombal ? protocoloRecepcao(climaPombal.temp, climaPombal.chuvaMm, ventoFinal?.tipo ?? null) : [];
   const contagem = (() => {
     const [H, M] = chegada(0.92).split(":").map(Number);
     const agora2 = new Date();
@@ -432,6 +461,30 @@ export default function RotaDaProva() {
     if (diff > -180) return "é agora — hora da chegada! 👀";
     return "janela prevista já passou — fique atento";
   })();
+  // 📖 Crônica — arquiva o panorama desta prova (previsão vs realizado depois)
+  const arquivarCronica = () => {
+    if (!provaSel) return;
+    const KEY_CRON = "nutripombos-cronicas-v1";
+    let lista: unknown[] = [];
+    try { lista = JSON.parse(localStorage.getItem(KEY_CRON) || "[]"); } catch { lista = []; }
+    const registro = {
+      provaId: provaSel.id, num: provaSel.num, cidade: provaSel.cidade, estado: provaSel.estado, km: provaSel.km,
+      dataSolta: provaSel.dataSolta, geradoEm: new Date().toISOString(), modo,
+      scoreMedio: media, piorTrecho: pior ? { nome: pior.pt.nome, pts: pior.score?.pts ?? null } : null,
+      idp: idp ? { valor: idp.idp, label: idp.label } : null,
+      kp: kp?.kp ?? null, chegadaPrevista: minutosVoo ? `${chegada(0.92)}–${chegada(1.08)}` : null,
+      veloEstimada, passagens: passagens.map((pp) => `${pp.nome} ~${pp.hora}`),
+      resumo: msgCompacta,
+    };
+    const filtrada = (lista as typeof registro[]).filter((r) => r && r.provaId !== registro.provaId);
+    filtrada.unshift(registro);
+    try {
+      localStorage.setItem(KEY_CRON, JSON.stringify(filtrada.slice(0, 60)));
+      setCronicaSalva(true); setCronicaMsg("✅ Crônica arquivada! Veja em 📖 Crônicas da Temporada (menu)");
+      window.setTimeout(() => { setCronicaSalva(false); setCronicaMsg(""); }, 3500);
+    } catch { setCronicaMsg("⚠️ Sem espaço para salvar a crônica."); }
+  };
+
   // 🖨️ Relatório da prova — abre versão pra imprimir / salvar PDF
   const gerarRelatorio = () => {
     if (!provaSel) return;
@@ -505,6 +558,11 @@ export default function RotaDaProva() {
             ))}
             <button onClick={() => provaSel && consultar(rota, modo, provaSel.dataSolta)} disabled={carregando} style={{ ...T.btnSm, opacity: carregando ? 0.6 : 1 }}>{carregando ? "⏳" : "↻ Atualizar"}</button>
           </div>
+          {modo === "prova" && (
+            <div style={{ marginTop: 8, padding: "7px 11px", borderRadius: 8, fontSize: 11, color: conf.cor, background: `${conf.cor}12`, border: `1px solid ${conf.cor}44`, lineHeight: 1.4 }}>
+              {conf.emoji} Confiança da previsão: <b>{conf.label}</b> — {conf.nota}
+            </div>
+          )}
           {modo === "agora" && previsivel && provaSel && (
             <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 9, color: T.orange, background: "#f9731612", border: "1px solid #f9731655", fontSize: 12, lineHeight: 1.5 }}>
               ⚠️ Você está vendo as condições de <b>AGORA ({hojeSP().split("-").reverse().slice(0, 2).join("/")})</b> — e não do dia da prova! A previsão de <b>{provaSel.dataSolta.split("-").reverse().slice(0, 2).join("/")}</b> já está disponível: toque em <b>🏁 Dia da soltura</b>.
@@ -563,6 +621,14 @@ export default function RotaDaProva() {
                   <div style={{ ...T.small, fontSize: 10 }}>LUA {modo === "prova" ? "NA PROVA" : "HOJE"}</div>
                   <b style={{ color: T.gold, fontSize: 12 }}>{lua.iluminacao}%</b>
                   <div style={{ ...T.small, fontSize: 9 }}>{lua.fase}</div>
+                </div>
+              )}
+              {idp && (
+                <div style={{ padding: 10, borderRadius: 9, background: `${idp.cor}12`, border: `1px solid ${idp.cor}55`, textAlign: "center" }}>
+                  <div style={{ fontSize: 16 }}>🎯</div>
+                  <div style={{ ...T.small, fontSize: 10 }}>DIFICULDADE (IDP)</div>
+                  <b style={{ color: idp.cor, fontSize: 14 }}>{idp.idp.toFixed(1)}/10</b>
+                  <div style={{ ...T.small, fontSize: 9, color: idp.cor }}>{idp.label}</div>
                 </div>
               )}
               {pior?.score && (
@@ -829,13 +895,17 @@ export default function RotaDaProva() {
               <a href={`https://wa.me/?text=${encodeURIComponent(msgCompacta)}`} target="_blank" rel="noreferrer" style={{ ...T.btn, flex: 1, minWidth: 180, display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", background: "#25D366", borderColor: "#25D366" }}>
                 💬 Enviar resumo no WhatsApp
               </a>
-              <button type="button" onClick={gerarRelatorio} style={{ ...T.btnGhost, flex: "1 1 100%", fontWeight: 800 }}>
-                🖨️ Relatório da prova (imprimir / salvar PDF)
+              <button type="button" onClick={gerarRelatorio} style={{ ...T.btnGhost, flex: 1, minWidth: 180, fontWeight: 800 }}>
+                🖨️ Relatório (imprimir / PDF)
+              </button>
+              <button type="button" onClick={arquivarCronica} style={{ ...T.btnGhost, flex: 1, minWidth: 180, fontWeight: 800, color: cronicaSalva ? T.green : T.white }}>
+                {cronicaSalva ? "✅ Arquivada!" : "📖 Arquivar crônica"}
               </button>
             </div>
             <div style={{ ...T.small, fontSize: 11, marginTop: 8, textAlign: "center", lineHeight: 1.5 }}>
               💡 <b>Copiar</b> cola a versão completa com emojis (recomendado — funciona em qualquer grupo).<br />O botão verde abre o WhatsApp com a versão resumida (links têm limite de tamanho e quebram emojis).
             </div>
+            {cronicaMsg && <div style={{ ...T.small, fontSize: 12, marginTop: 8, textAlign: "center", color: cronicaMsg.startsWith("✅") ? T.green : T.orange }}>{cronicaMsg}</div>}
             <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
               <button type="button" onClick={ativarAlarme} style={{ ...T.btnGhost, color: alarmeAtivo ? T.red : T.gold, fontWeight: 800 }}>
                 {alarmeAtivo ? "🔕 Desativar alarme" : "🔔 Alarme de chegada"}
@@ -923,6 +993,25 @@ export default function RotaDaProva() {
               )}
               <div style={{ ...T.small, marginTop: 4 }}>⏱️ Chegada prevista {chegada(0.92)}–{chegada(1.08)} — <b style={{ color: T.gold }}>{contagem}</b></div>
             </div>
+            {nowcast && nowcast.length > 0 && (() => {
+              const comChuva = nowcast.filter((n) => n.mm > 0.1);
+              const primeira = comChuva[0];
+              const idxPrimeira = primeira ? nowcast.indexOf(primeira) : -1;
+              return (
+                <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 10, background: "#ffffff08", fontSize: 12, lineHeight: 1.6 }}>
+                  <b style={{ color: T.blue }}>🌧️ Chuva iminente no pombal (próximas 2h):</b>{" "}
+                  {primeira
+                    ? <>começa ~<b style={{ color: T.blue }}>{primeira.hora}</b> ({idxPrimeira * 15}min) — pico {Math.max(...comChuva.map((n) => n.mm)).toFixed(1)}mm</>
+                    : <>sem chuva prevista ✅ — céu livre na reta final</>}
+                </div>
+              );
+            })()}
+            {recepcao.length > 0 && (
+              <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, background: "#ffffff08", fontSize: 12, lineHeight: 1.7 }}>
+                <b style={{ color: T.gold }}>🌡️ Protocolo de recepção:</b>
+                {recepcao.map((r, i) => <div key={i} style={{ marginTop: 4 }}>{r}</div>)}
+              </div>
+            )}
           </section>
         )}
 

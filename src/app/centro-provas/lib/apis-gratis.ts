@@ -617,3 +617,69 @@ export function alertaMadrugada(m: Madrugada): { titulo: string; emoji: string; 
   if (m.chuvaMm > 1) base = { ...base, dicas: [...base.dicas, `🌧️ Chuva prevista na madrugada (${m.chuvaMm}mm): proteja rações e evite bandeja de banho exposta`] };
   return base;
 }
+
+/* ------------------------------------------------------------------ */
+/* 🌧️ Chuva iminente — nowcast de 15 em 15 min (2h) no pombal          */
+/* ------------------------------------------------------------------ */
+
+export type NowcastPasso = { hora: string; mm: number };
+
+export async function buscarNowcastChuva(lat: number, lon: number): Promise<NowcastPasso[]> {
+  const p = new URLSearchParams({ latitude: String(lat), longitude: String(lon), minutely_15: "precipitation", forecast_minutely_15: "8", timezone: "America/Sao_Paulo" });
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  const m = j?.minutely_15;
+  if (!m?.time) throw new Error("Nowcast indisponível");
+  return (m.time as string[]).map((t, i) => ({ hora: t.slice(11, 16), mm: Number(m.precipitation?.[i] ?? 0) }));
+}
+
+/* ------------------------------------------------------------------ */
+/* 🎯 IDP — Índice de Dificuldade da Prova (0–10)                      */
+/* ------------------------------------------------------------------ */
+
+export function calcularIdp(input: {
+  km: number;
+  penVentoMedio: number;      // 0 (a favor) a 20 (contra)
+  chuvaMaxMm: number;         // pior cidade
+  kp: number | null;
+  relevoDesnivelM?: number | null; // máximo-mínimo da altimetria
+}): { idp: number; label: string; cor: string; emoji: string; partes: { nome: string; valor: number }[] } {
+  const dist = Math.min(10, input.km / 80);                                   // 760km → 9.5
+  const vento = 2 + input.penVentoMedio * 0.35;                               // 0→2 · 10→5.5 · 20→9
+  const chuva = Math.min(10, 1 + input.chuvaMaxMm * 0.9);                     // 0mm→1 · 8.4mm→8.6
+  const kp = input.kp == null ? 2 : input.kp >= 7 ? 10 : input.kp >= 5 ? 7 : input.kp >= 3 ? 4 : 1;
+  const d = input.relevoDesnivelM;
+  const relevo = d == null ? 3 : d > 800 ? 9 : d > 400 ? 6.5 : d > 150 ? 4 : 2;
+  const idp = Math.round((dist * 0.3 + vento * 0.25 + chuva * 0.2 + kp * 0.1 + relevo * 0.15) * 10) / 10;
+  const label = idp <= 3 ? "Prova tranquila" : idp <= 5 ? "Dificuldade média" : idp <= 7 ? "Prova dura" : "PROVA BRABA";
+  const cor = idp <= 3 ? "#39e58c" : idp <= 5 ? "#fbbf24" : idp <= 7 ? "#f97316" : "#ff5d62";
+  const emoji = idp <= 3 ? "🟢" : idp <= 5 ? "🟡" : idp <= 7 ? "🟠" : "🔴";
+  return { idp, label, cor, emoji, partes: [{ nome: "Distância", valor: dist }, { nome: "Vento", valor: vento }, { nome: "Chuva", valor: chuva }, { nome: "Kp", valor: kp }, { nome: "Relevo", valor: relevo }] };
+}
+
+/* ------------------------------------------------------------------ */
+/* 📊 Confiança da previsão (dias até a prova)                         */
+/* ------------------------------------------------------------------ */
+
+export function confiancaPrevisao(dias: number): { label: string; cor: string; emoji: string; nota: string } {
+  if (dias <= 1) return { label: "ALTA", cor: "#39e58c", emoji: "🟢", nota: "véspera/dia — previsão confiável" };
+  if (dias <= 4) return { label: "MÉDIA", cor: "#fbbf24", emoji: "🟡", nota: "bom parâmetro — confira de novo na véspera" };
+  if (dias <= 9) return { label: "BAIXA-MÉDIA", cor: "#f97316", emoji: "🟠", nota: "pode mudar bastante — reconfire perto da data" };
+  return { label: "BAIXA", cor: "#ff5d62", emoji: "🔴", nota: "visão grossa de longo prazo — reconfire na semana da prova" };
+}
+
+/* ------------------------------------------------------------------ */
+/* 🌡️ Protocolo de recepção no pombal (clima na hora da chegada)       */
+/* ------------------------------------------------------------------ */
+
+export function protocoloRecepcao(temp: number, chuvaMm: number, ventoTipo: string | null): string[] {
+  const L: string[] = [];
+  if (temp >= 30) L.push(`🥵 ${temp}°C na chegada: eletrólito na água ANTES do bando chegar, sombra na portinola e banho disponível`);
+  else if (temp >= 22) L.push(`😌 ${temp}°C na chegada: água limpa + eletrólito leve, recepção padrão`);
+  else L.push(`🧊 ${temp}°C na chegada: recepção padrão — mistura de recuperação e ambiente protegido`);
+  if (chuvaMm > 1) L.push(`🌧️ Chuva prevista na chegada (${chuvaMm}mm): seque quem chegar molhado e feche correntes de ar`);
+  if (ventoTipo === "Vento contra") L.push("🔴 Vêm de frente contra o vento: chegam gastas — Protocolo de Resgate pronto e NADA de ração pesada nas primeiras horas");
+  else if (ventoTipo === "Vento a favor") L.push("🟢 Vêm com vento a favor: chegam mais inteiras — hidratação e mistura leve de recuperação");
+  return L;
+}

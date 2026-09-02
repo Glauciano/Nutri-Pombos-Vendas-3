@@ -21,6 +21,7 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/alertas", label: "Central de alertas", icon: Bell },
       { href: "/centro-provas/performance", label: "Performance", icon: Activity },
       { href: "/centro-provas/clima-desempenho", label: "Clima × Desempenho", icon: TrendingUp },
+      { href: "/centro-provas/cronicas", label: "Crônicas da temporada", icon: Trophy },
       { href: "/centro-provas/pombo-as", label: "Pombo Ás Oficial (FCI)", icon: Trophy },
     ],
   },

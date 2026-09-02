@@ -683,3 +683,34 @@ export function protocoloRecepcao(temp: number, chuvaMm: number, ventoTipo: stri
   else if (ventoTipo === "Vento a favor") L.push("🟢 Vêm com vento a favor: chegam mais inteiras — hidratação e mistura leve de recuperação");
   return L;
 }
+
+/* ------------------------------------------------------------------ */
+/* 👟 Corta-Treino — veredito imediato pra soltar treino              */
+/* ------------------------------------------------------------------ */
+
+export function vereditoTreino(c: { ventoKmh: number; rajadaKmh: number; chuvaMm: number; wmo: number; temp: number }): {
+  nivel: "liberado" | "curto" | "cortar"; titulo: string; emoji: string; cor: string; motivos: string[];
+} {
+  const motivos: string[] = [];
+  let nivel: "liberado" | "curto" | "cortar" = "liberado";
+  const pior = (m: string, p: "curto" | "cortar") => { motivos.push(m); if (p === "cortar" || nivel === "liberado") nivel = p === "cortar" ? "cortar" : (nivel === "cortar" ? "cortar" : "curto"); };
+  if (c.rajadaKmh >= 45) pior(`💨 Rajada forte (${c.rajadaKmh} km/h) — risco de colisão e extravio`, "cortar");
+  else if (c.rajadaKmh >= 30) pior(`💨 Rajada moderada (${c.rajadaKmh} km/h)`, "curto");
+  if (c.ventoKmh >= 32) pior(`🌬️ Vento muito forte (${c.ventoKmh} km/h)`, "cortar");
+  else if (c.ventoKmh >= 20) pior(`🌬️ Vento forte (${c.ventoKmh} km/h)`, "curto");
+  if (c.chuvaMm >= 2) pior(`🌧️ Chuva (${c.chuvaMm} mm)`, "cortar");
+  else if (c.chuvaMm > 0.2) pior(`🌧️ Garoa/chuvisco (${c.chuvaMm} mm)`, "curto");
+  if (c.wmo >= 95) pior("⛈️ Tempestade na região", "cortar");
+  else if (c.wmo >= 61) pior("🌧️ Chuva no radar", "cortar");
+  else if (c.wmo >= 51) pior("🌦️ Garoa no radar", "curto");
+  if (c.temp >= 34) pior(`🥵 Calor extremo (${c.temp}°C) — estresse térmico em voo`, "cortar");
+  else if (c.temp >= 31) pior(`😰 Calor alto (${c.temp}°C)`, "curto");
+  if (c.temp > 5 && c.temp < 10) pior(`🥶 Frio (${c.temp}°C)`, "curto");
+  if (!motivos.length) motivos.push("✅ Condições tranquilas: vento, chuva e temperatura dentro da faixa boa");
+  const map = {
+    liberado: { titulo: "TREINO LIBERADO — bom voo!", emoji: "🟢", cor: "#39e58c" },
+    curto: { titulo: "SÓ VOLO CURTO ao redor do pombal", emoji: "🟡", cor: "#fbbf24" },
+    cortar: { titulo: "CORTA O TREINO HOJE", emoji: "🔴", cor: "#ff5d62" },
+  } as const;
+  return { nivel, ...map[nivel], motivos };
+}

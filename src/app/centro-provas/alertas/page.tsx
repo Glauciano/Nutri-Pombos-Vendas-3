@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
-import { Madrugada, alertaMadrugada, buscarMadrugada, getPombal, buscarClimaPassado, direcaoCardeal } from "../lib/apis-gratis";
+import { Madrugada, alertaMadrugada, buscarMadrugada, getPombal, buscarClimaPassado, direcaoCardeal, ClimaPonto, buscarClimaPonto, vereditoTreino } from "../lib/apis-gratis";
 import { T } from "../theme";
 
 type Tab="hoje"|"semana"|"preventivo";
@@ -113,6 +113,7 @@ export default function Alertas(){
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",marginBottom:14}}><h1 style={T.h1}>🔔 Central de Alertas</h1><Link href="/centro-provas" style={{...T.btnGhost,textDecoration:"none"}}>← Centro</Link></div>
     <VesperaProva provas={provas.filter(p=>!p.cancelada)}/>
     <AlertaMadrugadaCard/>
+    <CortaTreinoCard/>
     <ModoExtravio/>
     <section style={{...T.card,display:"flex",justifyContent:"space-between",alignItems:"center",borderColor:`${T.gold}55`,background:`${T.gold}0d`}}><div><div style={{fontSize:40,lineHeight:1,fontWeight:900,color:T.gold,fontVariantNumeric:"tabular-nums"}}>{horaStr(agora)}</div><div style={{...T.small,marginTop:5}}>{agora.toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div></div>{avisos.length>0&&<b style={{padding:"4px 10px",borderRadius:20,background:T.red}}>{avisos.length} alertas</b>}</section>
     <section style={{...T.card,border:`2px solid ${atual?T.gold:T.blue}`,background:atual?`${T.gold}12`:`${T.blue}0d`}}><small style={{color:atual?T.gold:T.blue,fontWeight:800}}>{atual?"🔴 TAREFA DE REFERÊNCIA AGORA":"🔵 PRÓXIMA TAREFA"}</small><h3 style={{margin:"5px 0"}}>{(atual||proxima).emoji} {(atual||proxima).titulo}</h3><div style={T.small}>{(atual||proxima).desc}</div><div style={{color:T.gold,fontSize:11,marginTop:5}}>⏰ {(atual||proxima).hora}</div></section>
@@ -210,6 +211,42 @@ function ModoExtravio(){
         • Manter portinola aberta nas primeiras horas da manhã<br />
         • <b>Ao voltar:</b> não dar ração pesada — siga o <Link href="/centro-provas/resgate" style={{color:T.blue}}>Protocolo de Resgate</Link> (desidratado/exausto)
       </div>
+    </div>}
+  </section>;
+}
+
+/* 👟 Corta-Treino — devo soltar treino agora? */
+function CortaTreinoCard(){
+  const[dados,setDados]=useState<ClimaPonto|null>(null);
+  const[erro,setErro]=useState("");
+  const[loading,setLoading]=useState(false);
+  const consultar=useCallback(async()=>{
+    setLoading(true);setErro("");
+    try{const p=getPombal();setDados(await buscarClimaPonto(p.lat,p.lon))}
+    catch(e){setDados(null);setErro(e instanceof Error?e.message:"falhou")}
+    finally{setLoading(false)}
+  },[]);
+  const v=dados?vereditoTreino(dados):null;
+  return <section style={{...T.card,marginBottom:10,borderColor:v?v.cor+"55":T.border,background:v?v.cor+"0d":undefined}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+      <Title>👟 Corta-Treino — devo soltar treino agora?</Title>
+      <button onClick={consultar} disabled={loading} style={T.btnSm}>{loading?"⏳":"↻ Consultar"}</button>
+    </div>
+    {!dados&&!loading&&!erro&&<div style={{...T.small,fontSize:12}}>Consulta vento, rajada, chuva e temperatura AGORA no seu pombal e dá o veredito na hora — um toque, decisão tomada.</div>}
+    {loading&&!dados&&<div style={{...T.small}}>⏳ Medindo as condições no pombal...</div>}
+    {erro&&<div style={{...T.small,color:T.orange}}>⚠️ Não foi possível consultar ({erro}).</div>}
+    {v&&dados&&<div>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+        <span style={{fontSize:30}}>{v.emoji}</span>
+        <b style={{fontSize:15,color:v.cor}}>{v.titulo}</b>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:10}}>
+        {[["🌬️",dados.ventoKmh+"km/h"],["💨",dados.rajadaKmh+"km/h"],["🌧️",dados.chuvaMm+"mm"],["🌡️",dados.temp+"°C"],["💧",dados.umidade+"%"]].map(([e,val])=>(
+          <div key={val} style={{padding:7,borderRadius:8,background:"#ffffff08",textAlign:"center"}}><div>{e}</div><b style={{fontSize:12}}>{val}</b></div>
+        ))}
+      </div>
+      {v.motivos.map((m,i)=><div key={i} style={{padding:"7px 11px",borderRadius:8,background:"#ffffff08",fontSize:12,marginBottom:4,lineHeight:1.5}}>{m}</div>)}
+      <div style={{...T.small,fontSize:10,marginTop:8}}>Local: pombal configurado • Fonte: Open-Meteo (dados atuais)</div>
     </div>}
   </section>;
 }

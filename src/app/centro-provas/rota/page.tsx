@@ -485,35 +485,63 @@ export default function RotaDaProva() {
     } catch { setCronicaMsg("⚠️ Sem espaço para salvar a crônica."); }
   };
 
-  // 🖨️ Relatório da prova — abre versão pra imprimir / salvar PDF
+  // 🖨️ Relatório da prova — versão completa pra imprimir / salvar PDF
   const gerarRelatorio = () => {
     if (!provaSel) return;
+    const climaDe = (v: typeof validos[number]) => (v.d && "clima" in v.d ? v.d.clima : null);
+    const pressoes = validos.map((v) => climaDe(v)?.pressaoMsl ?? 0).filter((x) => x > 0);
+    const pressaoMedia = pressoes.length ? Math.round(pressoes.reduce((a, b) => a + b, 0) / pressoes.length) : null;
+    const altMax = altimetria && altimetria.length ? Math.round(Math.max(...altimetria)) : null;
     const linhasTabela = pontosComScore.map(({ pt, d, vento, score }) => {
       const cl = d && "clima" in d ? d.clima : null;
+      const arPt = ar[pt.chave];
       return `<tr>
         <td><b>${pt.papel === "pombal" ? "🏠 " : pt.papel === "solta" ? "🏁 " : ""}${pt.nome}</b></td>
         <td>${pt.papel === "pombal" ? "—" : pt.km + "km"}</td>
         <td>${cl ? cl.temp + "°C" : "—"}</td>
         <td>${cl ? cl.chuvaMm + "mm" + (cl.chuvaPct != null ? " (" + cl.chuvaPct + "%)" : "") : "—"}</td>
         <td>${cl ? cl.ventoKmh + "km/h " + direcaoCardeal(cl.dirVento) : "—"}</td>
+        <td>${cl ? cl.rajadaKmh + "km/h" : "—"}</td>
+        <td>${cl && cl.pressaoMsl > 0 ? cl.pressaoMsl + " hPa" : "—"}</td>
+        <td>${cl ? cl.umidade + "%" : "—"}</td>
+        <td>${cl ? cl.visibilidadeKm + "km" : "—"}</td>
+        <td>${arPt ? arPt.pm25 + "µg" : "—"}</td>
         <td>${vento ? vento.tipo.replace("Vento ", "") : "—"}</td>
         <td style="color:${score ? score.cor : "#000"}"><b>${score ? score.pts + "%" : "—"}</b></td>
+        ${passagens.length ? `<td>${passagens.find((pp) => pp.nome === pt.nome)?.hora ?? "—"}</td>` : ""}
       </tr>`;
     }).join("");
+    const colPass = passagens.length ? "<th>Passa ~</th>" : "";
+    const linhasTempo = passagens.length ? `<h2>⏱️ Linha do tempo do voo (soltura ${horaSolta})</h2><table><tr><th>Hora</th><th>Cidade</th><th>Observação</th></tr>${passagens.map((pp) => `<tr><td><b>${pp.hora}</b></td><td>${pp.nome}</td><td>${pp.papel === "solta" ? "abertura dos cestos" : pp.papel === "pombal" ? "chegada no pombal (±8%)" : "passagem • " + (pp.vento?.tipo?.toLowerCase() ?? "") + " • ~" + pp.vel + " m/min"}</td></tr>`).join("")}</table>` : "";
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório Prova #${provaSel.num}</title>
-      <style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px;max-width:800px}
-      h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 6px;color:#555}
-      .sub{color:#555;font-size:12px;margin-bottom:14px}
-      .box{border:1px solid #ccc;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px}
-      table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:6px 8px;text-align:left}th{background:#f5f5f5}
+      <style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px;max-width:900px}
+      h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 6px;color:#444}
+      .sub{color:#555;font-size:12px;margin-bottom:12px}
+      .box{border:1px solid #ccc;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px}
+      .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+      .mini{border:1px solid #ddd;border-radius:8px;padding:8px;text-align:center;font-size:12px}
+      .mini b{display:block;font-size:16px}
+      table{width:100%;border-collapse:collapse;font-size:10.5px}th,td{border:1px solid #ddd;padding:5px 6px;text-align:left}th{background:#f5f5f5}
       .destaque{background:#fff8e1;border-color:#e6c200}</style></head><body>
       <h1>🕊️ Prova #${provaSel.num} — ${provaSel.cidade}/${provaSel.estado} (${provaSel.km}km)</h1>
       <div class="sub">Solta: ${provaSel.diaSolta} ${provaSel.dataSolta.split("-").reverse().slice(0, 2).join("/")} • Gerado em ${new Date().toLocaleString("pt-BR")} • Nutri Pombos</div>
-      <div class="box ${media !== null && media < 55 ? "" : "destaque"}"><b>Resumo:</b> ${media !== null ? `score médio da rota ${media}% • pior trecho: ${pior?.pt.nome} (${pior?.score?.pts}%)` : "—"}${kp ? ` • Kp ${kp.kp.toFixed(2)}` : ""}${lua ? ` • Lua ${lua.emoji} ${lua.iluminacao}%` : ""}${solSolta ? ` • Nascer do sol ${solSolta.nascer} → solta às ${horaSolta}` : ""}${minutosVoo ? ` • Chegada prevista ${chegada(0.92)}–${chegada(1.08)}` : ""}</div>
-      ${janelaIdeal ? `<div class="box destaque"><b>🕐 Melhor janela de soltura:</b> ${janelaIdeal.ini}–${janelaIdeal.fim} (${janelaIdeal.pts}%)</div>` : ""}
-      <h2>Vento e chuva por cidade ${modo === "prova" ? "(previsão do dia da soltura)" : "(condições atuais)"}</h2>
-      <table><tr><th>Cidade</th><th>Dist.</th><th>Temp.</th><th>Chuva</th><th>Vento</th><th>Na rota</th><th>Score</th></tr>${linhasTabela}</table>
-      <div class="sub" style="margin-top:14px">Fontes: Open-Meteo • NOAA SWPC • Esri — dados gratuitos. Previsões sujeitas a alteração; confira na véspera.</div>
+
+      <div class="grid">
+        ${idp ? `<div class="mini" style="border-color:${idp.cor}">🎯 IDP<b style="color:${idp.cor}">${idp.idp.toFixed(1)}/10</b>${idp.label}</div>` : ""}
+        ${kp ? `<div class="mini">🧲 Kp<b>${kp.kp.toFixed(2)}</b>${kp.kp <= 2 ? "calmo" : kp.kp <= 4 ? "instável" : "tempestade"}${kp.horaUTC ? " • " + kp.horaUTC : ""}</div>` : ""}
+        ${pressaoMedia ? `<div class="mini">🧭 Pressão média<b>${pressaoMedia} hPa</b>ao longo da rota</div>` : ""}
+        ${altMax != null ? `<div class="mini">⛰️ Ponto mais alto<b>${altMax} m</b>no perfil da rota</div>` : ""}
+      </div>
+
+      <div class="box destaque"><b>Resumo:</b> ${media !== null ? `score médio ${media}% • pior trecho: ${pior?.pt.nome} (${pior?.score?.pts}%)` : "—"}${lua ? ` • Lua ${lua.fase} ${lua.iluminacao}%` : ""}${solSolta ? ` • Nascer ${solSolta.nascer} → solta ${horaSolta} (${infoSolta.replace("☀️ ", "")})` : ""}${minutosVoo ? ` • Chegada prevista ${chegada(0.92)}–${chegada(1.08)} (~${veloEstimada} m/min)` : ""}${janelaIdeal ? ` • 🕐 Melhor janela: ${janelaIdeal.ini}–${janelaIdeal.fim} (${janelaIdeal.pts}%)` : ""}</div>
+      <div class="box">📊 <b>Confiança da previsão:</b> ${conf.emoji} ${conf.label} — ${conf.nota} • Referência das cidades: ${modo === "prova" ? "janela do voo 06h–20h do dia da soltura" : "condições atuais"}</div>
+
+      <h2>Vento e chuva por cidade</h2>
+      <table><tr><th>Cidade</th><th>Dist.</th><th>Temp.</th><th>Chuva</th><th>Vento</th><th>Rajada</th><th>Pressão</th><th>Umid.</th><th>Visib.</th><th>PM2.5</th><th>Na rota</th><th>Score</th>${colPass}</tr>${linhasTabela}</table>
+
+      ${linhasTempo}
+
+      <div class="sub" style="margin-top:14px">Fontes: Open-Meteo (clima, pressão, sol, altimetria, ar) • NOAA SWPC (Kp) • RainViewer (chuva) — gratuitos. Previsões sujeitas a alteração; confira na véspera.</div>
       <script>window.onload=()=>{window.print()}</script></body></html>`;
     const win = window.open("", "_blank");
     if (!win) { alert("Permita pop-ups para gerar o relatório (ou toque novamente)."); return; }

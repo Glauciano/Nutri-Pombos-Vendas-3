@@ -14,6 +14,7 @@ import {
   HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM, faseLua,
   NowcastPasso, buscarNowcastChuva, calcularIdp, confiancaPrevisao, protocoloRecepcao,
   riscoExtravio, gerarIcsProvas,
+  buscarClimaPontos, buscarSolPontos, buscarArPontos, buscarJanelaSoltaPontos, limparCacheApi,
 } from "../lib/apis-gratis";
 import { loadConfig } from "../config";
 
@@ -125,49 +126,42 @@ export default function RotaDaProva() {
   const diasAte = provaSel ? diasParaProva(provaSel.dataSolta) : 0;
   const previsivel = diasAte >= 0 && diasAte <= LIMITE_PREVISAO_DIAS;
 
-  const consultar = useCallback(async (rotaAtual: PontoRota[], modoAtual: Modo, dataSolta?: string) => {
+  const consultar = useCallback(async (rotaAtual: PontoRota[], modoAtual: Modo, dataSolta?: string, forcar = false) => {
     if (!rotaAtual.length) return;
+    if (forcar) limparCacheApi();
     setCarregando(true); setDados({}); setKp(null); setSolSolta(null); setSolPombal(null); setAr({});
     const dia = modoAtual === "prova" && dataSolta ? dataSolta : undefined;
-    const [resultados, kpR] = await Promise.all([
-      Promise.all(rotaAtual.map(async (pt) => {
-        try { return [pt.chave, { clima: await buscarClimaPonto(pt.lat, pt.lon, dia) }] as const; }
-        catch (e) { return [pt.chave, { erro: e instanceof Error ? e.message : "Falha na consulta" }] as const; }
-      })),
+    const coords = rotaAtual.map((pt) => ({ lat: pt.lat, lon: pt.lon }));
+    // 🚀 TODAS as cidades em UMA chamada (antes eram 11 — estourava o limite/429)
+    const [climas, kpR] = await Promise.all([
+      buscarClimaPontos(coords, dia).catch(() => undefined),
       buscarKpNoaa(),
     ]);
-    setDados(Object.fromEntries(resultados));
+    setDados(Object.fromEntries(rotaAtual.map((pt, i) => [
+      pt.chave,
+      climas?.[i] ? { clima: climas[i] as ClimaPonto } : { erro: "limite da API — toque ↻ Atualizar" },
+    ])));
     setKp(kpR);
-    // 🌫️ Qualidade do ar (somente modo "agora" — a API não prevê AQI com antecedência)
+    // 🌫️ Qualidade do ar em lote (somente modo "agora")
     if (modoAtual === "agora") {
-      Promise.all(rotaAtual.map(async (pt) => [pt.chave, await buscarAr(pt.lat, pt.lon)] as const))
-        .then((res) => setAr(Object.fromEntries(res)));
+      buscarArPontos(coords).then((ars) => setAr(Object.fromEntries(rotaAtual.map((pt, i) => [pt.chave, ars[i]])))).catch(() => {});
     }
-    if (rotaAtual[0] && rotaAtual[rotaAtual.length - 1]) {
-      const base = rotaAtual[rotaAtual.length - 1];
-      const solta = rotaAtual[0];
-      const [s1, s2] = await Promise.all([
-        buscarSol(solta.lat, solta.lon, 1).catch(() => null),
-        buscarSol(base.lat, base.lon, 1).catch(() => null),
-      ]);
-      setSolSolta(s1?.[0] ?? null);
-      setSolPombal(s2?.[0] ?? null);
+    // 🌅 Sol na soltura e no pombal (1 chamada)
+    if (rotaAtual.length > 1) {
+      try {
+        const sois = await buscarSolPontos([coords[0], coords[coords.length - 1]], 1);
+        setSolSolta(sois[0]?.[0] ?? null);
+        setSolPombal(sois[1]?.[0] ?? null);
+      } catch { /* segue sem sol */ }
     }
-    // 🕐 Janela ideal de soltura (hora a hora na soltura e no pombal)
+    // 🕐 Janela ideal de soltura (1 chamada, solta + pombal)
     setJanela(null); setJanelaErro("");
     const diaJanela = modoAtual === "prova" && dataSolta ? dataSolta : hojeSP();
-    const em24h = new Date(Date.now() + 24 * 3600000).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-    if (diaJanela <= em24h) {
-      try {
-        const [hs, hp] = await Promise.all([
-          buscarJanelaSolta(rotaAtual[0].lat, rotaAtual[0].lon, diaJanela),
-          buscarJanelaSolta(rotaAtual[rotaAtual.length - 1].lat, rotaAtual[rotaAtual.length - 1].lon, diaJanela),
-        ]);
-        setJanela({ solta: hs, pombal: hp });
-      } catch { setJanelaErro("previsão horária indisponível para esta data"); }
-    } else {
-      setJanelaErro("disponível a partir da véspera da prova");
-    }
+    try {
+      const janelas = await buscarJanelaSoltaPontos([coords[0], coords[coords.length - 1]], diaJanela);
+      if (janelas[0]?.length) setJanela({ solta: janelas[0], pombal: janelas[1] || [] });
+      else setJanelaErro("previsão horária ainda não disponível para esta data");
+    } catch { setJanelaErro("previsão horária indisponível agora — toque ↻"); }
     setCarregando(false);
   }, []);
 
@@ -415,16 +409,16 @@ export default function RotaDaProva() {
     const alvo: [string, string][] = [[provaSel.dataSolta, provaSel.diaSolta || nomeDiaSemana(provaSel.dataSolta)], [dia2, nomeDiaSemana(dia2)]];
     const saida: CompDia[] = [];
     for (const [data, label] of alvo) {
-      const pontos = await Promise.all(rota.map(async (pt, i) => {
-        try {
-          const clima = await buscarClimaPonto(pt.lat, pt.lon, data);
-          const origem = pt.papel === "pombal" && i > 0 ? rota[i - 1] : pt;
-          const b = bearingRota(origem.lat, origem.lon, base.lat, base.lon);
-          const v = ventoNaRota(clima.dirVento, b, clima.ventoKmh);
-          const sc = scorePonto(clima, v.pen, null);
-          return { nome: pt.nome, pts: sc.pts, chuva: clima.chuvaMm, solta: i === 0 };
-        } catch { return null; }
-      }));
+      const climas = await buscarClimaPontos(rota.map((pt) => ({ lat: pt.lat, lon: pt.lon })), data).catch(() => undefined);
+      const pontos = rota.map((pt, i) => {
+        const clima = climas?.[i];
+        if (!clima) return null;
+        const origem = pt.papel === "pombal" && i > 0 ? rota[i - 1] : pt;
+        const b = bearingRota(origem.lat, origem.lon, base.lat, base.lon);
+        const v = ventoNaRota(clima.dirVento, b, clima.ventoKmh);
+        const sc = scorePonto(clima, v.pen, null);
+        return { nome: pt.nome, pts: sc.pts, chuva: clima.chuvaMm, solta: i === 0 };
+      });
       const ok2 = pontos.filter((x): x is NonNullable<typeof x> => x !== null);
       if (!ok2.length) { saida.push({ data, label, media: 0, chuvaTotal: 0, pior: null, scoreSolta: null }); continue; }
       saida.push({
@@ -475,20 +469,20 @@ export default function RotaDaProva() {
     setMatrizCarregando(true); setMatriz(null);
     const dia = modo === "prova" ? provaSel.dataSolta : hojeSP();
     const horas = Array.from({ length: 12 }, (_, i) => `${String(7 + i).padStart(2, "0")}:00`); // 07h–18h
-    const fracos = await Promise.all(rota.map(async (pt, idx) => {
-      try {
-        const hs = await buscarJanelaSolta(pt.lat, pt.lon, dia);
-        const ref = idx > 0 && idx === rota.length - 1 ? rota[idx - 1] : pt;
-        const b = bearingRota(ref.lat, ref.lon, base.lat, base.lon);
-        const vals = horas.map((hAlvo) => {
-          const h = hs.find((x) => x.hora === hAlvo);
-          if (!h) return null;
-          const v = ventoNaRota(h.dir, b, h.vento);
-          return scorePonto({ temp: h.temp, chuvaMm: h.chuva, ventoKmh: h.vento, rajadaKmh: h.rajada, dirVento: h.dir, umidade: h.umidade, pressaoMsl: 1013, nuvens: 0, visibilidadeKm: 24, wmo: h.wmo, horaRef: h.hora }, v.pen, null).pts;
-        });
-        return [pt.chave, vals] as const;
-      } catch { return [pt.chave, horas.map(() => null)] as const; }
-    }));
+    const janelas = await buscarJanelaSoltaPontos(rota.map((pt) => ({ lat: pt.lat, lon: pt.lon })), dia).catch(() => undefined);
+    const fracos = rota.map((pt, idx) => {
+      const hs = janelas?.[idx];
+      if (!hs?.length) return [pt.chave, horas.map(() => null)] as const;
+      const ref = idx > 0 && idx === rota.length - 1 ? rota[idx - 1] : pt;
+      const b = bearingRota(ref.lat, ref.lon, base.lat, base.lon);
+      const vals = horas.map((hAlvo) => {
+        const h = hs.find((x) => x.hora === hAlvo);
+        if (!h) return null;
+        const v = ventoNaRota(h.dir, b, h.vento);
+        return scorePonto({ temp: h.temp, chuvaMm: h.chuva, ventoKmh: h.vento, rajadaKmh: h.rajada, dirVento: h.dir, umidade: h.umidade, pressaoMsl: 1013, nuvens: 0, visibilidadeKm: 24, wmo: h.wmo, horaRef: h.hora }, v.pen, null).pts;
+      });
+      return [pt.chave, vals] as const;
+    });
     setMatriz({ horas, celulas: Object.fromEntries(fracos) });
     setMatrizCarregando(false);
   };
@@ -627,7 +621,7 @@ export default function RotaDaProva() {
                 {lbl}
               </button>
             ))}
-            <button onClick={() => provaSel && consultar(rota, modo, provaSel.dataSolta)} disabled={carregando} style={{ ...T.btnSm, opacity: carregando ? 0.6 : 1 }}>{carregando ? "⏳" : "↻ Atualizar"}</button>
+            <button onClick={() => provaSel && consultar(rota, modo, provaSel.dataSolta, true)} disabled={carregando} style={{ ...T.btnSm, opacity: carregando ? 0.6 : 1 }}>{carregando ? "⏳" : "↻ Atualizar"}</button>
           </div>
           {modo === "prova" && (
             <div style={{ marginTop: 8, padding: "7px 11px", borderRadius: 8, fontSize: 11, color: conf.cor, background: `${conf.cor}12`, border: `1px solid ${conf.cor}44`, lineHeight: 1.4 }}>

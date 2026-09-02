@@ -11,6 +11,37 @@ import { loadConfig, saveConfig } from "../config";
 /** Evento disparado quando o usuário altera a localização do pombal */
 export const EVENTO_POMBAL = "nutripombos:pombal";
 
+/* Cache de 10 min + retry — evita HTTP 429 (limite) do Open-Meteo */
+const CACHE_API = new Map<string, { t: number; data: unknown }>();
+const TTL_API = 10 * 60 * 1000;
+
+async function fetchJson<T>(url: string, tentativas = 3): Promise<T> {
+  const c = CACHE_API.get(url);
+  if (c && Date.now() - c.t < TTL_API) return c.data as T;
+  let ultimoErro: unknown = new Error("falha na rede");
+  for (let i = 0; i < tentativas; i++) {
+    try {
+      const r = await fetch(url);
+      if (r.status === 429 || r.status >= 500) {
+        ultimoErro = new Error(`HTTP ${r.status} (limite da API)`);
+        await new Promise((res) => setTimeout(res, 900 * (i + 1)));
+        continue;
+      }
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = (await r.json()) as T;
+      CACHE_API.set(url, { t: Date.now(), data: j });
+      return j;
+    } catch (e) {
+      ultimoErro = e;
+      await new Promise((res) => setTimeout(res, 700 * (i + 1)));
+    }
+  }
+  throw ultimoErro;
+}
+
+/** Limpa o cache (botão ↻ Atualizar) */
+export function limparCacheApi() { CACHE_API.clear(); }
+
 export interface Coords { lat: number; lon: number }
 
 export const POMBAL_BASE = "Pombal (sua base)";
@@ -189,25 +220,33 @@ function hhmm(iso: string): string {
   return iso ? iso.slice(11, 16) : "--:--";
 }
 
-export async function buscarSol(lat: number, lon: number, dias = 7): Promise<SolDia[]> {
+/** Sol de vários pontos em UMA chamada */
+export async function buscarSolPontos(pontos: Coords[], dias = 1): Promise<SolDia[][]> {
   const p = new URLSearchParams({
-    latitude: String(lat),
-    longitude: String(lon),
+    latitude: pontos.map((c) => c.lat.toFixed(4)).join(","),
+    longitude: pontos.map((c) => c.lon.toFixed(4)).join(","),
     daily: "sunrise,sunset,daylight_duration",
     forecast_days: String(dias),
     timezone: "America/Sao_Paulo",
   });
-  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const j = await r.json();
-  const d = j?.daily;
-  if (!d?.time) throw new Error("Resposta inválida");
-  return (d.time as string[]).map((data, i) => ({
-    data,
-    nascer: hhmm(d.sunrise[i] || ""),
-    por: hhmm(d.sunset[i] || ""),
-    horasLuz: +(((d.daylight_duration?.[i] as number) || 0) / 3600).toFixed(2),
-  }));
+  const j = await fetchJson<unknown>(`https://api.open-meteo.com/v1/forecast?${p}`);
+  const lista = Array.isArray(j) ? j : [j];
+  return lista.map((item) => {
+    const d = (item as { daily?: Record<string, unknown[]> })?.daily;
+    if (!d?.time) return [] as SolDia[];
+    return (d.time as string[]).map((data, i) => ({
+      data,
+      nascer: hhmm(String(d.sunrise?.[i] ?? "")),
+      por: hhmm(String(d.sunset?.[i] ?? "")),
+      horasLuz: +((Number(d.daylight_duration?.[i] ?? 0)) / 3600).toFixed(2),
+    }));
+  });
+}
+
+export async function buscarSol(lat: number, lon: number, dias = 7): Promise<SolDia[]> {
+  const r = await buscarSolPontos([{ lat, lon }], dias);
+  if (!r[0]?.length) throw new Error("Resposta inválida");
+  return r[0];
 }
 
 /** Formata horas decimais como "11h 32min" */
@@ -241,68 +280,83 @@ export interface ClimaPonto {
   horaRef: string;          // "Agora" ou "09:00 de 30/08"
 }
 
+
+function agregarDiaVoo(hRaw: unknown, dia: string): ClimaPonto {
+  const h = hRaw as Record<string, unknown> | undefined;
+  if (!h?.time) throw new Error("Sem previsão para esta data");
+  const tempos = (h.time as string[])
+  const janela: number[] = [];
+  tempos.forEach((t, i) => { const hh = Number(t.slice(11, 13)); if (hh >= 6 && hh <= 19) janela.push(i); });
+  if (!janela.length) throw new Error("Sem previsão para esta data");
+  const pegar = (k: string, i: number): number => Number(((h[k] as (number | null)[] | undefined)?.[i]) ?? 0);
+  const maxNa = (k: string): number => janela.reduce((m, i) => Math.max(m, pegar(k, i)), 0);
+  const minNa = (k: string): number => janela.reduce((m, i) => Math.min(m, pegar(k, i)), Infinity);
+  const idxRep = Math.max(0, tempos.findIndex((t) => t.endsWith("T12:00")));
+  return {
+    temp: Math.round(pegar("temperature_2m", idxRep)),
+    chuvaMm: +janela.reduce((soma, i) => soma + pegar("precipitation", i), 0).toFixed(1),
+    chuvaPct: Math.round(maxNa("precipitation_probability")),
+    ventoKmh: Math.round(maxNa("wind_speed_10m")),
+    rajadaKmh: Math.round(maxNa("wind_gusts_10m")),
+    dirVento: Math.round(pegar("wind_direction_10m", idxRep)),
+    umidade: Math.round(pegar("relative_humidity_2m", idxRep)),
+    pressaoMsl: Math.round(pegar("pressure_msl", idxRep)) || 0,
+    nuvens: Math.round(maxNa("cloud_cover")),
+    visibilidadeKm: Math.round(minNa("visibility") / 1000),
+    wmo: janela.reduce((m, i) => Math.max(m, pegar("weather_code", i)), 0),
+    horaRef: `06h–20h de ${dia.slice(8, 10)}/${dia.slice(5, 7)} (janela do voo)`,
+  };
+}
+
+function currentParaClima(c: Record<string, unknown> | undefined): ClimaPonto {
+  if (!c) throw new Error("Resposta climática inválida");
+  return {
+    temp: Math.round(Number(c.temperature_2m ?? 0)),
+    chuvaMm: +Number(c.precipitation ?? 0).toFixed(1),
+    ventoKmh: Math.round(Number(c.wind_speed_10m ?? 0)),
+    rajadaKmh: Math.round(Number(c.wind_gusts_10m ?? 0)),
+    dirVento: Math.round(Number(c.wind_direction_10m ?? 0)),
+    umidade: Math.round(Number(c.relative_humidity_2m ?? 0)),
+    pressaoMsl: Math.round(Number(c.pressure_msl ?? 0)) || 0,
+    nuvens: Math.round(Number(c.cloud_cover ?? 0)),
+    visibilidadeKm: Math.round(Number(c.visibility ?? 0) / 1000),
+    wmo: Number(c.weather_code ?? 0),
+    horaRef: "Agora",
+  };
+}
+
 const VARS_CLIMA = "temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,relative_humidity_2m,pressure_msl,cloud_cover,visibility";
 
 /**
- * Clima de um ponto da rota.
- * Sem `dia`: condições atuais. Com `dia` (YYYY-MM-DD): previsão ~09h da manhã (até 16 dias à frente).
+ * Clima de VÁRIOS pontos em UMA chamada (a API aceita várias coordenadas) — evita 429.
  */
-export async function buscarClimaPonto(lat: number, lon: number, dia?: string): Promise<ClimaPonto> {
-  const p = new URLSearchParams({ latitude: String(lat), longitude: String(lon), timezone: "America/Sao_Paulo" });
-  let j: Record<string, Record<string, unknown> | undefined>;
-  let horaRef: string;
+export async function buscarClimaPontos(pontos: Coords[], dia?: string): Promise<(ClimaPonto | undefined)[]> {
+  const lat = pontos.map((p) => p.lat.toFixed(4)).join(",");
+  const lon = pontos.map((p) => p.lon.toFixed(4)).join(",");
+  const p = new URLSearchParams({ latitude: lat, longitude: lon, timezone: "America/Sao_Paulo" });
   if (dia) {
     p.set("hourly", `${VARS_CLIMA},precipitation_probability`);
     p.set("start_date", dia);
     p.set("end_date", dia);
-    horaRef = `06h–20h de ${dia.slice(8, 10)}/${dia.slice(5, 7)} (janela do voo)`;
-    const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    j = await r.json();
-    const h = j.hourly;
-    const tempos = (h?.time as string[]) || [];
-    // Janela do voo: das 06h às 19h (o bando voa o dia todo, não só às 9h)
-    const janela: number[] = [];
-    tempos.forEach((t, i) => { const hh = Number(t.slice(11, 13)); if (hh >= 6 && hh <= 19) janela.push(i); });
-    if (!h || !janela.length) throw new Error("Sem previsão para esta data");
-    const pegar = (k: string, i: number): number => Number((h[k] as (number | null)[])?.[i] ?? 0);
-    const maxNa = (k: string): number => janela.reduce((m, i) => Math.max(m, pegar(k, i)), 0);
-    const minNa = (k: string): number => janela.reduce((m, i) => Math.min(m, pegar(k, i)), Infinity);
-    const idxRep = Math.max(0, tempos.findIndex((t) => t.endsWith("T12:00"))); // meio-dia como referência
-    return {
-      temp: Math.round(pegar("temperature_2m", idxRep)),
-      chuvaMm: +janela.reduce((soma, i) => soma + pegar("precipitation", i), 0).toFixed(1),
-      chuvaPct: Math.round(maxNa("precipitation_probability")),
-      ventoKmh: Math.round(maxNa("wind_speed_10m")),
-      rajadaKmh: Math.round(maxNa("wind_gusts_10m")),
-      dirVento: Math.round(pegar("wind_direction_10m", idxRep)),
-      umidade: Math.round(pegar("relative_humidity_2m", idxRep)),
-      pressaoMsl: Math.round(pegar("pressure_msl", idxRep)),
-      nuvens: Math.round(maxNa("cloud_cover")),
-      visibilidadeKm: Math.round(minNa("visibility") / 1000),
-      wmo: janela.reduce((m, i) => Math.max(m, pegar("weather_code", i)), 0), // pior condição do dia de voo
-      horaRef,
-    };
+  } else {
+    p.set("current", VARS_CLIMA);
   }
-  p.set("current", VARS_CLIMA);
-  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  j = await r.json();
-  const c = j.current;
-  if (!c) throw new Error("Resposta climática inválida");
-  return {
-    temp: Math.round(Number(c.temperature_2m)),
-    chuvaMm: +Number(c.precipitation).toFixed(1),
-    ventoKmh: Math.round(Number(c.wind_speed_10m)),
-    rajadaKmh: Math.round(Number(c.wind_gusts_10m)),
-    dirVento: Math.round(Number(c.wind_direction_10m)),
-    umidade: Math.round(Number(c.relative_humidity_2m)),
-    pressaoMsl: Math.round(Number(c.pressure_msl ?? 0)) || 0,
-    nuvens: Math.round(Number(c.cloud_cover)),
-    visibilidadeKm: Math.round(Number(c.visibility) / 1000),
-    wmo: Number(c.weather_code),
-    horaRef: "Agora",
-  };
+  const j = await fetchJson<unknown>(`https://api.open-meteo.com/v1/forecast?${p}`);
+  const lista = Array.isArray(j) ? j : [j];
+  return lista.map((item) => {
+    const o = item as Record<string, Record<string, unknown> | undefined>;
+    try {
+      if (dia) return agregarDiaVoo(o.hourly, dia);
+      return currentParaClima(o.current as Record<string, unknown>);
+    } catch { return undefined; }
+  });
+}
+
+/** Clima de um ponto (mantida para outras páginas) */
+export async function buscarClimaPonto(lat: number, lon: number, dia?: string): Promise<ClimaPonto> {
+  const r = await buscarClimaPontos([{ lat, lon }], dia);
+  if (!r[0]) throw new Error("Sem dados do local");
+  return r[0];
 }
 
 /** Ângulo (bearing) do trecho: da cidade atual até o destino, em graus */
@@ -378,6 +432,25 @@ export function classificarAr(a: ArPonto): { label: string; cor: string; emoji: 
   return { label: "Ar ruim (queimada?)", cor: "#ff5d62", emoji: "🔴" };
 }
 
+/** Qualidade do ar de vários pontos em UMA chamada */
+export async function buscarArPontos(pontos: Coords[]): Promise<(ArPonto | null)[]> {
+  try {
+    const p = new URLSearchParams({
+      latitude: pontos.map((c) => c.lat.toFixed(4)).join(","),
+      longitude: pontos.map((c) => c.lon.toFixed(4)).join(","),
+      current: "pm10,pm2_5,ozone,us_aqi",
+      timezone: "America/Sao_Paulo",
+    });
+    const j = await fetchJson<unknown>("https://air-quality-api.open-meteo.com/v1/air-quality?" + p);
+    const lista = Array.isArray(j) ? j : [j];
+    return lista.map((item) => {
+      const c = (item as Record<string, Record<string, unknown>>)?.current;
+      if (!c) return null;
+      return { pm25: Math.round(Number(c.pm2_5 ?? 0)), pm10: Math.round(Number(c.pm10 ?? 0)), ozonio: Math.round(Number(c.ozone ?? 0)), aqi: Math.round(Number(c.us_aqi ?? -1)) };
+    });
+  } catch { return pontos.map(() => null); }
+}
+
 /* ------------------------------------------------------------------ */
 /* Altimetria da rota (Open-Meteo Elevation — gratuito, em lote)      */
 /* ------------------------------------------------------------------ */
@@ -396,10 +469,8 @@ export function interpolarRota(a: Coords, b: Coords, n: number): Coords[] {
 export async function buscarAltimetria(pontos: Coords[]): Promise<number[]> {
   const lat = pontos.map((p) => p.lat.toFixed(4)).join(",");
   const lon = pontos.map((p) => p.lon.toFixed(4)).join(",");
-  const r = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const j = await r.json();
-  return (j?.elevation as number[]) || [];
+  const j = await fetchJson<{ elevation?: number[] }>(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
+  return j?.elevation || [];
 }
 
 /* ------------------------------------------------------------------ */
@@ -505,6 +576,39 @@ export async function buscarJanelaSolta(lat: number, lon: number, dia?: string):
   });
   if (!out.length) throw new Error("Dia fora do alcance da previsão");
   return out;
+}
+
+/** Previsão hora a hora (05h–18h) de VÁRIOS pontos em UMA chamada */
+export async function buscarJanelaSoltaPontos(pontos: Coords[], dia: string): Promise<HoraSolta[][]> {
+  const p = new URLSearchParams({
+    latitude: pontos.map((c) => c.lat.toFixed(4)).join(","),
+    longitude: pontos.map((c) => c.lon.toFixed(4)).join(","),
+    hourly: "temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,relative_humidity_2m",
+    start_date: dia, end_date: dia,
+    timezone: "America/Sao_Paulo",
+  });
+  const j = await fetchJson<unknown>(`https://api.open-meteo.com/v1/forecast?${p}`);
+  const lista = Array.isArray(j) ? j : [j];
+  return lista.map((item) => {
+    const h = (item as { hourly?: Record<string, unknown[]> })?.hourly;
+    if (!h?.time) return [] as HoraSolta[];
+    const out: HoraSolta[] = [];
+    (h.time as string[]).forEach((t, i) => {
+      const hh = Number(t.slice(11, 13));
+      if (hh < 5 || hh > 18) return;
+      out.push({
+        hora: `${String(hh).padStart(2, "0")}:00`,
+        temp: Math.round(Number(h.temperature_2m?.[i] ?? 0)),
+        chuva: +Number(h.precipitation?.[i] ?? 0).toFixed(1),
+        vento: Math.round(Number(h.wind_speed_10m?.[i] ?? 0)),
+        rajada: Math.round(Number(h.wind_gusts_10m?.[i] ?? 0)),
+        dir: Math.round(Number(h.wind_direction_10m?.[i] ?? 0)),
+        wmo: Number(h.weather_code?.[i] ?? 0),
+        umidade: Math.round(Number(h.relative_humidity_2m?.[i] ?? 0)),
+      });
+    });
+    return out;
+  });
 }
 
 /* ------------------------------------------------------------------ */

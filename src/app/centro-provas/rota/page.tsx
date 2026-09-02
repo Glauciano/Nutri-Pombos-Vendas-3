@@ -240,6 +240,28 @@ export default function RotaDaProva() {
     return `${String(Math.floor(tot / 60) % 24).padStart(2, "0")}:${String(tot % 60).padStart(2, "0")}`;
   };
 
+  // ⏱️ Linha do tempo do voo — passagem estimada por cidade (vento+chuva+Kp por trecho)
+  const passagens = (() => {
+    if (!provaSel || !validos.length) return [] as { nome: string; papel: string; km: number; hora: string; horaMin: number; vel: number; vento: { emoji: string; tipo: string; cor: string } | null }[];
+    const velo = veloBase || 1200;
+    const kpPen = kp && kp.kp >= 5 ? 0.97 : 1;
+    const [h0, m0] = horaSolta.split(":").map(Number);
+    let minutos = 0, distAnt = 0;
+    const base0 = (h0 || 0) * 60 + (m0 || 0);
+    return validos.map((v) => {
+      const cl = v.d && "clima" in v.d ? v.d.clima : null;
+      const distSolta = v.pt.papel === "pombal" ? provaSel.km : provaSel.km - v.pt.km;
+      const fator = 1.08 - (v.vento?.pen ?? 0) * 0.013; // a favor 1.08 · lateral 0.95 · contra 0.82
+      const chuvaPen = cl ? (cl.chuvaMm > 5 ? 0.9 : cl.chuvaMm > 1 ? 0.95 : 1) : 1;
+      const vel = Math.round(velo * fator * chuvaPen * kpPen);
+      minutos += (Math.max(0, distSolta - distAnt) * 1000) / vel;
+      distAnt = distSolta;
+      const tot = base0 + minutos;
+      const horaMin = tot;
+      return { nome: v.pt.nome, papel: v.pt.papel, km: v.pt.km, hora: `${String(Math.floor(tot / 60) % 24).padStart(2, "0")}:${String(Math.round(tot % 60)).padStart(2, "0")}`, horaMin, vel, vento: v.vento };
+    });
+  })();
+
   // 💬 Mensagem pronta para o WhatsApp
   const msgWhatsApp = (() => {
     if (!provaSel) return "";
@@ -254,12 +276,14 @@ export default function RotaDaProva() {
     if (validos.length) {
       L.push("\n💨🌧️ *Vento e chuva por trecho:*");
       const climaDe = (v: typeof validos[number]) => (v.d && "clima" in v.d ? v.d.clima : null);
+      const horaDe = (nome: string) => passagens.find((pp) => pp.nome === nome)?.hora;
       validos.forEach((v) => {
         const cl = climaDe(v);
         const c = cl ? `${cl.ventoKmh}km/h ${direcaoCardeal(cl.dirVento)}` : "";
         const chuva = cl ? ` · 🌧️ ${cl.chuvaMm}mm${cl.chuvaPct != null ? ` (${cl.chuvaPct}%)` : ""}${cl.wmo >= 95 ? " ⛈️" : cl.chuvaMm > 1 ? " ☔" : ""}` : "";
         const temp = cl ? ` · ${cl.temp}°C` : "";
-        L.push(`${v.vento!.emoji} ${v.pt.nome}: ${v.vento!.tipo.toLowerCase()}${c ? ` (${c})` : ""}${temp}${chuva}`);
+        const hp = horaDe(v.pt.nome);
+        L.push(`${v.vento!.emoji} ${v.pt.nome}: ${v.vento!.tipo.toLowerCase()}${c ? ` (${c})` : ""}${temp}${chuva}${hp ? ` — passa ~${hp}` : ""}`);
       });
       const comChuva = validos.filter((v) => ((climaDe(v)?.chuvaMm ?? 0) > 0.5 || (climaDe(v)?.chuvaPct ?? 0) >= 50));
       if (comChuva.length) {
@@ -293,6 +317,10 @@ export default function RotaDaProva() {
       });
       const comChuva = validos.filter((v) => ((climaDe(v)?.chuvaMm ?? 0) > 0.5 || (climaDe(v)?.chuvaPct ?? 0) >= 50));
       if (comChuva.length) L.push(`ATENÇÃO chuva: ${comChuva.map((v) => v.pt.nome).join(", ")}`);
+    }
+    if (passagens.length > 1) {
+      const meio = passagens[Math.floor(passagens.length / 2)];
+      L.push(`Passagens: ${passagens[1].nome} ~${passagens[1].hora} • ${meio.nome} ~${meio.hora} • pombal ~${passagens[passagens.length - 1].hora}`);
     }
     if (solSolta) L.push(`Nascer ${solSolta.nascer} • solta ${horaSolta}`);
     if (minutosVoo) L.push(`Chegada prevista: ${chegada(0.92)}–${chegada(1.08)}`);
@@ -816,6 +844,40 @@ export default function RotaDaProva() {
             </div>
             {alarmeAtivo && <div style={{ ...T.small, fontSize: 10, marginTop: 6, textAlign: "center" }}>Mantenha esta página aberta — o alarme toca com aviso no celular, som e vibração 🔔</div>}
             {alarmeMsg && <div style={{ marginTop: 10, padding: 12, borderRadius: 10, color: T.green, background: `${T.green}12`, border: `1px solid ${T.green}55`, fontWeight: 800, textAlign: "center" }}>{alarmeMsg}</div>}
+          </section>
+        )}
+
+        {/* ⏱️ Linha do tempo do voo — passagem estimada por cidade */}
+        {provaSel && passagens.length > 1 && (
+          <section style={T.card}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>⏱️ Linha do Tempo do Voo — passagem por cidade</div>
+            <div style={{ ...T.small, fontSize: 11, marginBottom: 12, lineHeight: 1.5 }}>
+              Estimativa trecho a trecho: solta às {horaSolta} + velocidade do seu plantel ({veloBase || 1200} m/min) ajustada pelo <b>vento de cada trecho</b> (🟢 +8% · 🟡 −5% · 🔴 −18%), <b>chuva</b> (−5% a −10%) e <b>Kp</b> (−3% se ≥5).
+            </div>
+            <div>
+              {passagens.map((pa, i) => {
+                const ultimo = i === passagens.length - 1;
+                const horaFim = `${String(Math.floor(((pa.horaMin + 1) * 0.92 + 0) / 60) % 24).padStart(2, "0")}`;
+                void horaFim;
+                return (
+                  <div key={pa.nome + i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${T.border}` }}>
+                    <b style={{ fontSize: 16, color: ultimo ? T.green : T.gold, minWidth: 52 }}>{pa.hora}</b>
+                    <div style={{ width: 26, textAlign: "center", fontSize: 15 }}>{pa.papel === "pombal" ? "🏠" : pa.papel === "solta" ? "🏁" : pa.vento?.emoji || "•"}</div>
+                    <div style={{ flex: 1 }}>
+                      <b style={{ fontSize: 13 }}>{pa.nome}</b>
+                      <div style={{ ...T.small, fontSize: 11 }}>
+                        {pa.papel === "solta" ? "soltura dos cestos" : pa.papel === "pombal" ? "chegada no pombal 🎉" : `a ${pa.km}km do pombal`}
+                        {pa.papel !== "solta" && pa.vento ? ` • ${pa.vento.tipo.toLowerCase()} • ~${pa.vel} m/min` : ""}
+                      </div>
+                    </div>
+                    {ultimo && <span style={{ padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 800, color: T.green, background: `${T.green}12`, border: `1px solid ${T.green}55` }}>CHEGADA ±8%</span>}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ ...T.small, fontSize: 10, marginTop: 10, lineHeight: 1.5 }}>
+              ⚠️ Estimativa: bando real não voa em linha reta perfeita nem velocidade constante (correntes, térmicas e liderança variam). Use como referência de vigilância — da 1ª cidade prevista em diante, fique de olho no horizonte {rota.length > 1 ? direcaoCardeal(bearingRota(pombal.lat, pombal.lon, rota[0].lat, rota[0].lon)).toUpperCase() : "NORTE"}.
+            </div>
           </section>
         )}
 

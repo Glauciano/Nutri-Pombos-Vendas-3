@@ -30,13 +30,13 @@ const SEMENTES: Record<string, Semente> = {
 type DiaSemana = { dia: string; emoji: string; objetivo: string; detalhe: string; cor: string; mix: Record<string, number> };
 
 const SEMANA: DiaSemana[] = [
-  { dia: "Domingo", emoji: "💙", objetivo: "Recuperação & Depuração", cor: "#55a3ff", detalhe: "Dia pós-prova: intestino em repouso, mistura leve e fibrosa. Nada de ração pesada — o corpo se recupera com pouco.", mix: { cevada: 18, arroz: 14, trigo: 14, sorgo: 12, milho: 10, ervilha: 8, aveia: 6, vagem: 4, colza: 5, linhaça: 3, cartamo: 3, girassol: 2, niger: 1 } },
-  { dia: "Segunda", emoji: "🟢", objetivo: "Reconstrução Muscular", cor: "#39e58c", detalhe: "Proteína em alta: o músculo destruído pela prova/treino se refaz. Ervilhas e lentilha dominam a tigela.", mix: { ervilha: 20, maple: 8, vagem: 10, lentilha: 6, trigo: 12, sorgo: 10, milho: 12, colza: 6, linhaça: 4, cevada: 4, arroz: 3, girassol: 3, amendoim: 2 } },
-  { dia: "Terça", emoji: "🟡", objetivo: "Treino Equilibrado", cor: "#fbbf24", detalhe: "Balanceada pra voltar ao ar: energia média, proteína de manutenção e gordura moderada.", mix: { milho: 18, trigo: 14, sorgo: 12, ervilha: 14, vagem: 6, girassol: 8, colza: 6, linhaça: 4, cevada: 6, arroz: 4, aveia: 4, cartamo: 2, amendoim: 2 } },
-  { dia: "Quarta", emoji: "🔵", objetivo: "Resistência (gordura média)", cor: "#55a3ff", detalhe: "Sobe a gordura boa: girassol, amendoim e linhaça constroem a reserva aeróbica do fundista.", mix: { milho: 18, trigo: 12, sorgo: 10, ervilha: 10, girassol: 12, amendoim: 8, linhaça: 6, cartamo: 6, colza: 5, niger: 3, vagem: 4, cevada: 3, arroz: 3 } },
-  { dia: "Quinta", emoji: "🟠", objetivo: "Carga Energética Máxima", cor: "#f97316", detalhe: "O grande dia de carga: energia + gordura no talo pra estocar combustível. Mistura mais rica da semana.", mix: { milho: 20, girassol: 14, amendoim: 12, linhaça: 8, cartamo: 6, niger: 5, colza: 5, trigo: 10, sorgo: 8, ervilha: 6, aveia: 4, vagem: 2 } },
-  { dia: "Sexta", emoji: "🟣", objetivo: "Encestamento — digestível", cor: "#a78bfa", detalhe: "Pombos viajam no cesto: sementes menores e de digestão fácil, sem peso no papo. Pequenas sementes à vontade.", mix: { trigo: 16, milho: 16, colza: 8, niger: 8, linhaça: 6, cartamo: 5, ervilha: 8, vagem: 4, arroz: 8, cevada: 5, sorgo: 8, girassol: 6, amendoim: 2 } },
-  { dia: "Sábado", emoji: "⭐", objetivo: "Dia da Prova — energia disponível", cor: "#f7bd00", detalhe: "Combustível de uso imediato: milho pra chama rápida, girassol/amendoim pra queimar no meio, colza e níger pra começar leve.", mix: { milho: 22, trigo: 14, colza: 8, niger: 7, linhaça: 6, girassol: 10, amendoim: 6, cartamo: 5, ervilha: 8, sorgo: 8, arroz: 3, vagem: 3 } },
+  { dia: "Domingo", emoji: "💙", objetivo: "Recuperação & Depuração", cor: "#55a3ff", detalhe: "Dia pós-prova: intestino em repouso, mistura leve e fibrosa. Nada de ração pesada — o corpo se recupera com pouco.", mix: { cevada: 22, arroz: 16, trigo: 16, sorgo: 14, milho: 12, ervilha: 10, colza: 5, linhaça: 5 } },
+  { dia: "Segunda", emoji: "🟢", objetivo: "Reconstrução Muscular", cor: "#39e58c", detalhe: "Proteína em alta: o músculo destruído pela prova/treino se refaz. Ervilhas e lentilha dominam a tigela.", mix: { ervilha: 26, maple: 12, vagem: 10, lentilha: 8, trigo: 14, milho: 14, colza: 8, girassol: 8 } },
+  { dia: "Terça", emoji: "🟡", objetivo: "Treino Equilibrado", cor: "#fbbf24", detalhe: "Balanceada pra voltar ao ar: energia média, proteína de manutenção e gordura moderada.", mix: { milho: 20, trigo: 16, sorgo: 14, ervilha: 16, girassol: 10, cevada: 8, colza: 8, linhaça: 8 } },
+  { dia: "Quarta", emoji: "🔵", objetivo: "Resistência (gordura média)", cor: "#55a3ff", detalhe: "Sobe a gordura boa: girassol, amendoim e linhaça constroem a reserva aeróbica do fundista.", mix: { milho: 20, girassol: 16, trigo: 12, amendoim: 10, ervilha: 10, sorgo: 10, linhaça: 8, colza: 8, cartamo: 6 } },
+  { dia: "Quinta", emoji: "🟠", objetivo: "Carga Energética Máxima", cor: "#f97316", detalhe: "O grande dia de carga: energia + gordura no talo pra estocar combustível. Mistura mais rica da semana.", mix: { milho: 24, girassol: 16, amendoim: 14, trigo: 12, sorgo: 10, linhaça: 8, cartamo: 6, ervilha: 6, niger: 4 } },
+  { dia: "Sexta", emoji: "🟣", objetivo: "Encestamento — digestível", cor: "#a78bfa", detalhe: "Pombos viajam no cesto: sementes menores e de digestão fácil, sem peso no papo. Pequenas sementes à vontade.", mix: { trigo: 18, milho: 16, colza: 10, niger: 8, ervilha: 10, arroz: 10, sorgo: 12, linhaça: 8, girassol: 8 } },
+  { dia: "Sábado", emoji: "⭐", objetivo: "Dia da Prova — energia disponível", cor: "#f7bd00", detalhe: "Combustível de uso imediato: milho pra chama rápida, girassol/amendoim pra queimar no meio, colza e níger pra começar leve.", mix: { milho: 26, trigo: 14, girassol: 12, ervilha: 10, sorgo: 10, colza: 8, amendoim: 8, linhaça: 6, niger: 6 } },
 ];
 
 const CLASSE_INFO: Record<Classe, { label: string; emoji: string; cor: string }> = {
@@ -52,15 +52,20 @@ export default function MisturaSemanal() {
     return nomes[new Date().getDay()];
   });
   const [cfg, setCfg] = useState({ consumoDiario: 30, quantidadePombos: 20 });
+  const [loteKg, setLoteKg] = useState(1);
   useEffect(() => { const c = loadConfig(); setCfg({ consumoDiario: c.consumoDiario, quantidadePombos: c.quantidadePombos }); }, []);
 
   const dia = SEMANA.find((d) => d.dia === diaSel) || SEMANA[0];
   const mixNorm = useMemo(() => {
     const soma = Object.values(dia.mix).reduce((a, b) => a + b, 0) || 1;
     return Object.entries(dia.mix)
-      .map(([k, v]) => ({ chave: k, pct: Math.round((v / soma) * 1000) / 10, gPombo: Math.round((v / soma) * cfg.consumoDiario * 10) / 10, kgPlantel: Math.round((v / soma) * cfg.consumoDiario * cfg.quantidadePombos) / 1000 }))
+      .map(([k, v]) => {
+        const pct = Math.round((v / soma) * 1000) / 10;
+        return { chave: k, pct, gLote: Math.round((pct / 100) * loteKg * 1000), gPlantel: Math.round((pct / 100) * cfg.consumoDiario * cfg.quantidadePombos) };
+      })
       .sort((a, b) => b.pct - a.pct);
-  }, [dia, cfg]);
+  }, [dia, cfg, loteKg]);
+  const totalPlantelDia = cfg.consumoDiario * cfg.quantidadePombos;
 
   const perfil = useMemo(() => {
     const acc: Record<Classe, number> = { energia: 0, proteina: 0, gordura: 0, fibra: 0 };
@@ -110,7 +115,8 @@ export default function MisturaSemanal() {
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 26, fontWeight: 900, color: T.gold }}>{cfg.consumoDiario}g</div>
-              <div style={{ fontSize: 10, color: T.dim }}>por pombo • plantel de {cfg.quantidadePombos}</div>
+              <div style={{ fontSize: 10, color: T.dim }}>por pombo — UMA medida da mistura pronta</div>
+              <div style={{ fontSize: 10, color: T.dim }}>plantel: <b style={{ color: T.gold }}>{totalPlantelDia}g/dia</b> (uma tigela)</div>
             </div>
           </div>
           <div style={{ ...T.small, fontSize: 12, marginTop: 8, lineHeight: 1.6 }}>{dia.detalhe}</div>
@@ -131,7 +137,18 @@ export default function MisturaSemanal() {
         </section>
 
         <section style={T.card}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🥣 A mistura de {dia.dia} ({mixNorm.length} sementes)</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold }}>🥣 Receita do lote de {dia.dia} ({mixNorm.length} sementes)</div>
+            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <span style={{ ...T.small, fontSize: 10 }}>montar lote de:</span>
+              {[1, 2, 5, 10].map((k) => (
+                <button key={k} type="button" onClick={() => setLoteKg(k)} style={{ padding: "4px 9px", borderRadius: 7, fontSize: 10, fontWeight: 800, cursor: "pointer", color: loteKg === k ? "#0b1426" : T.dim, background: loteKg === k ? T.gold : T.bgInput, border: `1px solid ${loteKg === k ? T.gold : T.border}` }}>{k}kg</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ ...T.small, fontSize: 11, marginBottom: 10, lineHeight: 1.5, color: T.dim }}>
+            Monte o lote na balança (pese cada semente uma vez, misture num balde) e sirva <b style={{ color: T.gold }}>{cfg.consumoDiario}g por pombo</b> da mistura pronta — não pese semente por semente na hora de alimentar!
+          </div>
           {mixNorm.map((m) => {
             const s = SEMENTES[m.chave];
             return (
@@ -141,19 +158,19 @@ export default function MisturaSemanal() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                       <b style={{ fontSize: 13 }}>{s.nome}</b>
-                      <b style={{ color: s.cor, fontSize: 13 }}>{m.gPombo}g/pombo</b>
+                      <b style={{ color: s.cor, fontSize: 13 }}>{m.gLote}g</b>
                     </div>
                     <div style={{ height: 6, background: "#ffffff12", borderRadius: 3, margin: "5px 0" }}>
                       <div style={{ height: "100%", width: `${m.pct}%`, background: s.cor, borderRadius: 3 }} />
                     </div>
-                    <div style={{ ...T.small, fontSize: 10.5, lineHeight: 1.4 }}>{s.papel} • <b style={{ color: s.cor }}>{m.pct}%</b> da mistura • {m.kgPlantel.toFixed(2)}kg pro plantel</div>
+                    <div style={{ ...T.small, fontSize: 10.5, lineHeight: 1.4 }}>{s.papel} • <b style={{ color: s.cor }}>{m.pct}%</b> do lote de {loteKg}kg = <b style={{ color: s.cor }}>{m.gLote}g</b> • {m.gPlantel}g no balde do plantel</div>
                   </div>
                 </div>
               </div>
             );
           })}
           <div style={{ ...T.small, fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
-            ⚙️ Gramas calculadas com o consumo de <b>{cfg.consumoDiario}g/dia</b> para <b>{cfg.quantidadePombos} pombos</b> — ajuste em <Link href="/centro-provas/configuracao" style={{ color: T.blue }}>Configuração</Link>.
+            ⚙️ Lote rende ~{Math.round((loteKg * 1000) / Math.max(1, totalPlantelDia))} dias pro plantel de {cfg.quantidadePombos} pombos ({cfg.consumoDiario}g/dia cada) — ajuste o consumo em <Link href="/centro-provas/configuracao" style={{ color: T.blue }}>Configuração</Link>.
           </div>
         </section>
 

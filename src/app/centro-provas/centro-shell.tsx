@@ -45,6 +45,7 @@ const groups: NavGroup[] = [
     items: [
       { href: "/centro-provas/calculadora", label: "Calculadora do plantel", icon: Calculator },
       { href: "/centro-provas/mistura-semanal", label: "Mistura semanal (16 sementes)", icon: UtensilsCrossed },
+      { href: "/centro-provas/mix-energetico", label: "Mix energético (lote)", icon: Sparkles },
       { href: "/centro-provas/planejamento-anual", label: "Planejamento anual", icon: CalendarDays },
       { href: "/centro-provas/calendario-anual", label: "Calendário nutricional", icon: CalendarDays },
       { href: "/centro-provas/configuracao", label: "Configuração", icon: Settings },

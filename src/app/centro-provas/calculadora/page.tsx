@@ -7,35 +7,34 @@ import { loadConfig } from "../config";
 
 export const DISTRIBUICAO: Record<string, Record<string, { sementes: number; mix: number; obs: string }>> = {
   Velocidade: {
-    Domingo: { sementes: 28, mix: 2, obs: "Recuperação pós-prova" },
-    Segunda: { sementes: 28, mix: 2, obs: "Limpeza e depuração" },
-    Terça: { sementes: 27, mix: 3, obs: "Treino explosivo" },
-    Quarta: { sementes: 26, mix: 4, obs: "Treino técnico" },
-    Quinta: { sementes: 25, mix: 5, obs: "Carga energética ⚗️ MIX" },
-    Sexta: { sementes: 27, mix: 3, obs: "Encestamento — leve" },
-    Sábado: { sementes: 30, mix: 0, obs: "⭐ DIA DA PROVA" },
+    Domingo: { sementes: 30, mix: 0, obs: "Depuração pós-prova — sem mix" },
+    Segunda: { sementes: 29, mix: 1, obs: "Reconstrução leve" },
+    Terça: { sementes: 28.5, mix: 1.5, obs: "Treino explosivo" },
+    Quarta: { sementes: 28.5, mix: 1.5, obs: "Treino técnico" },
+    Quinta: { sementes: 28, mix: 2, obs: "Carga ⚗️ MIX (máx. p/ velocidade)" },
+    Sexta: { sementes: 28.5, mix: 1.5, obs: "Encestamento — leve" },
+    Sábado: { sementes: 30, mix: 0, obs: "⭐ DIA DA PROVA — energia dos grãos" },
   },
   "Meio Fundo": {
-    Domingo: { sementes: 27, mix: 3, obs: "Recuperação pós-prova" },
-    Segunda: { sementes: 27, mix: 3, obs: "Recuperação ativa" },
-    Terça: { sementes: 26, mix: 4, obs: "Treino resistência" },
-    Quarta: { sementes: 25, mix: 5, obs: "Treino longo" },
-    Quinta: { sementes: 24, mix: 6, obs: "Descanso + carga ⚗️ MIX" },
-    Sexta: { sementes: 25, mix: 5, obs: "Carga pesada ⚗️ MIX" },
-    Sábado: { sementes: 28, mix: 2, obs: "Encestamento" },
-    Domingo2: { sementes: 30, mix: 0, obs: "⭐ DIA DA PROVA" },
+    Domingo: { sementes: 30, mix: 0, obs: "Depuração pós-prova — sem mix" },
+    Segunda: { sementes: 28.5, mix: 1.5, obs: "Reconstrução muscular" },
+    Terça: { sementes: 28, mix: 2, obs: "Treino" },
+    Quarta: { sementes: 28, mix: 2, obs: "Resistência aeróbica" },
+    Quinta: { sementes: 27, mix: 3, obs: "Carga máxima ⚗️ MIX (nunca >3g)" },
+    Sexta: { sementes: 28, mix: 2, obs: "Encestamento" },
+    Sábado: { sementes: 30, mix: 0, obs: "⭐ DIA DA PROVA — energia dos grãos" },
   },
-  Fundo: {
-    Domingo: { sementes: 26, mix: 4, obs: "Recuperação total" },
-    Segunda: { sementes: 26, mix: 4, obs: "Recuperação ativa" },
-    Terça: { sementes: 25, mix: 5, obs: "Treino médio" },
-    Quarta: { sementes: 24, mix: 6, obs: "Treino longo" },
-    Quinta: { sementes: 23, mix: 7, obs: "Carga energética ⚗️ MIX MÁXIMO" },
-    Sexta: { sementes: 24, mix: 6, obs: "Carga máxima" },
-    Sábado: { sementes: 26, mix: 4, obs: "Encestamento" },
-    Domingo2: { sementes: 30, mix: 0, obs: "⭐ DIA DA PROVA" },
+  "Fundo": {
+    Domingo: { sementes: 30, mix: 0, obs: "Depuração pós-prova — sem mix" },
+    Segunda: { sementes: 28.5, mix: 1.5, obs: "Reconstrução muscular" },
+    Terça: { sementes: 28, mix: 2, obs: "Treino leve pós-recuperação" },
+    Quarta: { sementes: 28, mix: 2, obs: "Resistência — gordura boa" },
+    Quinta: { sementes: 27, mix: 3, obs: "CARGA MÁXIMA ⚗️ MIX (nunca >3g)" },
+    Sexta: { sementes: 28, mix: 2, obs: "Manhã — última dose" },
+    Sábado: { sementes: 30, mix: 0, obs: "⭐ DIA DA PROVA — energia dos grãos" },
   },
 };
+
 
 const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const CATS = ["Velocidade", "Meio Fundo", "Fundo"];

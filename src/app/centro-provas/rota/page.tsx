@@ -62,6 +62,8 @@ export default function RotaDaProva() {
   const [janelaErro, setJanelaErro] = useState("");
   const [veloBase, setVeloBase] = useState<number | null>(null);
   const [copiado, setCopiado] = useState(false);
+  // 📱 abas (mobile-first)
+  const [aba, setAba] = useState<"resumo" | "cidades" | "tempos" | "mapas">("resumo");
   // 🔔 Alarme de chegada
   const [alarmeAtivo, setAlarmeAtivo] = useState(false);
   const [alarmeHora, setAlarmeHora] = useState<string | null>(null);
@@ -640,7 +642,14 @@ export default function RotaDaProva() {
           )}
         </section>
 
-        {/* Resumo geral */}
+        {/* 📱 Barra de abas */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, position: "sticky", top: 0, zIndex: 20, background: T.bg, padding: "8px 0", borderBottom: `1px solid ${T.border}`, marginBottom: 12 }}>
+          {([["resumo", "📊 Resumo"], ["tempos", "🕐 Tempos"], ["cidades", "🏙️ Cidades"], ["mapas", "🗺️ Mapas"]] as const).map(([k, lbl]) => (
+            <button key={k} type="button" onClick={() => setAba(k)} style={{ padding: "10px 2px", borderRadius: 9, fontSize: 10.5, fontWeight: 800, cursor: "pointer", color: aba === k ? T.bg : T.dim, background: aba === k ? T.gold : T.bgCard, border: `1px solid ${aba === k ? T.gold : T.border}` }}>{lbl}</button>
+          ))}
+        </div>
+
+{aba==="resumo" && (<>         {/* Resumo geral */}
         {provaSel && (
           <section style={{ ...T.card, borderColor: `${T.gold}55`, background: `${T.gold}0d` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
@@ -720,7 +729,8 @@ export default function RotaDaProva() {
           </section>
         )}
 
-        {/* 📅 Sábado × Domingo — qual dia soltar? */}
+ </>)}
+        {aba==="resumo" && (<>         {/* 📅 Sábado × Domingo — qual dia soltar? */}
         {provaSel && modo === "prova" && previsivel && (
           <section style={T.card}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>
@@ -749,7 +759,8 @@ export default function RotaDaProva() {
           </section>
         )}
 
-        {/* ⛰️ Perfil do relevo da rota (Open-Meteo Elevation — gratuito) */}
+ </>)}
+        {aba==="mapas" && (<>         {/* ⛰️ Perfil do relevo da rota (Open-Meteo Elevation — gratuito) */}
         {provaSel && (
           <section style={T.card}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>
@@ -801,7 +812,8 @@ export default function RotaDaProva() {
           </section>
         )}
 
-        {/* 🛰️ Radar de chuva + 🗺️ Satélite GRÁTIS (Esri World Imagery, sem chave) */}
+ </>)}
+        {aba==="mapas" && (<>         {/* 🛰️ Radar de chuva + 🗺️ Satélite GRÁTIS (Esri World Imagery, sem chave) */}
         {provaSel && rota.length > 0 && (
           <section style={T.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
@@ -892,7 +904,8 @@ export default function RotaDaProva() {
           </section>
         )}
 
-        {/* 🕐 Janela ideal de soltura — hora a hora (Open-Meteo, gratuito) */}
+ </>)}
+        {aba==="tempos" && (<>         {/* 🕐 Janela ideal de soltura — hora a hora (Open-Meteo, gratuito) */}
         {provaSel && (
           <section style={T.card}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>
@@ -926,7 +939,8 @@ export default function RotaDaProva() {
           </section>
         )}
 
-        {/* ⏱️ Previsão de chegada + 💬 WhatsApp */}
+ </>)}
+        {aba==="tempos" && (<>         {/* ⏱️ Previsão de chegada + 💬 WhatsApp */}
         {provaSel && (
           <section style={{ ...T.card, borderColor: `${T.blue}55`, background: `${T.blue}0d` }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>⏱️ Previsão de Chegada no Pombal</div>
@@ -995,7 +1009,8 @@ export default function RotaDaProva() {
           </section>
         )}
 
-        {/* 🔢 Matriz Cidade × Hora — a onda do clima pela rota */}
+ </>)}
+        {aba==="tempos" && (<>         {/* 🔢 Matriz Cidade × Hora — a onda do clima pela rota */}
         {provaSel && (
           <section style={T.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
@@ -1036,7 +1051,8 @@ export default function RotaDaProva() {
           </section>
         )}
 
-        {/* ⏱️ Linha do tempo do voo — passagem estimada por cidade */}
+ </>)}
+        {aba==="tempos" && (<>         {/* ⏱️ Linha do tempo do voo — passagem estimada por cidade */}
         {provaSel && passagens.length > 1 && (
           <section style={T.card}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>⏱️ Linha do Tempo do Voo — passagem por cidade</div>
@@ -1070,7 +1086,8 @@ export default function RotaDaProva() {
           </section>
         )}
 
-        {/* 🧭 Bússola da Chegada — para quem espera no pombal */}
+ </>)}
+        {aba==="mapas" && (<>         {/* 🧭 Bússola da Chegada — para quem espera no pombal */}
         {provaSel && rota.length > 1 && rumoSoltura != null && (
           <section style={{ ...T.card, borderColor: `${T.blue}55`, background: `${T.blue}0d` }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🧭 Bússola da Chegada — onde olhar no céu</div>
@@ -1134,7 +1151,8 @@ export default function RotaDaProva() {
           </section>
         )}
 
-        {/* Pontos da rota */}
+ </>)}
+        {aba==="cidades" && (<>         {/* Pontos da rota */}
         {pontosComScore.map(({ pt, d, vento, score, bearing, trechoFinal }) => {
           const clima = d && "clima" in d ? d.clima : null;
           const wi = clima ? wmoInfo(clima.wmo) : null;
@@ -1218,7 +1236,8 @@ export default function RotaDaProva() {
         <div style={{ ...T.small, textAlign: "center", fontSize: 11 }}>
           Fontes: Open-Meteo (clima e sol) • NOAA SWPC (Kp) • gratuitos, sem chave • {carregando ? "consultando..." : "atualizado agora"}
         </div>
-      </div>
+ </>)}
+              </div>
     </main>
   );
 }

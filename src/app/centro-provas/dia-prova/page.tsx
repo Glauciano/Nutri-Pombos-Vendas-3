@@ -19,7 +19,7 @@ const CLIMAS = ["☀️ Ensolarado", "☁️ Nublado", "🌧️ Chuva", "🍃 Ve
 const VENTOS = ["⬆️ Norte", "↗️ Nordeste", "➡️ Leste", "↘️ Sudeste", "⬇️ Sul", "↙️ Sudoeste", "⬅️ Oeste", "↖️ Noroeste"];
 const CHECKLIST = [
   ["c1", "🌾", "Alimentação leve feita (sem oleaginosas em excesso)"], ["c2", "💧", "Água fresca e limpa disponível"],
-  ["c3", "⚗️", "Mix Final ofertado (dose correta por categoria)"], ["c4", "❤️", "Sistema de viuvez ativado"],
+  ["c3", "⚗️", "HOJE NÃO tem Mix em pó — a energia vem dos grãos (mistura da prova)"], ["c4", "❤️", "Sistema de viuvez ativado"],
   ["c5", "⚖️", "Condição física verificada"], ["c6", "💊", "Sem medicamentos nas últimas 48h"],
   ["c7", "🧺", "Cesto de enceste limpo e identificado"], ["c8", "📋", "Ficha de anilha conferida"],
   ["c9", "🌤️", "Previsão do tempo verificada"], ["c10", "📱", "App pronto para registrar chegadas"],

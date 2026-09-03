@@ -63,7 +63,7 @@ export default function RotaDaProva() {
   const [veloBase, setVeloBase] = useState<number | null>(null);
   const [copiado, setCopiado] = useState(false);
   // 📱 abas (mobile-first)
-  const [aba, setAba] = useState<"resumo" | "cidades" | "tempos" | "mapas">("resumo");
+  const [aba, setAba] = useState<"resumo" | "tempos" | "cidades" | "mapas" | "tudo">("resumo");
   // 🔔 Alarme de chegada
   const [alarmeAtivo, setAlarmeAtivo] = useState(false);
   const [alarmeHora, setAlarmeHora] = useState<string | null>(null);
@@ -642,14 +642,20 @@ export default function RotaDaProva() {
           )}
         </section>
 
-        {/* 📱 Barra de abas */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, position: "sticky", top: 0, zIndex: 20, background: T.bg, padding: "8px 0", borderBottom: `1px solid ${T.border}`, marginBottom: 12 }}>
-          {([["resumo", "📊 Resumo"], ["tempos", "🕐 Tempos"], ["cidades", "🏙️ Cidades"], ["mapas", "🗺️ Mapas"]] as const).map(([k, lbl]) => (
-            <button key={k} type="button" onClick={() => setAba(k)} style={{ padding: "10px 2px", borderRadius: 9, fontSize: 10.5, fontWeight: 800, cursor: "pointer", color: aba === k ? T.bg : T.dim, background: aba === k ? T.gold : T.bgCard, border: `1px solid ${aba === k ? T.gold : T.border}` }}>{lbl}</button>
-          ))}
+        {/* 📱 Barra de abas — grande e impossível de não ver */}
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: T.bg, padding: "10px 0 8px", borderBottom: `2px solid ${T.gold}44`, marginBottom: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 5 }}>
+            {([["resumo", "📊", "Resumo"], ["tempos", "🕐", "Tempos"], ["cidades", "🏙️", "Cidades"], ["mapas", "🗺️", "Mapas"], ["tudo", "📋", "TUDO"]] as const).map(([k, emoji, lbl]) => (
+              <button key={k} type="button" onClick={() => setAba(k)} style={{ padding: "11px 2px 9px", borderRadius: 11, cursor: "pointer", color: aba === k ? T.bg : T.white, background: aba === k ? (k === "tudo" ? T.green : T.gold) : T.bgCard, border: `2px solid ${aba === k ? (k === "tudo" ? T.green : T.gold) : T.border}`, textAlign: "center", lineHeight: 1.25 }}>
+                <div style={{ fontSize: 19 }}>{emoji}</div>
+                <div style={{ fontSize: 10.5, fontWeight: 800 }}>{lbl}</div>
+              </button>
+            ))}
+          </div>
+          {aba !== "tudo" && <div style={{ ...T.small, fontSize: 10, textAlign: "center", marginTop: 7 }}>👆 toque nas abas pra ver cada parte — ou <b style={{ color: T.green }}>📋 TUDO</b> pra ver a página inteira</div>}
         </div>
 
-{aba==="resumo" && (<>         {/* Resumo geral */}
+{(aba==="resumo" || aba==="tudo") && (<>         {/* Resumo geral */}
         {provaSel && (
           <section style={{ ...T.card, borderColor: `${T.gold}55`, background: `${T.gold}0d` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
@@ -730,7 +736,7 @@ export default function RotaDaProva() {
         )}
 
  </>)}
-        {aba==="resumo" && (<>         {/* 📅 Sábado × Domingo — qual dia soltar? */}
+        {(aba==="resumo" || aba==="tudo") && (<>         {/* 📅 Sábado × Domingo — qual dia soltar? */}
         {provaSel && modo === "prova" && previsivel && (
           <section style={T.card}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>
@@ -760,7 +766,7 @@ export default function RotaDaProva() {
         )}
 
  </>)}
-        {aba==="mapas" && (<>         {/* ⛰️ Perfil do relevo da rota (Open-Meteo Elevation — gratuito) */}
+        {(aba==="mapas" || aba==="tudo") && (<>         {/* ⛰️ Perfil do relevo da rota (Open-Meteo Elevation — gratuito) */}
         {provaSel && (
           <section style={T.card}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>
@@ -813,7 +819,7 @@ export default function RotaDaProva() {
         )}
 
  </>)}
-        {aba==="mapas" && (<>         {/* 🛰️ Radar de chuva + 🗺️ Satélite GRÁTIS (Esri World Imagery, sem chave) */}
+        {(aba==="mapas" || aba==="tudo") && (<>         {/* 🛰️ Radar de chuva + 🗺️ Satélite GRÁTIS (Esri World Imagery, sem chave) */}
         {provaSel && rota.length > 0 && (
           <section style={T.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
@@ -905,7 +911,7 @@ export default function RotaDaProva() {
         )}
 
  </>)}
-        {aba==="tempos" && (<>         {/* 🕐 Janela ideal de soltura — hora a hora (Open-Meteo, gratuito) */}
+        {(aba==="tempos" || aba==="tudo") && (<>         {/* 🕐 Janela ideal de soltura — hora a hora (Open-Meteo, gratuito) */}
         {provaSel && (
           <section style={T.card}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>
@@ -940,7 +946,7 @@ export default function RotaDaProva() {
         )}
 
  </>)}
-        {aba==="tempos" && (<>         {/* ⏱️ Previsão de chegada + 💬 WhatsApp */}
+        {(aba==="tempos" || aba==="tudo") && (<>         {/* ⏱️ Previsão de chegada + 💬 WhatsApp */}
         {provaSel && (
           <section style={{ ...T.card, borderColor: `${T.blue}55`, background: `${T.blue}0d` }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>⏱️ Previsão de Chegada no Pombal</div>
@@ -1010,7 +1016,7 @@ export default function RotaDaProva() {
         )}
 
  </>)}
-        {aba==="tempos" && (<>         {/* 🔢 Matriz Cidade × Hora — a onda do clima pela rota */}
+        {(aba==="tempos" || aba==="tudo") && (<>         {/* 🔢 Matriz Cidade × Hora — a onda do clima pela rota */}
         {provaSel && (
           <section style={T.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
@@ -1052,7 +1058,7 @@ export default function RotaDaProva() {
         )}
 
  </>)}
-        {aba==="tempos" && (<>         {/* ⏱️ Linha do tempo do voo — passagem estimada por cidade */}
+        {(aba==="tempos" || aba==="tudo") && (<>         {/* ⏱️ Linha do tempo do voo — passagem estimada por cidade */}
         {provaSel && passagens.length > 1 && (
           <section style={T.card}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>⏱️ Linha do Tempo do Voo — passagem por cidade</div>
@@ -1087,7 +1093,7 @@ export default function RotaDaProva() {
         )}
 
  </>)}
-        {aba==="mapas" && (<>         {/* 🧭 Bússola da Chegada — para quem espera no pombal */}
+        {(aba==="mapas" || aba==="tudo") && (<>         {/* 🧭 Bússola da Chegada — para quem espera no pombal */}
         {provaSel && rota.length > 1 && rumoSoltura != null && (
           <section style={{ ...T.card, borderColor: `${T.blue}55`, background: `${T.blue}0d` }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🧭 Bússola da Chegada — onde olhar no céu</div>
@@ -1152,7 +1158,7 @@ export default function RotaDaProva() {
         )}
 
  </>)}
-        {aba==="cidades" && (<>         {/* Pontos da rota */}
+        {(aba==="cidades" || aba==="tudo") && (<>         {/* Pontos da rota */}
         {pontosComScore.map(({ pt, d, vento, score, bearing, trechoFinal }) => {
           const clima = d && "clima" in d ? d.clima : null;
           const wi = clima ? wmoInfo(clima.wmo) : null;

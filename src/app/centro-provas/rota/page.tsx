@@ -63,7 +63,7 @@ export default function RotaDaProva() {
   const [veloBase, setVeloBase] = useState<number | null>(null);
   const [copiado, setCopiado] = useState(false);
   // 📱 abas (mobile-first)
-  const [aba, setAba] = useState<"resumo" | "tempos" | "cidades" | "mapas" | "tudo">("resumo");
+  const [aba, setAba] = useState<"resumo" | "tempos" | "cidades" | "mapas" | "tudo">("tudo");
   // 🔔 Alarme de chegada
   const [alarmeAtivo, setAlarmeAtivo] = useState(false);
   const [alarmeHora, setAlarmeHora] = useState<string | null>(null);
@@ -593,7 +593,7 @@ export default function RotaDaProva() {
       <div style={{ maxWidth: 880, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
           <div>
-            <h1 style={T.h1}>🛣️ Rota Completa da Prova — Instrumentos por Cidade</h1>
+            <h1 style={T.h1}>🛣️ Rota Completa da Prova — Instrumentos por Cidade <small style={{ fontSize: 10, color: T.dim, fontWeight: 600 }}>· v3.3</small></h1>
             <p style={{ ...T.small, marginTop: 4 }}>
               Da soltura até o pombal: clima, vento na rota, pressão, visibilidade e Kp em cada cidade do percurso • Open-Meteo + NOAA (gratuito)
             </p>
@@ -652,7 +652,7 @@ export default function RotaDaProva() {
               </button>
             ))}
           </div>
-          {aba !== "tudo" && <div style={{ ...T.small, fontSize: 10, textAlign: "center", marginTop: 7 }}>👆 toque nas abas pra ver cada parte — ou <b style={{ color: T.green }}>📋 TUDO</b> pra ver a página inteira</div>}
+          {aba !== "tudo" ? <div style={{ ...T.small, fontSize: 10, textAlign: "center", marginTop: 7 }}>👆 você está vendo só esta parte — toque em <b style={{ color: T.green }}>📋 TUDO</b> pra ver a página inteira</div> : <div style={{ ...T.small, fontSize: 10, textAlign: "center", marginTop: 7 }}>✅ vendo a página inteira — use as abas pra focar em uma parte</div>}
         </div>
 
 {(aba==="resumo" || aba==="tudo") && (<>         {/* Resumo geral */}

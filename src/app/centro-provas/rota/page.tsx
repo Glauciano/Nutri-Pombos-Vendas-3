@@ -14,7 +14,7 @@ import {
   HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM, faseLua,
   NowcastPasso, buscarNowcastChuva, calcularIdp, confiancaPrevisao, protocoloRecepcao,
   riscoExtravio, gerarIcsProvas,
-  buscarClimaPontos, buscarSolPontos, buscarArPontos, buscarJanelaSoltaPontos, limparCacheApi,
+  buscarClimaPontos, buscarSolPontos, buscarArPontos, buscarJanelaSoltaPontos, limparCacheApi, baseTileGoes,
 } from "../lib/apis-gratis";
 import { loadConfig } from "../config";
 
@@ -196,7 +196,7 @@ export default function RotaDaProva() {
 
   // 🛰️ Satélite opcional (Google, com API Key) + 🌙 lua da prova
   const gKey = (loadConfig().mapaApiKey || "").trim();
-  const [modoMapa, setModoMapa] = useState<"radar" | "satelite" | "google">("radar");
+  const [modoMapa, setModoMapa] = useState<"radar" | "satelite" | "nuvens" | "google">("radar");
   const diaLua = modo === "prova" && provaSel ? provaSel.dataSolta : hojeSP();
   const lua = provaSel ? faseLua(diaLua) : null;
   const pontosComScore = rota.map((pt, i) => {
@@ -827,6 +827,7 @@ export default function RotaDaProva() {
               <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                 <button onClick={() => setModoMapa("radar")} style={{ ...T.btnGhost, color: modoMapa === "radar" ? T.bg : T.white, background: modoMapa === "radar" ? T.gold : "#1b283c" }}>🌧️ Radar</button>
                 <button onClick={() => setModoMapa("satelite")} style={{ ...T.btnGhost, color: modoMapa === "satelite" ? T.bg : T.white, background: modoMapa === "satelite" ? T.gold : "#1b283c" }}>🗺️ Satélite</button>
+                <button onClick={() => setModoMapa("nuvens")} style={{ ...T.btnGhost, color: modoMapa === "nuvens" ? T.bg : T.white, background: modoMapa === "nuvens" ? T.gold : "#1b283c" }}>☁️ AO VIVO</button>
                 {gKey && <button onClick={() => setModoMapa("google")} style={{ ...T.btnGhost, color: modoMapa === "google" ? T.bg : T.white, background: modoMapa === "google" ? T.gold : "#1b283c" }}>🧭 Rota Google</button>}
                 {radar && modoMapa !== "google" && (
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -867,18 +868,21 @@ export default function RotaDaProva() {
               for (let gx = 0; gx < cols; gx++) for (let gy = 0; gy < rows; gy++) tiles.push({ gx, gy });
               const baseTile = modoMapa === "satelite"
                 ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile`
-                : `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile`;
+                : modoMapa === "nuvens"
+                  ? baseTileGoes(hojeSP())
+                  : `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile`;
+              const extTile = modoMapa === "nuvens" ? ".jpg" : "";
               return (
                 <div>
                   <div style={{ overflowX: "auto", borderRadius: 12, border: `1px solid ${T.border}` }}>
-                    <div style={{ position: "relative", width: cols * 256, height: rows * 256, background: modoMapa === "satelite" ? "#000" : "#0b1426" }}>
+                    <div style={{ position: "relative", width: cols * 256, height: rows * 256, background: modoMapa === "satelite" || modoMapa === "nuvens" ? "#000" : "#0b1426" }}>
                       {tiles.map(({ gx, gy }) => (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img key={`b${gx}-${gy}`} src={`${baseTile}/${Z}/${y0 + gy}/${x0 + gx}`} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256 }} />
+                        <img key={`b${gx}-${gy}`} src={`${baseTile}/${Z}/${y0 + gy}/${x0 + gx}${extTile}`} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256 }} />
                       ))}
                       {frame && tiles.map(({ gx, gy }) => (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img key={`r${gx}-${gy}-${frame.path}`} src={urlTileRadar(radar.host, frame.path, Z, x0 + gx, y0 + gy)} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256, opacity: modoMapa === "satelite" ? 0.6 : 0.7 }} />
+                        <img key={`r${gx}-${gy}-${frame.path}`} src={urlTileRadar(radar.host, frame.path, Z, x0 + gx, y0 + gy)} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256, opacity: modoMapa === "radar" ? 0.75 : 0.6 }} />
                       ))}
                       {rota.map((pt, i) => {
                         const p = pos(pt.lat, pt.lon);
@@ -899,9 +903,16 @@ export default function RotaDaProva() {
                       {frame ? `${frame.previsto ? "🔮 Previsão" : "🛰️ Observado"} · ${hora} · quadro ${radarIdx + 1}/${radar.frames.length}` : "🛰️ Chuva carregando..."}
                     </small>
                     <small style={{ color: T.dim }}>
-                      {modoMapa === "satelite" ? "🗺️ Satélite © Esri · chuva: RainViewer" : "verde=fraca · amarelo=moderada · vermelho=forte · Mapa © Esri/OSM · Chuva: RainViewer"}
+                      {modoMapa === "satelite" ? "🗺️ Satélite © Esri · chuva: RainViewer"
+                        : modoMapa === "nuvens" ? "☁️ Nuvens reais: NASA GOES-East (~15-30min) · pontos de chuva: RainViewer"
+                        : "verde=fraca · amarelo=moderada · vermelho=forte · Mapa © Esri/OSM · Chuva: RainViewer"}
                     </small>
                   </div>
+                  {modoMapa === "radar" && (
+                    <div style={{ ...T.small, fontSize: 10.5, marginTop: 8, color: T.orange, lineHeight: 1.5 }}>
+                      ⚠️ Radar de solo cobre bem o Sudeste, mas o centro/norte do Brasil têm lacunas — se estiver chovendo sem aparecer aqui, toque em <b>☁️ AO VIVO</b> (nuvens vistas por satélite, cobrem todo o Brasil) ou confira o card da cidade no modo 📡 Agora.
+                    </div>
+                  )}
                 </div>
               );
             })()}

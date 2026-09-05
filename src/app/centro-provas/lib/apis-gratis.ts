@@ -492,6 +492,11 @@ export async function buscarRadar(): Promise<{ host: string; frames: FrameRadar[
   } catch { return null; }
 }
 
+/** Nuvens REAIS por satélite geoestacionário (NASA GOES-East, ~15-30 min) — cobre TODO o Brasil */
+export function baseTileGoes(dataISO: string): string {
+  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_GeoColor/default/${dataISO}/GoogleMapsCompatible_Level7`;
+}
+
 export function urlTileRadar(host: string, path: string, z: number, x: number, y: number): string {
   return `${host}${path}/256/${z}/${x}/${y}/2/1_1.png`;
 }

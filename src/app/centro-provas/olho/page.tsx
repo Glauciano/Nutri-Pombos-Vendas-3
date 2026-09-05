@@ -276,6 +276,58 @@ export default function AnaliseOlhoPombo() {
             <br />• <b>Íris & Esclerótica:</b> A riqueza em granulação (relevo montanhoso) evidencia vitalidade e resistência circulatória do atleta.
           </div>
         </section>
+      {/* 📚 ESCOLA EYE-SIGN — conteúdo pesquisado (Jack Barkel + Hofmann + ciência) */}
+      <section style={T.card}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>📚 Escola Eye-Sign — Jack Barkel e a teoria dos 5 círculos</div>
+        <div style={{ ...T.small, fontSize: 11, marginBottom: 10, lineHeight: 1.5 }}>
+          Pesquisa direta das fontes clássicas (Alberta Classic, fórum PigeonBasics com o próprio Barkel). O sul-africano <b>Jack Barkel</b> divide o olho em <b>5 círculos</b>: pupila, adaptação, correlação, íris e o círculo reprodutor (perímetro/círculo da saúde).
+        </div>
+        {([
+          ["1️⃣ Pupila", "Pequena e REATIVA à luz (contrai e expande). Quanto maior a pupila ou a correlação, mais estreito fica o perímetro. Barkel: olhar o músculo esfíncter com lupa sem avaliar reatividade é perda de tempo. Olhos pretos (bull eye) podem ter pupila reativa como qualquer outro."],
+          ["2️⃣ Círculo de Adaptação", "Nos puros de reprodução, limpo e completo. O 'sinal de corrida' é o segmento escuro sobreposto — é o que marca o voador. Nas matrizes de Barkel/Hofmann, preferem-no serrilhado (bordas em serra) e bem desenvolvido."],
+          ["3️⃣ Círculo de Correlação", "Vai da pupila ao perímetro. Se a parte VISÍVEL (entre adaptação e íris) for larga demais → pombo só para distâncias CURTAS. Correlação fechada = fundo. Barkel considerava a leitura da correlação a parte exclusiva e original da própria teoria."],
+          ["4️⃣ Íris", "Íris fina, com falhas/buracos = regressão genética (velocidade sem homing — ganham provas mas se perdem). Íris espessa e granulada = saúde e fundo. Amarelo×amarelo gera íris muito espessa; pérola×pérola gera íris fina demais para provas duras."],
+          ["5️⃣ Perímetro / Círculo Reprodutor", "Para merecer vaga no plantel de reprodução, Barkel exigia: os 5 círculos perfeitos, adaptação e perímetro da MESMA cor e largura, e pupila pequena e reativa. VOADORES NÃO PRECISAM dos 5 círculos — a exigência completa é só para matrizes."],
+        ] as const).map(([t, d]) => (
+          <div key={t} style={{ padding: "9px 12px", borderRadius: 9, background: "#ffffff08", marginBottom: 6, fontSize: 12, lineHeight: 1.6 }}>
+            <b style={{ color: T.gold }}>{t}</b> — {d}
+          </div>
+        ))}
+      </section>
+
+      <section style={T.card}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>💘 Regras de acasalamento de Barkel (por cor de olho)</div>
+        {([
+          ["🚫 Pérola × Pérola", "Aumenta velocidade e vitalidade, mas sacrifica a capacidade de voltar pra casa (homing). Evitar."],
+          ["🚫 Amarelo × Amarelo", "Gera pombos lentos e teimosos: muita resistência e homing, pouca vitalidade. Evitar."],
+          ["✅ Amarelo × Pérola", "Combina velocidade + resistência + homing + vitalidade. A aposta de Barkel."],
+          ["🏆 O pombo duplo propósito", "Melhor que criar puro voador: criar o 'dual purpose' — voa bem e, ao fim da carreira, vai pro plantel. Regra de ouro: acasalar aves cuja SOM dos sinais de corrida não passe de 100%."],
+          ["📅 Plano de 3 a 5 anos", "Barkel via o eye-sign como controle de 'deriva genética' do plantel: seleção de olhos gera, em 3-5 gerações, um plantel concentrado nos genes certos. Olho é o termômetro mais sensível — junto com osso, asa e quilha."],
+        ] as const).map(([t, d]) => (
+          <div key={t} style={{ padding: "9px 12px", borderRadius: 9, background: "#ffffff08", marginBottom: 6, fontSize: 12, lineHeight: 1.6 }}>
+            <b style={{ color: t.startsWith("✅") || t.startsWith("🏆") ? T.green : t.startsWith("🚫") ? T.red : T.gold }}>{t}</b> — {d}
+          </div>
+        ))}
+      </section>
+
+      <section style={T.card}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🇩🇪 Escola alemã — Josef Hofmann</div>
+        <div style={{ ...T.small, fontSize: 12, lineHeight: 1.7 }}>
+          Hofmann compartilha com Barkel: pupila pequena, círculo de adaptação bem desenvolvido e <b>serrilhado</b>, e o eye-sign como ferramenta para <b>encontrar os reprodutores</b> do plantel. Os dois admitem: é possível criar excelentes pombos <b>sem nunca olhar o olho</b> — o eye-sign é um filtro a mais, não uma religião.
+        </div>
+      </section>
+
+      <section style={{ ...T.card, borderColor: "#55a3ff55", background: "#55a3ff0d" }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.blue, marginBottom: 10 }}>⚖️ E o que a ciência diz hoje?</div>
+        <div style={{ ...T.small, fontSize: 12, lineHeight: 1.7 }}>
+          A ciência moderna deu razão e tirou razão dos eye-signistas ao mesmo tempo: o olho <b>realmente participa da navegação</b> — pombos têm proteínas sensíveis à luz (criptocromos) na retina que enxergam o <b>campo magnético da Terra</b> (bússola magnética dependente de luz). Ou seja, a intuição de que "o olho é a chave da orientação" estava certa! <br /><br />
+          MAS: esses mecanismos funcionam em nível molecular/neurológico — <b>não alteram a cor, textura ou granulação da íris</b> de forma diagnosticável. Não há evidência científica de que feições visíveis do olho prevejam desempenho. O que o olho revela bem: <b>saúde geral, vitalidade e calma</b> do pombo.<br /><br />
+          <b style={{ color: T.gold }}>Uso sábio:</b> use o eye-sign como mais uma ferramenta de seleção (junte com linhagem, resultados no cesto, asa/osso/saúde) — nunca como única. Como dizem os próprios Barkel e Hofmann: os melhores pombos se revelam <b>voando</b>, não só no olho.
+        </div>
+        <div style={{ ...T.small, fontSize: 10, marginTop: 10, lineHeight: 1.8 }}>
+          🔗 Fontes: <a href="http://www.albertaclassic.com/eyes/barkel.php" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Alberta Classic — Jack Barkel</a> • <a href="http://www.albertaclassic.com/eyes/hofmann.php" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Alberta Classic — Josef Hofmann</a> • <a href="https://pigeonweb.co.uk/pigeon-racing-explained/pigeon-racing-science-and-theory/eye-sign-and-navigation-right-question-wrong-evidence" target="_blank" rel="noreferrer" style={{ color: T.blue }}>PigeonWeb — ciência e navegação</a> • <a href="http://forum.pigeonbasics.com/topic/20687-jack-barkel-eyesign/" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Fórum PigeonBasics (posts do próprio Barkel)</a>
+        </div>
+      </section>
       </div>
     </main>
   );

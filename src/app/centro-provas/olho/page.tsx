@@ -10,6 +10,74 @@ type IrisCor = "amarelo_ouro" | "perola_prata" | "violeta_vermelho" | "castanho"
 type Granulacao = "rugosa_3d" | "media" | "lisa";
 type AnelSaude = "preto_forte" | "cinza_claro" | "indefinido";
 
+/* 🔬 Olho interativo — ilustração SVG ORIGINAL do app (conceitos clássicos, zero imagem de terceiros) */
+const PARTES_OLHO: Record<string, { nome: string; cor: string; desc: string; avaliar: string }> = {
+  pupila: { nome: "1️⃣ Pupila", cor: "#f8fafc", desc: "Pequena e REATIVA à luz — contrai rápido quando iluminada (passe o mouse nela e veja!). Grande demais ou parada derruba a avaliação. Olhos pretos (bull eye) também podem ter pupila reativa.", avaliar: "tamanho + velocidade de contração à luz" },
+  adaptacao: { nome: "2️⃣ Círculo de Adaptação", cor: "#eab308", desc: "Anel em volta da pupila. Nas matrizes: completo e limpo; bordas SERRILHADAS (em serra) são as mais valorizadas por Barkel e Hofmann. É onde se lê o sinal de corrida.", avaliar: "presença, largura e serrilhado das bordas" },
+  corrida: { nome: "⚡ Sinal de Corrida", cor: "#ff5d62", desc: "Segmento escuro sobreposto ao círculo de adaptação — é a marca do VOADOR. Regra de ouro de Barkel ao acasalar: a soma dos sinais de corrida do casal NÃO deve passar de 100%.", avaliar: "presença e tamanho do segmento escuro" },
+  correlacao: { nome: "3️⃣ Círculo de Correlação", cor: "#55a3ff", desc: "Vai da pupila ao perímetro. A faixa VISÍVEL (entre adaptação e íris) larga demais = pombo só para distâncias CURTAS; fechada = aptidão para o FUNDO. Barkel considerava essa leitura a parte exclusiva da própria teoria.", avaliar: "largura da faixa visível entre adaptação e íris" },
+  iris: { nome: "4️⃣ Íris", cor: "#f97316", desc: "A 'carne' colorida do olho. Espessa, granulada e sem falhas = saúde e fundo. Fina ou com buracos = regressão (velocidade sem homing — ganham e se perdem). Amarelo×amarelo gera íris espessa demais; pérola×pérola, fina demais para provas duras.", avaliar: "espessura, granulação e ausência de falhas" },
+  perimetro: { nome: "5️⃣ Perímetro (Reprodutor)", cor: "#39e58c", desc: "O anel externo — círculo da saúde/reprodução. Exigência de Barkel pra matriz: mesma COR e LARGURA do círculo de adaptação, completo em volta. Voador não precisa; matriz sim.", avaliar: "uniformidade completa + igualar cor/largura com a adaptação" },
+};
+
+function OlhoInterativo() {
+  const [sel, setSel] = useState<string | null>(null);
+  const [luz, setLuz] = useState(false);
+  const op = (k: string) => (sel == null || sel === k ? 1 : 0.28);
+  const info = sel ? PARTES_OLHO[sel] : null;
+  const granulacao = Array.from({ length: 44 }, (_, i) => i * (360 / 44));
+  return (
+    <section style={T.card}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 8 }}>🔬 Olho Interativo — passe o mouse (ou toque) em cada círculo</div>
+      <div style={{ ...T.small, fontSize: 11, marginBottom: 12, lineHeight: 1.5 }}>
+        Ilustração original do app inspirada nos 5 círculos de Jack Barkel — hover/toque destaca o anel e explica o que avaliar. Dica: passe o mouse na <b>pupila</b> e veja ela contrair (reativa à luz ⚡).
+      </div>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
+        <svg viewBox="0 0 280 280" style={{ width: "100%", maxWidth: 320, margin: "0 auto", display: "block" }}>
+          <circle cx="140" cy="140" r="136" fill="#0b1529" />
+          {/* 5. perímetro */}
+          <circle cx="140" cy="140" r="128" fill="#2f2620" stroke={sel === "perimetro" ? "#fff" : "#1a140e"} strokeWidth={sel === "perimetro" ? 3 : 2} strokeDasharray={sel === "perimetro" ? "6 4" : undefined} opacity={op("perimetro")} style={{ cursor: "pointer", transition: "opacity .25s" }} onMouseEnter={() => setSel("perimetro")} onMouseLeave={() => setSel(null)} onClick={() => setSel("perimetro")} />
+          {/* 4. íris + granulação */}
+          <g opacity={op("iris")} style={{ cursor: "pointer", transition: "opacity .25s" }} onMouseEnter={() => setSel("iris")} onMouseLeave={() => setSel(null)} onClick={() => setSel("iris")}>
+            <circle cx="140" cy="140" r="118" fill="#c87f06" stroke={sel === "iris" ? "#fff" : "#8a5a10"} strokeWidth={sel === "iris" ? 3 : 2} strokeDasharray={sel === "iris" ? "6 4" : undefined} />
+            {granulacao.map((a) => (
+              <line key={a} x1="140" y1="70" x2="140" y2="40" stroke="#f7bd00" strokeWidth="3.2" strokeLinecap="round" opacity="0.65" transform={`rotate(${a} 140 140)`} />
+            ))}
+          </g>
+          {/* 3. correlação */}
+          <circle cx="140" cy="140" r="68" fill="#cdb287" stroke={sel === "correlacao" ? "#fff" : "#a68b5f"} strokeWidth={sel === "correlacao" ? 3 : 2} strokeDasharray={sel === "correlacao" ? "6 4" : undefined} opacity={op("correlacao")} style={{ cursor: "pointer", transition: "opacity .25s" }} onMouseEnter={() => setSel("correlacao")} onMouseLeave={() => setSel(null)} onClick={() => setSel("correlacao")} />
+          {/* 2. adaptação (serrilhada) */}
+          <circle cx="140" cy="140" r="48" fill="#8a5a2b" stroke={sel === "adaptacao" ? "#fff" : "#4a2f14"} strokeWidth={sel === "adaptacao" ? 3.5 : 5} strokeDasharray="5 5" opacity={op("adaptacao")} style={{ cursor: "pointer", transition: "opacity .25s" }} onMouseEnter={() => setSel("adaptacao")} onMouseLeave={() => setSel(null)} onClick={() => setSel("adaptacao")} />
+          {/* ⚡ sinal de corrida (segmento escuro sobre a adaptação) */}
+          <path d="M94.9 123.6 A48 48 0 0 1 123.6 94.9" fill="none" stroke="#0a0a0a" strokeWidth="11" strokeLinecap="round" opacity={op("corrida") || 0.95} style={{ cursor: "pointer", transition: "opacity .25s" }} onMouseEnter={() => setSel("corrida")} onMouseLeave={() => setSel(null)} onClick={() => setSel("corrida")} />
+          {sel === "corrida" && <circle cx="109" cy="109" r="30" fill="none" stroke="#ff5d62" strokeWidth="2" strokeDasharray="5 4" />}
+          {/* 1. pupila (reativa!) */}
+          <circle cx="140" cy="140" r={luz ? 15 : 28} fill="#050505" stroke={sel === "pupila" ? "#fff" : "#222"} strokeWidth={sel === "pupila" ? 3 : 2} strokeDasharray={sel === "pupila" ? "5 4" : undefined} opacity={op("pupila")} style={{ cursor: "pointer", transition: "r .35s ease, opacity .25s" }} onMouseEnter={() => { setSel("pupila"); setLuz(true); }} onMouseLeave={() => { setSel(null); setLuz(false); }} onClick={() => setSel("pupila")} />
+          {luz && <text x="140" y="205" textAnchor="middle" fontSize="11" fontWeight="800" fill="#f7bd00">⚡ pupila contraindo à luz!</text>}
+        </svg>
+        <div style={{ flex: 1, minWidth: 220 }}>
+          {info ? (
+            <div style={{ padding: 14, borderRadius: 11, background: "#ffffff08", border: `1px solid ${T.border}` }}>
+              <b style={{ fontSize: 14, color: info.cor }}>{info.nome}</b>
+              <div style={{ ...T.small, fontSize: 12, marginTop: 6, lineHeight: 1.65 }}>{info.desc}</div>
+              <div style={{ marginTop: 8, padding: "8px 11px", borderRadius: 8, background: `${T.gold}12`, border: `1px solid ${T.gold}44`, fontSize: 11.5, lineHeight: 1.5 }}>
+                ✔ <b>O que avaliar:</b> {info.avaliar}
+              </div>
+            </div>
+          ) : (
+            <div style={{ ...T.small, fontSize: 12, lineHeight: 1.7, padding: 14, borderRadius: 11, background: "#ffffff08" }}>
+              👁️ Passe o mouse ou toque em um anel do olho:<br /><br />
+              {Object.values(PARTES_OLHO).map((pp) => (
+                <div key={pp.nome} style={{ marginBottom: 3 }}><b style={{ color: pp.cor }}>{pp.nome}</b></div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function AnaliseOlhoPombo() {
   const [pupila, setPupila] = useState<Pupila>("puntiforme");
   const [circulo, setCirculo] = useState<Circulo>("serrilhado_largo");
@@ -276,6 +344,8 @@ export default function AnaliseOlhoPombo() {
             <br />• <b>Íris & Esclerótica:</b> A riqueza em granulação (relevo montanhoso) evidencia vitalidade e resistência circulatória do atleta.
           </div>
         </section>
+      <OlhoInterativo />
+
       {/* 📚 ESCOLA EYE-SIGN — conteúdo pesquisado (Jack Barkel + Hofmann + ciência) */}
       <section style={T.card}>
         <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>📚 Escola Eye-Sign — Jack Barkel e a teoria dos 5 círculos</div>

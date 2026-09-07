@@ -162,7 +162,9 @@ function ModoExtravio(){
   const salvar=(l:Extravio[])=>{setLista(l);try{localStorage.setItem(KEY_EXTRA,JSON.stringify(l))}catch{}};
   const add=()=>{if(!anilha.trim())return;const id=typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():String(Date.now());salvar([...lista,{id,anilha:anilha.trim(),nome:nome.trim()||undefined,desde}]);setAnilha("");setNome("")};
   const remover=(id:string)=>{salvar(lista.filter(x=>x.id!==id));setAnalises(a=>{const c={...a};delete c[id];return c})};
-  const diasFora=(d:string)=>Math.max(0,Math.floor((Date.now()-new Date(d+"T12:00:00").getTime())/86400000));
+  const [agora,setAgora]=useState(0);
+  useEffect(()=>{setAgora(Date.now())},[]);
+  const diasFora=(d:string)=>agora?Math.max(0,Math.floor((agora-new Date(d+"T12:00:00").getTime())/86400000)):0;
   const analisar=async(ev:Extravio)=>{
     setAnalisando(ev.id);
     try{const p=getPombal();const c=await buscarClimaPassado(p.lat,p.lon,ev.desde);setAnalises(a=>({...a,[ev.id]:{dir:c.dirVento,vento:c.vento}}))}

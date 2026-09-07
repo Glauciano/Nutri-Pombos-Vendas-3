@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { classificarProva, diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
-import { aplicarPombalSalvo, geocodeCidade } from "../lib/apis-gratis";
+import { aplicarPombalSalvo, geocodeCidade, loadParceiros } from "../lib/apis-gratis";
 import { T } from "../theme";
 
 type Tab = "agora" | "7dias" | "provas";
@@ -27,10 +27,8 @@ export default function PrevisaoTempo(){
   useEffect(()=>{const p=aplicarPombalSalvo();COORDS[BASE]={lat:p.lat,lon:p.lon}},[]);
   const [parceiros,setParceiros]=useState<string[]>([]);
   useEffect(()=>{(async()=>{
-    let lista:{cidade?:string}[]=[];
-    try{lista=JSON.parse(localStorage.getItem("nutripombos-parceiros-v1")||"[]")}catch{}
     const nomes:string[]=[];
-    for(const pr of lista){
+    for(const pr of loadParceiros()){
       const cidade=(pr.cidade||"").trim();
       if(!cidade)continue;
       if(!COORDS[cidade]){const c=await geocodeCidade(cidade);if(!c)continue;COORDS[cidade]=c;}

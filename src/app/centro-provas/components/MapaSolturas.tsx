@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { classificarProva, diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
-import { Coords, geocodeCidade, getPombal } from "../lib/apis-gratis";
+import { Coords, geocodeCidade, getPombal, loadParceiros } from "../lib/apis-gratis";
 import { loadConfig } from "../config";
 import { T } from "../theme";
 
@@ -45,10 +45,8 @@ export default function MapaSolturas() {
   useEffect(() => {
     let vivo = true;
     (async () => {
-      let lista: { id: string; nome: string; cidade: string }[] = [];
-      try { lista = JSON.parse(localStorage.getItem("nutripombos-parceiros-v1") || "[]"); } catch { lista = []; }
       const res: { nome: string; cidade: string; x: number; y: number }[] = [];
-      for (const pr of lista) {
+      for (const pr of loadParceiros()) {
         if (!pr.cidade?.trim()) continue;
         const c = await geocodeCidade(pr.cidade.trim());
         if (!c) continue;

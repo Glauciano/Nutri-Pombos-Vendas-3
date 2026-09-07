@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CALENDARIO_2026, classificarProva, diasParaProva, type Prova } from "../data/calendario";
+import { loadCalendario, classificarProva, diasParaProva, type Prova } from "../data/calendario";
 import { T } from "../theme";
 
 type Tela = "hub" | "selecionar" | "ativo" | "encerrada";
@@ -96,14 +96,23 @@ export default function DiaProva() {
   const [importTxt, setImportTxt] = useState("");
   const [message, setMessage] = useState("");
 
-  useEffect(() => { setReg(readLocal<Registro | null>(DIA_KEY, null)); setChecks(readLocal<string[]>(CHECK_KEY, [])); fetch("/api/pombos").then(r => r.json()).then(v => setPombos(Array.isArray(v) ? v : [])).catch(() => setPombos([])); const timer = window.setInterval(() => setHoraAtual(new Date()), 1000); return () => window.clearInterval(timer); }, []);
+  const [provas, setProvas] = useState<Prova[]>([]);
+  useEffect(() => {
+    setReg(readLocal<Registro | null>(DIA_KEY, null)); setChecks(readLocal<string[]>(CHECK_KEY, []));
+    fetch("/api/pombos").then(r => r.json()).then(v => setPombos(Array.isArray(v) ? v : [])).catch(() => setPombos([]));
+    const carregar = () => setProvas(loadCalendario().filter(p => !p.cancelada));
+    carregar();
+    window.addEventListener("nutripombos:calendario", carregar);
+    const timer = window.setInterval(() => setHoraAtual(new Date()), 1000);
+    return () => { window.clearInterval(timer); window.removeEventListener("nutripombos:calendario", carregar); };
+  }, []);
   useEffect(() => { if (reg) localStorage.setItem(DIA_KEY, JSON.stringify(reg)); else localStorage.removeItem(DIA_KEY); }, [reg]);
 
   const ativos = pombos.filter(p => !p.status || p.status === "ativo" || p.status === "Ativo" || p.status === "Em tratamento");
   const hoje = new Date().toISOString().slice(0, 10);
-  const provaHoje = CALENDARIO_2026.find(p => p.dataSolta === hoje);
-  const proxima = CALENDARIO_2026.find(p => p.dataSolta >= hoje) ?? CALENDARIO_2026.at(-1);
-  const prova = reg ? CALENDARIO_2026.find(p => provaId(p) === reg.provaId || String(p.num) === reg.provaId) : undefined;
+  const provaHoje = provas.find(p => p.dataSolta === hoje);
+  const proxima = provas.find(p => p.dataSolta >= hoje) ?? provas.at(-1);
+  const prova = reg ? provas.find(p => provaId(p) === reg.provaId || String(p.num) === reg.provaId) : undefined;
 
   function iniciar(p: Prova) { setReg({ provaId: provaId(p), horaSoltura: "", clima: CLIMAS[0], vento: VENTOS[0], velocidadeVento: 5, temperatura: 24, retornos: [], obs: "", encerrada: false, dataRegistro: new Date().toISOString() }); setTela("ativo"); }
   function toggle(id: string) { const next = checks.includes(id) ? checks.filter(v => v !== id) : [...checks, id]; setChecks(next); localStorage.setItem(CHECK_KEY, JSON.stringify(next)); }
@@ -112,7 +121,7 @@ export default function DiaProva() {
   function importar() { if (!reg || !prova) return; const hSolta = reg.horaSoltura || "07:00:00"; const linhas = parsearConstatacao(importTxt); if (!linhas.length) { setMessage("❌ Nenhum registro de pombo encontrado no arquivo ou texto."); return; } const lista = [...reg.retornos]; let count = 0; for (const linha of linhas) { const alvo = linha.anilha.trim(); const pombo = pombos.find(p => p.anilha.trim() === alvo || p.anilha.replace(/\D/g, "") === alvo.replace(/\D/g, "") || p.anilha.includes(alvo) || alvo.includes(p.anilha)); const id = pombo ? String(pombo.id) : `anilha:${alvo}`; if (lista.some(r => r.pomboId === id && r.hora === linha.hora)) continue; const obsMeta = [pombo ? "" : `Anilha/Chip: ${linha.anilha}`, linha.socio ? `Sócio: ${linha.socio}${linha.idSocio ? ` (#${linha.idSocio})` : ""}` : "", linha.concurso ? `Concurso: ${linha.concurso}` : ""].filter(Boolean).join(" | "); lista.push({ pomboId: id, hora: linha.hora, velocidade: calcVel(prova.km, normalizarHora(hSolta), linha.hora), colocacao: 0, obs: obsMeta }); count++; } setReg({ ...reg, horaSoltura: hSolta, retornos: ordenar(lista) }); setImportTxt(""); setMessage(`✅ ${count} registro(s) importado(s) do Pigeon Master/ETS!`); }
   function salvarHistorico() { if (!reg || !prova) return; const anteriores = readLocal<Resultado[]>(HIST_KEY, []); const novos = reg.retornos.map(r => ({ id: crypto.randomUUID(), prova: `${prova.cidade}/${prova.estado} — #${prova.num}`, data: prova.dataSolta, distancia: prova.km, pomboId: r.pomboId, colocacao: r.colocacao, velocidade: r.velocidade, hora: r.hora, observacoes: r.obs ?? "" })); localStorage.setItem(HIST_KEY, JSON.stringify([...anteriores, ...novos])); setReg(null); setTela("hub"); setMessage(`${novos.length} resultado(s) salvos no histórico.`); }
 
-  if (tela === "selecionar") return <Shell><Back onClick={() => setTela("hub")} /><h1 style={{ ...T.h1, marginBottom: 16 }}>📅 Selecionar Prova</h1>{CALENDARIO_2026.map(p => { const c = classificarProva(p.km); return <button key={p.num} onClick={() => iniciar(p)} style={{ width: "100%", textAlign: "left", padding: 14, marginBottom: 7, borderRadius: 11, cursor: "pointer", color: T.white, background: T.bgCard, border: `1px solid ${c.cor}55`, borderLeft: `4px solid ${c.cor}` }}><b>#{p.num} {p.cidade} — {p.estado}</b><span style={{ float: "right", color: T.dim }}>›</span><div style={{ ...T.small, marginTop: 4 }}>{c.emoji} {c.tipo} • {p.km}km • {p.dataSolta}</div></button>; })}</Shell>;
+  if (tela === "selecionar") return <Shell><Back onClick={() => setTela("hub")} /><h1 style={{ ...T.h1, marginBottom: 16 }}>📅 Selecionar Prova</h1>{provas.map(p => { const c = classificarProva(p.km); return <button key={p.num} onClick={() => iniciar(p)} style={{ width: "100%", textAlign: "left", padding: 14, marginBottom: 7, borderRadius: 11, cursor: "pointer", color: T.white, background: T.bgCard, border: `1px solid ${c.cor}55`, borderLeft: `4px solid ${c.cor}` }}><b>#{p.num} {p.cidade} — {p.estado}</b><span style={{ float: "right", color: T.dim }}>›</span><div style={{ ...T.small, marginTop: 4 }}>{c.emoji} {c.tipo} • {p.km}km • {p.dataSolta}</div></button>; })}</Shell>;
   if (tela === "ativo" && reg && prova) return <Shell><TelaAtiva reg={reg} setReg={setReg} prova={prova} pombos={ativos} horaAtual={horaAtual} novo={novo} setNovo={setNovo} addRetorno={addRetorno} showImport={showImport} setShowImport={setShowImport} importTxt={importTxt} setImportTxt={setImportTxt} importar={importar} message={message} onBack={() => setTela("hub")} onEnd={() => { setReg({ ...reg, encerrada: true }); setTela("encerrada"); }} /></Shell>;
   if (tela === "encerrada" && reg && prova) return <Shell><TelaEncerrada reg={reg} prova={prova} pombos={ativos} onSave={salvarHistorico} onEdit={() => setTela("ativo")} onDiscard={() => { setReg(null); setTela("hub"); }} /></Shell>;
 

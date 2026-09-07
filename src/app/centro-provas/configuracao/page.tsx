@@ -5,16 +5,10 @@ import Link from "next/link";
 import { T } from "../theme";
 import { DISTRIBUICAO } from "../calculadora/page";
 import { DEFAULT_CONFIG, loadConfig, saveConfig, type ConfigPlantel } from "../config";
-import { getPombal, salvarPombal, geocodeCidade } from "../lib/apis-gratis";
+import { getPombal, salvarPombal, geocodeCidade, loadParceiros, type Parceiro } from "../lib/apis-gratis";
 
 const KEY_POMBAIS = "nutripombos-pombais-v1";
 const KEY_PARC = "nutripombos-parceiros-v1";
-type Parceiro = { id: string; nome: string; cidade: string };
-const PARCEIROS_PADRAO: Parceiro[] = [
-  { id: "p1", nome: "", cidade: "Ribeirão Preto" },
-  { id: "p2", nome: "", cidade: "Franca" },
-  { id: "p3", nome: "", cidade: "Araraquara" },
-];
 type PombalSalvo = { nome: string; lat: number; lon: number };
 
 function escalar(base: number, consumo: number) {
@@ -40,9 +34,7 @@ export default function Configuracao() {
   // 👨‍🌾 Multi-pombal + 🤝 Parceiros
   const [pombais, setPombais] = useState<PombalSalvo[]>([]);
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
-  useEffect(() => {
-    try { const l = JSON.parse(localStorage.getItem(KEY_PARC) || "null"); setParceiros(Array.isArray(l) ? l : PARCEIROS_PADRAO); } catch { setParceiros(PARCEIROS_PADRAO); }
-  }, []);
+  useEffect(() => { setParceiros(loadParceiros()); }, []);
   const salvarParceiros = (l: Parceiro[]) => { setParceiros(l); try { localStorage.setItem(KEY_PARC, JSON.stringify(l)); } catch { /* ignora */ } };
   // 🔍 autocomplete de cidades ao digitar
   const [sugestoes, setSugestoes] = useState<{ cidade: string; estado: string }[]>([]);

@@ -15,7 +15,7 @@ import {
   NowcastPasso, buscarNowcastChuva, calcularIdp, confiancaPrevisao, protocoloRecepcao,
   riscoExtravio, gerarIcsProvas,
   buscarClimaPontos, buscarSolPontos, buscarArPontos, buscarJanelaSoltaPontos, limparCacheApi, baseTileGoes,
-  geocodeCidade,
+  geocodeCidade, loadParceiros,
 } from "../lib/apis-gratis";
 import { loadConfig } from "../config";
 
@@ -102,10 +102,8 @@ export default function RotaDaProva() {
   useEffect(() => {
     let vivo = true;
     (async () => {
-      let lista: { id: string; nome: string; cidade: string }[] = [];
-      try { lista = JSON.parse(localStorage.getItem("nutripombos-parceiros-v1") || "[]"); } catch { lista = []; }
       const res: { nome: string; cidade: string; lat: number; lon: number }[] = [];
-      for (const pr of lista) {
+      for (const pr of loadParceiros()) {
         if (!pr.cidade?.trim()) continue;
         const c = await geocodeCidade(pr.cidade.trim());
         if (c) res.push({ nome: (pr.nome || "").trim() || pr.cidade.trim(), cidade: pr.cidade.trim(), lat: c.lat, lon: c.lon });

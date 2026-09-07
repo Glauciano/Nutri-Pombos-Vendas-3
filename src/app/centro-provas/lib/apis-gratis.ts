@@ -11,6 +11,28 @@ import { loadConfig, saveConfig } from "../config";
 /** Evento disparado quando o usuário altera a localização do pombal */
 export const EVENTO_POMBAL = "nutripombos:pombal";
 
+/* ------------------------------------------------------------------ */
+/* 🤝 Cidades parceiras — lista central (padrão + edições do usuário)  */
+/* ------------------------------------------------------------------ */
+
+export type Parceiro = { id: string; nome: string; cidade: string };
+export const PARCEIROS_PADRAO: Parceiro[] = [
+  { id: "p1", nome: "", cidade: "Ribeirão Preto" },
+  { id: "p2", nome: "", cidade: "Franca" },
+  { id: "p3", nome: "", cidade: "Araraquara" },
+];
+
+/** Lê os parceiros salvos; se nunca editou, usa o padrão (e grava pra frente) */
+export function loadParceiros(): Parceiro[] {
+  if (typeof window === "undefined") return PARCEIROS_PADRAO;
+  try {
+    const l = JSON.parse(localStorage.getItem("nutripombos-parceiros-v1") || "null");
+    if (Array.isArray(l)) return l;
+  } catch { /* ignora */ }
+  try { localStorage.setItem("nutripombos-parceiros-v1", JSON.stringify(PARCEIROS_PADRAO)); } catch { /* ignora */ }
+  return PARCEIROS_PADRAO;
+}
+
 /* Cache de 10 min + retry — evita HTTP 429 (limite) do Open-Meteo */
 const CACHE_API = new Map<string, { t: number; data: unknown }>();
 const TTL_API = 10 * 60 * 1000;

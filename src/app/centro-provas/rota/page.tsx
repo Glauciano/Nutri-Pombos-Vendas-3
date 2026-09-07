@@ -98,6 +98,7 @@ export default function RotaDaProva() {
     if (!parcSel) { setParcClima(null); return; }
     setParcLoading(true); setParcClima(null);
     buscarClimaPonto(parcSel.lat, parcSel.lon).then((c) => setParcClima(c)).catch(() => setParcClima(null)).finally(() => setParcLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reconsultar apenas quando a cidade do parceiro muda
   }, [parcSel?.cidade, parcSel?.lat]);
   useEffect(() => {
     let vivo = true;
@@ -267,6 +268,7 @@ export default function RotaDaProva() {
     const chuvaMax = validos.reduce((m, v) => Math.max(m, (v.d && "clima" in v.d ? v.d.clima.chuvaMm : 0)), 0);
     const d = altimetria && altimetria.length ? Math.max(...altimetria) - Math.min(...altimetria) : null;
     return calcularIdp({ km: provaSel.km, penVentoMedio: penMedio, chuvaMaxMm: chuvaMax, kp: kp?.kp ?? null, relevoDesnivelM: d });
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- recompute intencional quando a rota muda
   }, [provaSel, validos, kp, altimetria]);
 
   // 📊 confiança da previsão + 🐦 risco de extravio

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { classificarProva, diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
-import { aplicarPombalSalvo } from "../lib/apis-gratis";
+import { aplicarPombalSalvo, geocodeCidade } from "../lib/apis-gratis";
 import { T } from "../theme";
 
 type Tab = "agora" | "7dias" | "provas";
@@ -25,13 +25,26 @@ export default function PrevisaoTempo(){
   const[provas,setProvas]=useState<ProvaCalendario[]>([]);const[cidade,setCidade]=useState(BASE);const[pombalDir,setPombalDir]=useState("Sul");const[dados,setDados]=useState<DadosClima|null>(null);const[loading,setLoading]=useState(false);const[erro,setErro]=useState("");const[tab,setTab]=useState<Tab>("agora");
   useEffect(()=>setProvas(loadCalendario()),[]);
   useEffect(()=>{const p=aplicarPombalSalvo();COORDS[BASE]={lat:p.lat,lon:p.lon}},[]);
+  const [parceiros,setParceiros]=useState<string[]>([]);
+  useEffect(()=>{(async()=>{
+    let lista:{cidade?:string}[]=[];
+    try{lista=JSON.parse(localStorage.getItem("nutripombos-parceiros-v1")||"[]")}catch{}
+    const nomes:string[]=[];
+    for(const pr of lista){
+      const cidade=(pr.cidade||"").trim();
+      if(!cidade)continue;
+      if(!COORDS[cidade]){const c=await geocodeCidade(cidade);if(!c)continue;COORDS[cidade]=c;}
+      nomes.push(cidade);
+    }
+    setParceiros(nomes);
+  })()},[]);
   const hoje=new Date().toISOString().slice(0,10),proxima=provas.find(p=>p.dataSolta>=hoje&&!p.cancelada);
   const consultar=useCallback(async(c:string)=>{const coord=COORDS[c];if(!coord){setDados(null);setErro("Ainda não há coordenadas cadastradas para esta cidade.");return}setLoading(true);setErro("");try{setDados(await buscar(c,coord.lat,coord.lon))}catch(e){setDados(null);setErro(`Não foi possível obter dados reais agora. ${e instanceof Error?e.message:"Erro de rede"}`)}finally{setLoading(false)}},[]);
   useEffect(()=>{consultar(cidade)},[cidade,consultar]);
   const info=dados?wmoInfo(dados.wmo):null,sc=dados?score(dados.temp,dados.chuva,dados.vento,dados.wmo):null,va=dados?ventoAnalise(dados.ventoDir,pombalDir):null;
-  const cidades=[BASE,...provas.map(p=>p.cidade).filter((v,i,a)=>a.indexOf(v)===i)];
+  const cidades=[BASE,...provas.map(p=>p.cidade).filter((v,i,a)=>a.indexOf(v)===i),...parceiros];
   return <div><div style={{marginBottom:16}}><h1 style={T.h1}>📡 Previsão do Tempo</h1><p style={{...T.small,marginTop:4}}>Dados reais • Open-Meteo • Direção e velocidade do vento</p></div>
-    <section style={T.card}><Title>📍 Selecionar local</Title><div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>{cidades.map(c=>{const p=provas.find(x=>x.cidade===c),prox=p?.num===proxima?.num;return <button key={c} onClick={()=>setCidade(c)} style={{padding:"7px 10px",borderRadius:20,fontSize:10,fontWeight:800,color:cidade===c?T.bg:prox?T.gold:T.dim,background:cidade===c?T.gold:prox?`${T.gold}15`:T.bgInput,border:`1px solid ${cidade===c?T.gold:prox?T.gold:T.border}`}}>{c===BASE?"🏠 Pombal":p?`#${p.num} ${c.split(" ")[0]}${prox?" ⭐":""}`:c}</button>})}</div><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={T.small}>Pombal fica ao:</span><select value={pombalDir} onChange={e=>setPombalDir(e.target.value)} style={{...T.input,flex:1}}>{DIRECOES.map(d=><option key={d}>{d}</option>)}</select><button onClick={()=>consultar(cidade)} style={T.btnSm}>🔄</button></div></section>
+    <section style={T.card}><Title>📍 Selecionar local</Title><div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>{cidades.map(c=>{const p=provas.find(x=>x.cidade===c),prox=p?.num===proxima?.num;return <button key={c} onClick={()=>setCidade(c)} style={{padding:"7px 10px",borderRadius:20,fontSize:10,fontWeight:800,color:cidade===c?T.bg:prox?T.gold:T.dim,background:cidade===c?T.gold:prox?`${T.gold}15`:T.bgInput,border:`1px solid ${cidade===c?T.gold:prox?T.gold:T.border}`}}>{c===BASE?"🏠 Pombal":p?`#${p.num} ${c.split(" ")[0]}${prox?" ⭐":""}`:parceiros.includes(c)?`🤝 ${c}`:c}</button>})}</div><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={T.small}>Pombal fica ao:</span><select value={pombalDir} onChange={e=>setPombalDir(e.target.value)} style={{...T.input,flex:1}}>{DIRECOES.map(d=><option key={d}>{d}</option>)}</select><button onClick={()=>consultar(cidade)} style={T.btnSm}>🔄</button></div></section>
     {loading&&<div style={{textAlign:"center",padding:30,color:T.dim}}>⏳ Buscando dados climáticos reais...</div>}{erro&&<div style={{padding:12,marginBottom:12,borderRadius:9,color:T.red,background:`${T.red}12`,border:`1px solid ${T.red}44`}}>⚠️ {erro}<button onClick={()=>consultar(cidade)} style={{...T.btnSm,marginLeft:10}}>Tentar novamente</button></div>}
     {dados&&!loading&&<><nav style={{display:"flex",gap:6,marginBottom:12}}>{([['agora','🌡️ Agora'],['7dias','📅 7 Dias'],['provas','🏁 Provas']] as const).map(([k,l])=><button key={k} onClick={()=>setTab(k)} style={{flex:1,padding:10,borderRadius:9,fontWeight:800,color:tab===k?T.bg:T.dim,background:tab===k?T.gold:T.bgCard,border:`1px solid ${tab===k?T.gold:T.border}`}}>{l}</button>)}</nav>
       {tab==="agora"&&info&&sc&&va&&<><section style={{...T.card,borderColor:`${T.gold}55`,background:`${T.gold}0d`}}><div style={{display:"flex",justifyContent:"space-between"}}><div><small style={{color:T.gold}}>{dados.cidade.toUpperCase()} • {dados.atualizado}</small><div style={{fontSize:48}}>{info.emoji}</div><b>{info.desc}</b></div><div style={{textAlign:"right"}}><div style={{fontSize:54,color:T.gold,fontWeight:900}}>{dados.temp}°</div><small>↑{dados.tempMax}° ↓{dados.tempMin}°</small></div></div><div style={{padding:10,marginTop:13,borderRadius:9,color:sc.cor,background:`${sc.cor}12`,border:`1px solid ${sc.cor}55`}}><b>● {sc.label}</b><strong style={{float:"right"}}>{sc.pts}%</strong><div style={{height:5,marginTop:7,background:"#ffffff14"}}><div style={{height:"100%",width:`${sc.pts}%`,background:sc.cor}}/></div><small>Score climático estimado para avaliação de prova</small></div></section><div className="weather-metrics" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>{[["💧","Umidade",`${dados.umidade}%`],["🌧️","Chuva",`${dados.chuva.toFixed(1)}mm (${dados.chuvaPct}%)`],["💨","Velocidade do vento",`${dados.vento}km/h`],["🧭","Direção do vento",direcao(dados.ventoDir)],["🌡️","Pressão",dados.pressao>0?`${dados.pressao} hPa`:"—"]].map(([e,l,v])=><Metric key={l} emoji={e} label={l} value={v}/>)}</div><section style={T.card}><Title>💨 Análise do Vento para Prova</Title><div style={{padding:13,borderRadius:9,color:va.cor,background:`${va.cor}12`,border:`1px solid ${va.cor}55`}}><h3 style={{margin:"0 0 5px"}}>{va.emoji} {va.tipo}</h3><div style={T.small}>Vento vindo de {direcao(dados.ventoDir)} a {dados.vento}km/h. A análise depende da direção aproximada selecionada para o pombal.</div><div style={{display:"flex",justifyContent:"space-around",textAlign:"center",marginTop:12}}><div><small>VENTO VEM DE</small><div style={{fontSize:24}}>💨</div><b style={{color:T.blue}}>{direcao(dados.ventoDir)}</b></div><div style={{alignSelf:"center"}}>→</div><div><small>POMBAL AO</small><div style={{fontSize:24}}>🏠</div><b style={{color:T.gold}}>{pombalDir}</b></div></div></div></section><section style={T.card}><Title>🌾 Alimentação Recomendada</Title><div style={{padding:10,borderRadius:8,background:"#ffffff08",color:T.dim,fontSize:13}}>{alimento(dados.temp,dados.chuva,dados.vento)}</div></section></>}

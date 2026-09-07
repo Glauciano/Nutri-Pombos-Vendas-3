@@ -77,6 +77,14 @@ export default function RotaDaProva() {
   const [tick, setTick] = useState(0);
   // 🤝 cidades parceiras (marcadores no mapa, fora da rota)
   const [parcPos, setParcPos] = useState<{ nome: string; cidade: string; lat: number; lon: number }[]>([]);
+  const [parcSel, setParcSel] = useState<{ nome: string; cidade: string; lat: number; lon: number } | null>(null);
+  const [parcClima, setParcClima] = useState<ClimaPonto | null>(null);
+  const [parcLoading, setParcLoading] = useState(false);
+  useEffect(() => {
+    if (!parcSel) { setParcClima(null); return; }
+    setParcLoading(true); setParcClima(null);
+    buscarClimaPonto(parcSel.lat, parcSel.lon).then((c) => setParcClima(c)).catch(() => setParcClima(null)).finally(() => setParcLoading(false));
+  }, [parcSel?.cidade, parcSel?.lat]);
   useEffect(() => {
     let vivo = true;
     (async () => {
@@ -918,8 +926,8 @@ export default function RotaDaProva() {
                       {parcPos.map((pp) => {
                         const p2 = pos(pp.lat, pp.lon);
                         return (
-                          <div key={`parc-${pp.cidade}-${pp.lat}`} style={{ position: "absolute", left: p2.left, top: p2.top, transform: "translate(-50%,-50%)", textAlign: "center", zIndex: 5 }}>
-                            <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#1b283c", border: "2px solid #c4b4ff", display: "grid", placeItems: "center", fontSize: 9, boxShadow: "0 0 8px rgba(0,0,0,.7)" }}>🤝</div>
+                          <div key={`parc-${pp.cidade}-${pp.lat}`} onClick={() => setParcSel(parcSel?.cidade === pp.cidade ? null : pp)} style={{ position: "absolute", left: p2.left, top: p2.top, transform: "translate(-50%,-50%)", textAlign: "center", zIndex: 5, cursor: "pointer" }}>
+                            <div style={{ width: parcSel?.cidade === pp.cidade ? 24 : 18, height: parcSel?.cidade === pp.cidade ? 24 : 18, borderRadius: "50%", background: parcSel?.cidade === pp.cidade ? "#c4b4ff" : "#1b283c", border: "2px solid #c4b4ff", display: "grid", placeItems: "center", fontSize: parcSel?.cidade === pp.cidade ? 12 : 9, boxShadow: "0 0 8px rgba(0,0,0,.7)" }}>🤝</div>
                             <small style={{ display: "block", marginTop: 3, fontSize: 9, fontWeight: 800, color: "#c4b4ff", textShadow: "0 1px 3px #000, 0 0 6px #000" }}>
                               {pp.nome !== pp.cidade ? `${pp.nome} · ${pp.cidade}` : pp.cidade}
                             </small>
@@ -935,9 +943,36 @@ export default function RotaDaProva() {
                     <small style={{ color: T.dim }}>
                       {modoMapa === "satelite" ? "🗺️ Satélite © Esri · chuva: RainViewer"
                         : modoMapa === "nuvens" ? "☁️ Nuvens reais: NASA GOES-East (~15-30min) · pontos de chuva: RainViewer"
-                        : "verde=fraca · amarelo=moderada · vermelho=forte · 🤝=parceiro · Mapa © Esri/OSM · Chuva: RainViewer"}
+                        : "verde=fraca · amarelo=moderada · vermelho=forte · 🤝 parceiro (toque!) · Mapa © Esri/OSM · Chuva: RainViewer"}
                     </small>
                   </div>
+                  {parcSel && (
+                    <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 11, background: "#c4b4ff12", border: "1px solid #c4b4ff55" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                        <b style={{ fontSize: 14, color: "#c4b4ff" }}>🤝 {parcSel.nome !== parcSel.cidade ? `${parcSel.nome} — ${parcSel.cidade}` : parcSel.cidade}</b>
+                        <button type="button" onClick={() => setParcSel(null)} style={{ ...T.btnGhost, padding: "4px 10px", fontSize: 11 }}>✕ fechar</button>
+                      </div>
+                      {parcLoading && <div style={{ ...T.small, marginTop: 8 }}>⏳ Consultando o clima em {parcSel.cidade}...</div>}
+                      {parcClima && (() => {
+                        const wi = wmoInfo(parcClima.wmo);
+                        return (
+                          <div>
+                            <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "10px 0 6px" }}>
+                              <div style={{ fontSize: 30 }}>{wi.emoji}</div>
+                              <div><b style={{ fontSize: 22, color: T.gold }}>{parcClima.temp}°C</b><div style={{ ...T.small, fontSize: 11 }}>{wi.desc} • agora</div></div>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))", gap: 6 }}>
+                              {([["💨", "Vento", `${parcClima.ventoKmh} km/h ${direcaoCardeal(parcClima.dirVento)}`], ["🌪️", "Rajada", `${parcClima.rajadaKmh} km/h`], ["🌧️", "Chuva", `${parcClima.chuvaMm} mm`], ["💧", "Umidade", `${parcClima.umidade}%`], ["🧭", "Pressão", parcClima.pressaoMsl > 0 ? `${parcClima.pressaoMsl} hPa` : "—"], ["☁️", "Nuvens", `${parcClima.nuvens}%`]] as const).map(([e, l, v]) => (
+                                <div key={l} style={{ padding: 7, borderRadius: 8, background: "#ffffff08", textAlign: "center" }}><div>{e}</div><div style={{ ...T.small, fontSize: 9.5 }}>{l}</div><b style={{ fontSize: 11.5 }}>{v}</b></div>
+                              ))}
+                            </div>
+                            <div style={{ ...T.small, fontSize: 10, marginTop: 8 }}>💡 Previsão completa de {parcSel.cidade} (7 dias) no 📡 widget do Painel principal</div>
+                          </div>
+                        );
+                      })()}
+                      {!parcLoading && !parcClima && <div style={{ ...T.small, marginTop: 8, color: T.orange }}>⚠️ Não foi possível obter o clima agora — toque de novo.</div>}
+                    </div>
+                  )}
                   {modoMapa === "radar" && (
                     <div style={{ ...T.small, fontSize: 10.5, marginTop: 8, color: T.orange, lineHeight: 1.5 }}>
                       ⚠️ Radar de solo cobre bem o Sudeste, mas o centro/norte do Brasil têm lacunas — se estiver chovendo sem aparecer aqui, toque em <b>☁️ AO VIVO</b> (nuvens vistas por satélite, cobrem todo o Brasil) ou confira o card da cidade no modo 📡 Agora.

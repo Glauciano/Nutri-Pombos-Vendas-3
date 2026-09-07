@@ -5,7 +5,7 @@ import Link from "next/link";
 import { T } from "../theme";
 import { DISTRIBUICAO } from "../calculadora/page";
 import { DEFAULT_CONFIG, loadConfig, saveConfig, type ConfigPlantel } from "../config";
-import { getPombal, salvarPombal } from "../lib/apis-gratis";
+import { getPombal, salvarPombal, geocodeCidade } from "../lib/apis-gratis";
 
 const KEY_POMBAIS = "nutripombos-pombais-v1";
 const KEY_PARC = "nutripombos-parceiros-v1";
@@ -13,6 +13,7 @@ type Parceiro = { id: string; nome: string; cidade: string };
 const PARCEIROS_PADRAO: Parceiro[] = [
   { id: "p1", nome: "", cidade: "Ribeirão Preto" },
   { id: "p2", nome: "", cidade: "Franca" },
+  { id: "p3", nome: "", cidade: "Araraquara" },
 ];
 type PombalSalvo = { nome: string; lat: number; lon: number };
 
@@ -43,6 +44,18 @@ export default function Configuracao() {
     try { const l = JSON.parse(localStorage.getItem(KEY_PARC) || "null"); setParceiros(Array.isArray(l) ? l : PARCEIROS_PADRAO); } catch { setParceiros(PARCEIROS_PADRAO); }
   }, []);
   const salvarParceiros = (l: Parceiro[]) => { setParceiros(l); try { localStorage.setItem(KEY_PARC, JSON.stringify(l)); } catch { /* ignora */ } };
+  // 🔍 autocomplete de cidades ao digitar
+  const [sugestoes, setSugestoes] = useState<{ cidade: string; estado: string }[]>([]);
+  const [sugestoesPara, setSugestoesPara] = useState<string | null>(null);
+  const buscarSugestoes = async (termo: string, id: string) => {
+    setSugestoesPara(id);
+    if (termo.trim().length < 3) { setSugestoes([]); return; }
+    try {
+      const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(termo.trim())}&count=5&language=pt&countryCode=BR&format=json`);
+      const j = await r.json();
+      setSugestoes((j?.results || []).map((x: { name: string; admin1?: string }) => ({ cidade: x.name, estado: x.admin1 || "" })));
+    } catch { setSugestoes([]); }
+  };
   const [novoNome, setNovoNome] = useState("");
   useEffect(() => {
     try { setPombais(JSON.parse(localStorage.getItem(KEY_POMBAIS) || "[]")); } catch { setPombais([]); }
@@ -238,7 +251,18 @@ export default function Configuracao() {
           {parceiros.map((pr) => (
             <div key={pr.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 6, marginBottom: 6 }}>
               <input aria-label="Nome do parceiro" type="text" placeholder="Nome (opcional)" value={pr.nome} onChange={(e) => salvarParceiros(parceiros.map((x) => x.id === pr.id ? { ...x, nome: e.target.value } : x))} style={{ ...T.input, minHeight: 38 }} />
-              <input aria-label="Cidade do parceiro" type="text" placeholder="Cidade (ex.: Franca)" value={pr.cidade} onChange={(e) => salvarParceiros(parceiros.map((x) => x.id === pr.id ? { ...x, cidade: e.target.value } : x))} style={{ ...T.input, minHeight: 38 }} />
+              <div style={{ position: "relative" }}>
+                <input aria-label="Cidade do parceiro" type="text" placeholder="Cidade (ex.: Franca)" value={pr.cidade} onChange={(e) => { salvarParceiros(parceiros.map((x) => x.id === pr.id ? { ...x, cidade: e.target.value } : x)); buscarSugestoes(e.target.value, pr.id); }} style={{ ...T.input, minHeight: 38 }} />
+                {sugestoesPara === pr.id && sugestoes.length > 0 && (
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 30, background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 8, marginTop: 3, overflow: "hidden" }}>
+                    {sugestoes.map((sg) => (
+                      <button key={sg.cidade + sg.estado} type="button" onClick={() => { salvarParceiros(parceiros.map((x) => x.id === pr.id ? { ...x, cidade: sg.cidade } : x)); setSugestoes([]); setSugestoesPara(null); }} style={{ display: "block", width: "100%", padding: "8px 11px", background: "none", border: 0, borderBottom: `1px solid ${T.border}`, color: T.white, fontSize: 12, textAlign: "left", cursor: "pointer" }}>
+                        📍 {sg.cidade}{sg.estado ? ` — ${sg.estado}` : ""}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button type="button" onClick={() => salvarParceiros(parceiros.filter((x) => x.id !== pr.id))} style={{ ...T.btnGhost, color: T.red, minHeight: 38 }}>×</button>
             </div>
           ))}

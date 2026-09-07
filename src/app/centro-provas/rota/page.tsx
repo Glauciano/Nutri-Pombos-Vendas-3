@@ -75,6 +75,20 @@ export default function RotaDaProva() {
   const [compCarregando, setCompCarregando] = useState(false);
   // 🧭 Bússola da chegada (quem espera no pombal)
   const [tick, setTick] = useState(0);
+  // 🗺️ provas futuras sem coordenada cadastrada → geocodifica pelo nome (ano que vem: só cadastrar a prova!)
+  const [coordsExtras, setCoordsExtras] = useState<Record<string, Coords>>({});
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      const faltando = provas.filter((p2) => p2.latitude == null && p2.longitude == null && !COORDS[p2.cidade]);
+      for (const p2 of faltando) {
+        const c = (await geocodeCidade(p2.cidade)) ?? (await geocodeCidade(`${p2.cidade} ${p2.estado}`.trim()));
+        if (c && vivo) setCoordsExtras((atual) => ({ ...atual, [p2.id]: c }));
+      }
+    })();
+    return () => { vivo = false; };
+  }, [provas]);
+
   // 🤝 cidades parceiras (marcadores no mapa, fora da rota)
   const [parcPos, setParcPos] = useState<{ nome: string; cidade: string; lat: number; lon: number }[]>([]);
   const [parcSel, setParcSel] = useState<{ nome: string; cidade: string; lat: number; lon: number } | null>(null);
@@ -145,11 +159,11 @@ export default function RotaDaProva() {
       .filter((p) => p.km <= provaSel.km)
       .sort((a, b) => b.km - a.km)
       .map((p, i) => {
-        const coord = p.latitude != null && p.longitude != null ? { lat: p.latitude, lon: p.longitude } : COORDS[p.cidade];
+        const coord = p.latitude != null && p.longitude != null ? { lat: p.latitude, lon: p.longitude } : (COORDS[p.cidade] ?? coordsExtras[p.id]);
         return { chave: `p${p.num}`, nome: p.cidade, estado: p.estado, km: p.km, lat: coord?.lat ?? base.lat, lon: coord?.lon ?? base.lon, papel: i === 0 ? ("solta" as const) : ("intermediaria" as const) };
       });
     return [...waypoints, { chave: "pombal", nome: pombal.nome === POMBAL_BASE ? "Pombal (chegada)" : `${pombal.nome} (chegada)`, estado: "SP", km: 0, lat: base.lat, lon: base.lon, papel: "pombal" as const }];
-  }, [provaSel, provas, pombal]);
+  }, [provaSel, provas, pombal, coordsExtras]);
 
   const diasAte = provaSel ? diasParaProva(provaSel.dataSolta) : 0;
   const previsivel = diasAte >= 0 && diasAte <= LIMITE_PREVISAO_DIAS;

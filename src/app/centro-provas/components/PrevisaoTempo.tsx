@@ -38,6 +38,14 @@ export default function PrevisaoTempo(){
     }
     setParceiros(nomes);
   })()},[]);
+  useEffect(()=>{(async()=>{
+    // provas futuras fora da tabela de coordenadas → geocodifica pelo nome
+    for(const p of provas){
+      if(COORDS[p.cidade])continue;
+      const c=(await geocodeCidade(p.cidade)) ?? (await geocodeCidade(`${p.cidade} ${p.estado||""}`.trim()));
+      if(c)COORDS[p.cidade]=c;
+    }
+  })()},[provas]);
   const hoje=new Date().toISOString().slice(0,10),proxima=provas.find(p=>p.dataSolta>=hoje&&!p.cancelada);
   const consultar=useCallback(async(c:string)=>{const coord=COORDS[c];if(!coord){setDados(null);setErro("Ainda não há coordenadas cadastradas para esta cidade.");return}setLoading(true);setErro("");try{setDados(await buscar(c,coord.lat,coord.lon))}catch(e){setDados(null);setErro(`Não foi possível obter dados reais agora. ${e instanceof Error?e.message:"Erro de rede"}`)}finally{setLoading(false)}},[]);
   useEffect(()=>{consultar(cidade)},[cidade,consultar]);

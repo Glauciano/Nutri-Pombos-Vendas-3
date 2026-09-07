@@ -69,6 +69,17 @@ export default function Configuracao() {
     setPombalNome(p.nome === "Pombal (sua base)" ? "" : p.nome);
   }, []);
 
+  // 🔎 pombal por nome de cidade (comprador não precisa saber coordenadas)
+  const [pombalSugs, setPombalSugs] = useState<{ nome: string; admin1: string; lat: number; lon: number }[]>([]);
+  const buscarPombalCidade = async (termo: string) => {
+    if (termo.trim().length < 3) { setPombalSugs([]); return; }
+    try {
+      const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(termo.trim())}&count=6&language=pt&countryCode=BR&format=json`);
+      const j = await r.json();
+      setPombalSugs((j?.results || []).map((x: { name: string; admin1?: string; latitude: number; longitude: number }) => ({ nome: x.name, admin1: x.admin1 || "", lat: x.latitude, lon: x.longitude })));
+    } catch { setPombalSugs([]); }
+  };
+
   const usarGps = () => {
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) { setGpsMsg("⚠️ GPS não suportado neste aparelho — digite manualmente."); return; }
     setGpsMsg("⏳ Detectando localização...");
@@ -156,6 +167,17 @@ export default function Configuracao() {
           <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>🏠 Localização do Pombal (latitude e longitude)</div>
           <div style={{ ...T.small, fontSize: 12, marginBottom: 12, lineHeight: 1.6 }}>
             Todas as ferramentas usam essa posição: <b>rota da prova</b> (distância, vento, altimetria, radar), <b>clima avançado</b>, <b>nascer/pôr do sol</b> e <b>clima × desempenho</b>. Troque o padrão (São Paulo) pela localização real do seu pombal.
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={T.label}>🔎 Ou busque pelo nome da cidade (mais fácil!)</label>
+            <input aria-label="Buscar cidade do pombal" type="text" placeholder="Ex.: Limeira" onChange={(e) => buscarPombalCidade(e.target.value)} style={T.input} />
+            {pombalSugs.length > 0 && (
+              <div style={{ border: `1px solid ${T.border}`, borderRadius: 8, marginTop: 4, overflow: "hidden" }}>
+                {pombalSugs.map((sg) => (
+                  <button key={sg.nome + sg.admin1 + sg.lat} type="button" onClick={() => { setPombalState((atual) => ({ ...atual, lat: sg.lat, lon: sg.lon })); setPombalNome(sg.nome); setPombalSugs([]); setGpsMsg(`✅ ${sg.nome} — ${sg.admin1} selecionada! Toque em 💾 Salvar localização.`); }} style={{ display: "block", width: "100%", padding: "8px 11px", background: "none", border: 0, borderBottom: `1px solid ${T.border}`, color: T.white, fontSize: 12, textAlign: "left", cursor: "pointer" }}>📍 {sg.nome} — {sg.admin1}</button>
+                ))}
+              </div>
+            )}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
             <div>

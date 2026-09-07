@@ -84,7 +84,7 @@ export const COORDS: Record<string, Coords> = {
   Brasília: { lat: -15.78, lon: -47.93 },
 };
 
-const GEO_CACHE_KEY = "nutripombos-geocode-v1";
+const GEO_CACHE_KEY = "nutripombos-geocode-v2";
 
 /* ------------------------------------------------------------------ */
 /* Localização do pombal (configurável pelo usuário)                   */
@@ -136,12 +136,19 @@ export async function geocodeCidade(nome: string): Promise<Coords | null> {
   try { cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || "{}"); } catch { cache = {}; }
   if (cache[nome]) return cache[nome];
   try {
-    const r = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(semUF || nome)}&count=1&language=pt&format=json`
-    );
+    const alvo = encodeURIComponent(semUF || nome);
+    // 1ª tentativa: apenas Brasil (senão "Formosa" acha a da Argentina, perto do Paraguai!)
+    let r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${alvo}&count=1&language=pt&countryCode=BR&format=json`);
     if (!r.ok) return null;
-    const j = await r.json();
-    const res = j?.results?.[0];
+    let j = await r.json();
+    let res = j?.results?.[0];
+    if (!res) {
+      // 2ª tentativa (reserva): mundo inteiro
+      const r2 = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${alvo}&count=1&language=pt&format=json`);
+      if (!r2.ok) return null;
+      j = await r2.json();
+      res = j?.results?.[0];
+    }
     if (!res || typeof res.latitude !== "number" || typeof res.longitude !== "number") return null;
     const c: Coords = { lat: res.latitude, lon: res.longitude };
     try { cache[nome] = c; localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache)); } catch { /* ignora */ }

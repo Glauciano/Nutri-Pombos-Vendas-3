@@ -8,6 +8,8 @@ import { T } from "../theme";
 type Tela = "lista" | "form" | "detalhe";
 const VAZIO: Partial<ProvaCalendario> = { cidade: "", estado: "SP", categoria: "Campeonato Adultos", km: 300, dataEmbarque: "", diaEmbarque: "Sábado", dataSolta: "", diaSolta: "Domingo", adiada: false, cancelada: false, obs: "" };
 const ESTADOS = ["SP","MG","GO","DF","RJ","PR","SC","RS","BA","MT","MS","ES","RO","TO","PA","AM"];
+const UF_NOME: Record<string, string> = {"Acre":"AC","Alagoas":"AL","Amapá":"AP","Amazonas":"AM","Bahia":"BA","Ceará":"CE","Distrito Federal":"DF","Espírito Santo":"ES","Goiás":"GO","Maranhão":"MA","Mato Grosso":"MT","Mato Grosso do Sul":"MS","Minas Gerais":"MG","Pará":"PA","Paraíba":"PB","Paraná":"PR","Pernambuco":"PE","Piauí":"PI","Rio de Janeiro":"RJ","Rio Grande do Norte":"RN","Rio Grande do Sul":"RS","Rondônia":"RO","Roraima":"RR","Santa Catarina":"SC","São Paulo":"SP","Sergipe":"SE","Tocantins":"TO"};
+type SugCidade = { nome: string; admin1: string; lat: number; lon: number };
 function fmt(d: string) { if (!d) return "—"; const [a,m,dd] = d.split("-"); return `${dd}/${m}/${a}`; }
 
 export default function GerenciarCalendario() {
@@ -53,9 +55,20 @@ export default function GerenciarCalendario() {
 
 function Form({form,setForm,edit,onCancel,onSave}:{form:Partial<ProvaCalendario>;setForm:(v:Partial<ProvaCalendario>)=>void;edit:boolean;onCancel:()=>void;onSave:()=>void}) {
   const change=(v:Partial<ProvaCalendario>)=>setForm({...form,...v}); const classe=classificarProva(form.km||0);
+  const [sugs,setSugs]=useState<SugCidade[]>([]);
+  const buscarCidades=async(termo:string)=>{
+    change({cidade:termo});
+    if(termo.trim().length<3){setSugs([]);return;}
+    try{
+      const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(termo.trim())}&count=6&language=pt&countryCode=BR&format=json`);
+      const j=await r.json();
+      setSugs((j?.results||[]).map((x:{name:string;admin1?:string;latitude:number;longitude:number})=>({nome:x.name,admin1:x.admin1||"",lat:x.latitude,lon:x.longitude})));
+    }catch{setSugs([])}
+  };
   return <><button onClick={onCancel} style={{...T.btnGhost,marginBottom:16}}>← Cancelar</button><h1 style={T.h1}>{edit?"✏️ Editar Prova":"➕ Nova Prova"}</h1><p style={{...T.small,margin:"4px 0 16px"}}>Preencha os dados da prova</p><section style={T.card}>
     <div className="form-grid" style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10}}><Field label="Nº da Prova"><input type="number" value={form.num||""} onChange={e=>change({num:+e.target.value})} style={T.input}/></Field><Field label="Categoria"><input value={form.categoria||""} onChange={e=>change({categoria:e.target.value})} style={T.input}/></Field></div>
-    <div className="form-grid" style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:10}}><Field label="Cidade *"><input value={form.cidade||""} onChange={e=>change({cidade:e.target.value})} style={T.input}/></Field><Field label="Estado"><select value={form.estado||"SP"} onChange={e=>change({estado:e.target.value})} style={T.input}>{ESTADOS.map(v=><option key={v}>{v}</option>)}</select></Field></div>
+    <div className="form-grid" style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:10}}><Field label="Cidade * (digite e escolha da lista)"><div style={{position:"relative"}}><input value={form.cidade||""} onChange={e=>buscarCidades(e.target.value)} style={T.input} placeholder="Ex.: Formosa"/>
+      {sugs.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:40,background:T.bgCard,border:`1px solid ${T.border}`,borderRadius:8,marginTop:3,overflow:"hidden"}}>{sugs.map(sg=><button key={sg.nome+sg.admin1+sg.lat} type="button" onClick={()=>{change({cidade:sg.nome,estado:UF_NOME[sg.admin1]||form.estado||"SP",latitude:sg.lat,longitude:sg.lon});setSugs([]);}} style={{display:"block",width:"100%",padding:"8px 11px",background:"none",border:0,borderBottom:`1px solid ${T.border}`,color:T.white,fontSize:12,textAlign:"left",cursor:"pointer"}}>📍 {sg.nome} — {sg.admin1}</button>)}</div>}</div>{form.latitude!=null?<small style={{color:"#39e58c",fontSize:11}}>📍 localização confirmada ✓ ({form.latitude.toFixed(2)}, {form.longitude?.toFixed(2)})</small>:<small style={{color:"#fbbf24",fontSize:11}}>⚠️ escolha na lista pra garantir o mapa certo</small>}</Field><Field label="Estado"><select value={form.estado||"SP"} onChange={e=>change({estado:e.target.value})} style={T.input}>{ESTADOS.map(v=><option key={v}>{v}</option>)}</select></Field></div>
     <Field label="Distância (km) *"><input type="number" value={form.km||""} onChange={e=>change({km:+e.target.value})} style={{...T.input,textAlign:"center",fontSize:21,fontWeight:900}}/>{(form.km||0)>0&&<div style={{color:classe.cor,marginTop:5,fontSize:12}}>{classe.emoji} {classe.tipo}</div>}</Field>
     <Field label="📦 Data de Embarque"><input type="date" value={form.dataEmbarque||""} onChange={e=>change({dataEmbarque:e.target.value,diaEmbarque:diaDaSemana(e.target.value)})} style={T.input}/><small style={{color:T.gold}}>{form.diaEmbarque}</small></Field>
     <Field label="🏁 Data de Solta *"><input type="date" value={form.dataSolta||""} onChange={e=>change({dataSolta:e.target.value,diaSolta:diaDaSemana(e.target.value)})} style={T.input}/><small style={{color:T.gold}}>{form.diaSolta}</small></Field>

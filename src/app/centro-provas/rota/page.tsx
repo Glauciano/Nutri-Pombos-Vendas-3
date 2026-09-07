@@ -155,7 +155,7 @@ export default function RotaDaProva() {
     if (!provaSel) return [];
     const base = { lat: pombal.lat, lon: pombal.lon };
     const waypoints = provas
-      .filter((p) => p.km <= provaSel.km)
+      .filter((p) => p.km <= provaSel.km && p.dataSolta.slice(0, 4) === provaSel.dataSolta.slice(0, 4))
       .sort((a, b) => b.km - a.km)
       .map((p, i) => {
         const coord = p.latitude != null && p.longitude != null ? { lat: p.latitude, lon: p.longitude } : (COORDS[p.cidade] ?? coordsExtras[p.id]);
@@ -1005,6 +1005,11 @@ export default function RotaDaProva() {
               );
             })()}
 
+            {rota.length > rotaGeo.length && (
+              <div style={{ ...T.small, fontSize: 11, marginTop: 10, padding: "9px 12px", borderRadius: 9, color: T.orange, background: "#f9731612", border: "1px solid #f9731655", lineHeight: 1.5 }}>
+                ⚠️ {rota.length - rotaGeo.length} cidade(s) desta prova não aparecem no mapa por falta de localização — edite a prova no 📅 Calendário, apague o nome da cidade, digite de novo e <b>escolha na lista 📍 que aparece</b> (aparece "localização confirmada ✓").
+              </div>
+            )}
             {modoMapa === "radar" && !radar && <div style={{ ...T.small, textAlign: "center", padding: 16 }}>⏳ Carregando radar de chuva...</div>}
           </section>
         )}

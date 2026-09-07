@@ -1,188 +1,332 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { loadCalendario, type ProvaCalendario } from "../data/calendario";
+import { diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
+import { Madrugada, alertaMadrugada, buscarMadrugada, getPombal, buscarClimaPassado, direcaoCardeal, ClimaPonto, buscarClimaPonto, vereditoTreino } from "../lib/apis-gratis";
 import { T } from "../theme";
-import {
-  COORDS, POMBAL_BASE, ClimaPassado,
-  buscarClimaPassado, bearingRota, direcaoCardeal, ventoNaRota, wmoInfo,
-  aplicarPombalSalvo, getPombal,
-} from "../lib/apis-gratis";
 
-const HIST_KEY = "nutripombos-historico-provas-v1";
+type Tab="hoje"|"semana"|"preventivo";
+type Pombo={id:number;status:string|null};
+type Estoque={ingrediente?:string;kg?:number};
+type Medicamento={produto:string;validade:string};
+type RotinaItem={id:string;hora:string;emoji:string;titulo:string;desc:string};
 
-type ProvaHistorico = {
-  id?: string;
-  data: string;
-  competicao?: string;
-  prova?: string;
-  distancia: number;
-  colocacao: number;
-  velocidade: number;
-  observacoes?: string;
-};
+const KEY_FEITOS="nutripombos-alertas-feitos-v1";
+const KEY_ROTINA="nutripombos-alertas-rotina-v1";
+const KEY_SEMANA="nutripombos-alertas-semana-v1";
 
-type Linha = {
-  hist: ProvaHistorico;
-  prova?: ProvaCalendario;
-  clima?: ClimaPassado;
-  vento?: { tipo: string; emoji: string; cor: string };
-  erro?: string;
-};
+const ROTINA_PADRAO:RotinaItem[]=[
+  {id:"r0",hora:"06:00",emoji:"🌅",titulo:"Abrir o pombal",desc:"Iniciar a rotina e avaliar as condições climáticas."},
+  {id:"r1",hora:"06:30",emoji:"🌾",titulo:"Alimentação matinal",desc:"Oferecer a ração prevista no protocolo."},
+  {id:"r2",hora:"07:00",emoji:"💧",titulo:"Trocar a água",desc:"Água fresca e higienização dos bebedouros."},
+  {id:"r3",hora:"08:00",emoji:"👁️",titulo:"Observar o plantel",desc:"Verificar fezes, apetite, comportamento e respiração."},
+  {id:"r4",hora:"09:00",emoji:"🏋️",titulo:"Treino programado",desc:"Executar somente se clima e recuperação permitirem."},
+  {id:"r5",hora:"12:00",emoji:"📋",titulo:"Revisar o protocolo",desc:"Confirmar alimentação e produtos já validados."},
+  {id:"r6",hora:"16:00",emoji:"🌾",titulo:"Alimentação da tarde",desc:"Ajustar quantidade conforme consumo e condição."},
+  {id:"r7",hora:"17:00",emoji:"🚿",titulo:"Banho opcional",desc:"Disponibilizar água limpa para banho em condições adequadas."},
+  {id:"r8",hora:"18:00",emoji:"🔒",titulo:"Fechar o pombal",desc:"Conferir o retorno de todas as aves e proteger o ambiente."},
+  {id:"r9",hora:"18:30",emoji:"📝",titulo:"Registrar o dia",desc:"Anotar treino, alimentação, saúde e observações."},
+];
 
-export default function ClimaDesempenho() {
-  const [hist, setHist] = useState<ProvaHistorico[]>([]);
-  const [linhas, setLinhas] = useState<Linha[] | null>(null);
-  const [analisando, setAnalisando] = useState(false);
+const SEMANA_PADRAO=[
+  {id:"s0",emoji:"🚿",titulo:"Banho conforme necessidade e clima"},
+  {id:"s1",emoji:"🧹",titulo:"Limpeza do pombal"},
+  {id:"s2",emoji:"💊",titulo:"Conferir protocolo e rótulos"},
+  {id:"s3",emoji:"🏋️",titulo:"Revisar treinos programados"},
+  {id:"s4",emoji:"📊",titulo:"Verificar condição corporal"},
+  {id:"s5",emoji:"📝",titulo:"Atualizar registros"},
+  {id:"s6",emoji:"🌾",titulo:"Verificar estoque de grãos"},
+  {id:"s7",emoji:"💉",titulo:"Verificar validade dos produtos"},
+];
 
-  useEffect(() => {
-    try { setHist(JSON.parse(localStorage.getItem(HIST_KEY) || "[]")); } catch { setHist([]); }
-  }, []);
+const PREVENTIVO=[
+  {periodo:"Semanal",emoji:"🚿",titulo:"Banho e observação das penas",desc:"Oferecer água limpa; não usar aditivos sem orientação."},
+  {periodo:"Semanal",emoji:"🧹",titulo:"Limpeza do pombal",desc:"Remover fezes, controlar umidade e ventilar."},
+  {periodo:"Periódico",emoji:"🔬",titulo:"Avaliação parasitológica",desc:"Realizar exame de fezes antes de vermífugos quando indicado."},
+  {periodo:"Conforme risco",emoji:"🛡️",titulo:"Revisão vacinal",desc:"Confirmar vacinas e reforços com médico-veterinário."},
+  {periodo:"Mensal",emoji:"⚖️",titulo:"Peso e condição corporal",desc:"Registrar variações e investigar perdas."},
+  {periodo:"Pós-temporada",emoji:"🏥",titulo:"Avaliação sanitária",desc:"Revisar plantel, histórico e necessidade de exames."},
+];
 
+function readLS<T>(key:string,fallback:T):T{try{const v=localStorage.getItem(key);return v?JSON.parse(v):fallback}catch{return fallback}}
+function horaStr(d:Date){return[d.getHours(),d.getMinutes(),d.getSeconds()].map(v=>String(v).padStart(2,"0")).join(":")}
+function diasValidade(data:string){if(!data)return null;return Math.ceil((new Date(`${data}T12:00:00`).getTime()-new Date().setHours(12,0,0,0))/86400000)}
+function sortRotina(items:RotinaItem[]):RotinaItem[]{return[...items].sort((a,b)=>a.hora.localeCompare(b.hora))}
 
-  useEffect(() => { aplicarPombalSalvo(); }, []);
+export default function Alertas(){
+  const[tab,setTab]=useState<Tab>("hoje");
+  const[feitos,setFeitos]=useState<string[]>([]);
+  const[agora,setAgora]=useState(new Date());
+  const[pombos,setPombos]=useState<Pombo[]>([]);
+  const[provas,setProvas]=useState<ProvaCalendario[]>([]);
+  const[estoque,setEstoque]=useState<Estoque[]>([]);
+  const[farmacia,setFarmacia]=useState<Medicamento[]>([]);
+  const[ready,setReady]=useState(false);
+  const[rotina,setRotina]=useState<RotinaItem[]>(ROTINA_PADRAO);
+  const[editHora,setEditHora]=useState<string|null>(null);
 
-  const analisar = async () => {
-    setAnalisando(true);
-    const base = getPombal();
-    const calendario = loadCalendario();
-    const semDuplicado = hist.filter((h, i, a) => a.findIndex((x) => x.data === h.data && x.distancia === h.distancia) === i);
-    const limite = semDuplicado.slice(0, 25);
-    const resultado: Linha[] = await Promise.all(limite.map(async (h): Promise<Linha> => {
-      const linha: Linha = { hist: h };
-      const porData = calendario.find((p) => p.dataSolta === h.data);
-      const porKm = calendario.find((p) => Math.abs(p.km - h.distancia) <= 25);
-      const prova = porData || porKm;
-      if (!prova) return { ...linha, erro: "não bate com nenhuma prova do calendário" };
-      linha.prova = prova;
-      const coord = prova.latitude != null && prova.longitude != null
-        ? { lat: prova.latitude, lon: prova.longitude }
-        : COORDS[prova.cidade];
-      if (!coord) return { ...linha, erro: "cidade sem coordenadas" };
-      try {
-        const clima = await buscarClimaPassado(coord.lat, coord.lon, h.data);
-        linha.clima = clima;
-        linha.vento = ventoNaRota(clima.dirVento, bearingRota(coord.lat, coord.lon, base.lat, base.lon), clima.vento);
-      } catch (e) {
-        linha.erro = e instanceof Error ? e.message : "falhou";
-      }
-      return linha;
-    }));
-    setLinhas(resultado);
-    setAnalisando(false);
-  };
+  useEffect(()=>{
+    setFeitos(readLS(KEY_FEITOS,[]));
+    setRotina(readLS(KEY_ROTINA,ROTINA_PADRAO));
+    setProvas(loadCalendario());
+    setEstoque(readLS("nutripombos-estoque-v1",[]));
+    setFarmacia(readLS("nutripombos-farmacia-v1",[]));
+    fetch("/api/pombos").then(r=>r.json()).then(v=>setPombos(Array.isArray(v)?v:[])).catch(()=>setPombos([]));
+    const timer=setInterval(()=>setAgora(new Date()),1000);
+    setReady(true);
+    return()=>clearInterval(timer);
+  },[]);
 
-  const ok = (linhas || []).filter((l) => l.clima && l.vento);
-  const media = (grupo: typeof ok) => (grupo.length ? Math.round(grupo.reduce((s, l) => s + l.hist.velocidade, 0) / grupo.length) : null);
-  const favor = ok.filter((l) => l.vento!.tipo === "Vento a favor");
-  const contra = ok.filter((l) => l.vento!.tipo === "Vento contra");
-  const lateral = ok.filter((l) => l.vento!.tipo === "Vento lateral");
-  const chuva = ok.filter((l) => l.clima!.chuva > 0.5);
-  const seco = ok.filter((l) => l.clima!.chuva <= 0.5);
-  const velMax = Math.max(media(favor) || 0, media(contra) || 0, media(lateral) || 0, 1);
+  useEffect(()=>{if(ready)localStorage.setItem(KEY_FEITOS,JSON.stringify(feitos))},[feitos,ready]);
+  useEffect(()=>{if(ready)localStorage.setItem(KEY_ROTINA,JSON.stringify(rotina))},[rotina,ready]);
 
-  const Barra = ({ label, valor, cor, n }: { label: string; valor: number | null; cor: string; n: number }) => (
-    <div style={{ padding: 10, borderRadius: 9, background: "#ffffff08" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-        <b style={{ color: cor }}>{label}</b>
-        <span style={{ color: T.dim, fontSize: 10 }}>{n} prova(s)</span>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-        <div style={{ height: 6, flex: 1, background: "#ffffff12", borderRadius: 3 }}>
-          {valor && <div style={{ height: "100%", width: `${Math.round((valor / velMax) * 100)}%`, background: cor, borderRadius: 3 }} />}
-        </div>
-        <b style={{ color: cor, fontSize: 13 }}>{valor ? `${valor} m/min` : "—"}</b>
-      </div>
-    </div>
-  );
+  const salvarHora=useCallback((id:string,novaHora:string)=>{
+    if(!/^\d{2}:\d{2}$/.test(novaHora))return;
+    const[h,m]=novaHora.split(":").map(Number);
+    if(h<0||h>23||m<0||m>59)return;
+    setRotina(prev=>sortRotina(prev.map(r=>r.id===id?{...r,hora:novaHora}:r)));
+    setEditHora(null);
+  },[]);
 
-  return (
-    <main style={{ minHeight: "100vh", background: T.bg, color: T.white, padding: "20px 16px 60px" }}>
-      <div style={{ maxWidth: 880, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
-          <div>
-            <h1 style={T.h1}>📊 Clima × Desempenho Histórico</h1>
-            <p style={{ ...T.small, marginTop: 4 }}>
-              Cruza os resultados que você registrou no Histórico com o clima REAL daquele dia (arquivo ERA5) — descubra com quais condições seus pombos voam melhor
-            </p>
-          </div>
-          <Link href="/centro-provas" style={{ ...T.btnGhost, textDecoration: "none" }}>← Centro</Link>
-        </div>
+  const rotinaSorted=sortRotina(rotina);
+  const hhmm=horaStr(agora).slice(0,5),minuto=agora.getHours()*60+agora.getMinutes();
+  const atual=rotinaSorted.find(t=>{const[h,m]=t.hora.split(":").map(Number),diff=minuto-(h*60+m);return diff>=0&&diff<60});
+  const proxima=rotinaSorted.find(t=>t.hora>hhmm)||rotinaSorted[0];
 
-        <section style={T.card}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🔬 Como funciona</div>
-          <div style={{ ...T.small, fontSize: 12, lineHeight: 1.7 }}>
-            1️⃣ Pega cada prova registrada na página <b>Histórico</b> (data, distância e velocidade)<br />
-            2️⃣ Casa com a cidade do calendário e busca o clima real daquele dia (temperatura, chuva, vento e direção — média de 9h às 13h)<br />
-            3️⃣ Calcula se o vento daquele dia estava <b style={{ color: T.green }}>a favor</b>, <b style={{ color: "#fbbf24" }}>lateral</b> ou <b style={{ color: T.red }}>contra</b> a rota até o pombal
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
-            <button onClick={analisar} disabled={analisando || hist.length === 0} style={{ ...T.btn, opacity: analisando || hist.length === 0 ? 0.5 : 1, flex: 1 }}>
-              {analisando ? "⏳ Analisando..." : `🔍 Analisar ${hist.length} prova(s) com clima real`}
-            </button>
-            <Link href="/centro-provas/historico" style={{ ...T.btnGhost, textDecoration: "none" }}>➕ Registrar resultados</Link>
-          </div>
-          {hist.length === 0 && (
-            <div style={{ ...T.small, marginTop: 10, color: T.orange }}>
-              ⚠️ Você ainda não registrou resultados no Histórico. Cadastre suas provas lá primeiro (data, distância e velocidade média).
-            </div>
+  const hoje=new Date().toISOString().slice(0,10),prova=provas.find(p=>p.dataSolta>=hoje&&!p.cancelada),dias=prova?diasParaProva(prova.dataSolta):null;
+  const tratamento=pombos.filter(p=>p.status?.toLowerCase().includes("tratamento")).length;
+  const baixo=estoque.filter(e=>Number(e.kg||0)<15).length;
+  const vencendo=farmacia.filter(f=>{const d=diasValidade(f.validade);return d!==null&&d<30}).length;
+  const avisos:{cor:string;texto:string}[]=[];
+  if(tratamento)avisos.push({cor:T.orange,texto:`⚠️ ${tratamento} pombo(s) em tratamento ou acompanhamento`});
+  if(baixo)avisos.push({cor:T.red,texto:`🔴 ${baixo} item(ns) de estoque abaixo de 15kg`});
+  if(vencendo)avisos.push({cor:T.red,texto:`💊 ${vencendo} produto(s) vencido(s) ou perto do vencimento`});
+  if(dias!==null&&dias>=0&&dias<=3)avisos.push({cor:T.gold,texto:`🏁 Prova em ${dias} dia(s): ${prova?.cidade}`});
+  if(agora.getDay()===4)avisos.push({cor:T.gold,texto:"📋 Quinta-feira: revise carga, clima e condição corporal"});
+
+  const toggle=(id:string)=>setFeitos(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);
+
+  const resetarRotina=()=>{setRotina(ROTINA_PADRAO);localStorage.setItem(KEY_ROTINA,JSON.stringify(ROTINA_PADRAO))};
+
+  return <main style={{minHeight:"100vh",background:T.bg,color:T.white,padding:"18px 12px 50px"}}><div style={{maxWidth:760,margin:"0 auto"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",marginBottom:14}}><h1 style={T.h1}>🔔 Central de Alertas</h1><Link href="/centro-provas" style={{...T.btnGhost,textDecoration:"none"}}>← Centro</Link></div>
+    <VesperaProva provas={provas.filter(p=>!p.cancelada)}/>
+    <AlertaMadrugadaCard/>
+    <CortaTreinoCard/>
+    <ModoExtravio/>
+    <section style={{...T.card,display:"flex",justifyContent:"space-between",alignItems:"center",borderColor:`${T.gold}55`,background:`${T.gold}0d`}}><div><div style={{fontSize:40,lineHeight:1,fontWeight:900,color:T.gold,fontVariantNumeric:"tabular-nums"}}>{horaStr(agora)}</div><div style={{...T.small,marginTop:5}}>{agora.toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div></div>{avisos.length>0&&<b style={{padding:"4px 10px",borderRadius:20,background:T.red}}>{avisos.length} alertas</b>}</section>
+    <section style={{...T.card,border:`2px solid ${atual?T.gold:T.blue}`,background:atual?`${T.gold}12`:`${T.blue}0d`}}><small style={{color:atual?T.gold:T.blue,fontWeight:800}}>{atual?"🔴 TAREFA DE REFERÊNCIA AGORA":"🔵 PRÓXIMA TAREFA"}</small><h3 style={{margin:"5px 0"}}>{(atual||proxima).emoji} {(atual||proxima).titulo}</h3><div style={T.small}>{(atual||proxima).desc}</div><div style={{color:T.gold,fontSize:11,marginTop:5}}>⏰ {(atual||proxima).hora}</div></section>
+    {avisos.length>0&&<section style={T.card}><Title color={T.red}>⚠️ Alertas Ativos</Title>{avisos.map(a=><div key={a.texto} style={{padding:"6px 0",borderBottom:`1px solid ${T.border}`,color:a.cor,fontSize:12}}>{a.texto}</div>)}</section>}
+    <nav style={{display:"flex",gap:6,marginBottom:12}}>{([['hoje','⏰ Hoje'],['semana','📆 Semana'],['preventivo','🗓️ Preventivo']] as const).map(([k,l])=><button key={k} onClick={()=>setTab(k)} style={{flex:1,padding:9,borderRadius:9,fontWeight:800,color:tab===k?T.bg:T.dim,background:tab===k?T.gold:T.bgCard,border:`1px solid ${tab===k?T.gold:T.border}`}}>{l}</button>)}</nav>
+
+    {tab==="hoje"&&<><div style={{padding:8,marginBottom:10,borderRadius:9,color:T.blue,background:`${T.blue}12`,border:`1px solid ${T.blue}44`,fontSize:11,lineHeight:1.5}}>💡 <b>Clique no horário</b> para editar. Os horários ficam salvos no seu navegador. A ordem é automática por hora.</div>
+      {rotinaSorted.map(t=>{
+        const id=t.id,feito=feitos.includes(id),isAtual=atual?.id===t.id,passou=t.hora<hhmm;
+        const editing=editHora===id;
+        return <div key={id} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 13px",marginBottom:5,textAlign:"left",borderRadius:9,opacity:passou&&!feito&&!isAtual?.55:1,color:feito?T.green:isAtual?T.gold:T.white,background:feito?`${T.green}12`:isAtual?`${T.gold}12`:"#ffffff05",border:`1px solid ${feito?T.green:isAtual?T.gold:T.border}`}}>
+          <button onClick={()=>toggle(id)} style={{width:27,height:27,display:"grid",placeItems:"center",borderRadius:"50%",background:feito?T.green:isAtual?T.gold:T.bgInput,color:T.bg,border:0,cursor:"pointer",fontSize:12}}>{feito?"✓":t.emoji}</button>
+          <span style={{flex:1}}><b style={{fontSize:13}}>{t.titulo}{isAtual?" ← AGORA":""}</b><span style={{...T.small,display:"block",marginTop:2}}>{t.desc}</span></span>
+          {editing?(
+            <input type="time" defaultValue={t.hora} autoFocus onBlur={e=>salvarHora(id,e.target.value)} onKeyDown={e=>{if(e.key==="Enter")salvarHora(id,(e.target as HTMLInputElement).value);if(e.key==="Escape")setEditHora(null)}} style={{width:80,padding:4,borderRadius:6,border:`1px solid ${T.gold}`,background:T.bgInput,color:T.gold,fontSize:13,fontWeight:800,textAlign:"center"}}/>
+          ):(
+            <button onClick={()=>setEditHora(id)} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${isAtual?T.gold:T.border}`,background:isAtual?`${T.gold}18`:"#ffffff05",color:isAtual?T.gold:T.dim,fontSize:12,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>⏰ {t.hora}</button>
           )}
-        </section>
+        </div>})}
+    </>}
 
-        {ok.length >= 2 && (
-          <section style={{ ...T.card, borderColor: `${T.gold}55`, background: `${T.gold}0d` }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🧠 O que os seus dados revelam</div>
-            <div style={{ display: "grid", gap: 8 }}>
-              <Barra label="🟢 Vento a favor" valor={media(favor)} cor={T.green} n={favor.length} />
-              <Barra label="🟡 Vento lateral" valor={media(lateral)} cor="#fbbf24" n={lateral.length} />
-              <Barra label="🔴 Vento contra" valor={media(contra)} cor={T.red} n={contra.length} />
-              <Barra label="🌧️ Dias com chuva" valor={media(chuva)} cor="#55a3ff" n={chuva.length} />
-              <Barra label="☀️ Dias secos" valor={media(seco)} cor={T.gold} n={seco.length} />
-            </div>
-            {favor.length && contra.length ? (
-              <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 10, background: "#ffffff0a", fontSize: 12, lineHeight: 1.6 }}>
-                💡 Entre {favor.length} prova(s) com vento a favor e {contra.length} com vento contra, a diferença média foi de{" "}
-                <b style={{ color: Math.abs((media(favor) || 0) - (media(contra) || 0)) > 60 ? T.red : T.gold }}>
-                  {Math.abs((media(favor) || 0) - (media(contra) || 0))} m/min
-                </b>
-                . {media(favor)! > media(contra)! ? "Seu plantel rende mais com cauda — encestamento extra nos dias de vento sul pode valer a pena." : "Curioso: seu plantel segurou bem mesmo com vento contra."}
-              </div>
-            ) : null}
-          </section>
-        )}
+    {tab==="semana"&&SEMANA_PADRAO.map(s=><Check key={s.id} id={`sem-${s.id}`} feito={feitos.includes(`sem-${s.id}`)} emoji={s.emoji} title={s.titulo} toggle={toggle}/>)}
+    {tab==="preventivo"&&<><div style={{padding:10,marginBottom:10,borderRadius:9,color:T.blue,background:`${T.blue}12`,fontSize:11}}>ℹ️ Frequências são lembretes de manejo. Vacinas, vermífugos e tratamentos devem seguir avaliação veterinária e risco local.</div>{PREVENTIVO.map((p,i)=><Check key={p.titulo} id={`prev-${i}`} feito={feitos.includes(`prev-${i}`)} emoji={p.emoji} title={p.titulo} desc={p.desc} time={p.periodo} toggle={toggle}/>)}</>}
+    <div style={{display:"flex",gap:8,marginTop:12}}>
+      <button onClick={()=>setFeitos([])} style={{flex:1,padding:12,borderRadius:9,color:T.dim,background:"#ffffff05",border:`1px solid ${T.border}`}}>🔄 Resetar itens marcados</button>
+      {tab==="hoje"&&<button onClick={()=>{if(confirm("Restaurar horários padrão?"))resetarRotina()}} style={{padding:12,borderRadius:9,color:T.red,background:"#ffffff05",border:`1px solid ${T.border}`}}>⏰ Horários padrão</button>}
+    </div>
+  </div><style jsx global>{`button{font-family:inherit;cursor:pointer}input[type=time]{font-family:inherit}`}</style></main>
+}
 
-        {linhas && (
-          <section style={T.card}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>📋 Provas analisadas</div>
-            {linhas.map((l, i) => (
-              <div key={`${l.hist.data}-${i}`} style={{ padding: "12px 0", borderBottom: `1px solid ${T.border}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
-                  <div>
-                    <b style={{ fontSize: 13 }}>
-                      {l.hist.data.split("-").reverse().join("/")} · {l.prova ? `${l.prova.cidade} (${l.hist.distancia}km)` : l.hist.competicao || "Prova"}
-                    </b>
-                    <div style={{ ...T.small, fontSize: 11 }}>
-                      {l.hist.colocacao}º lugar · {l.hist.velocidade} m/min
-                      {l.clima && ` · ${wmoInfo(l.clima.chuva > 1 ? 63 : 0).emoji} ${l.clima.temp}°C · 💨 ${l.clima.vento}km/h ${direcaoCardeal(l.clima.dirVento)} · 🌧️ ${l.clima.chuva}mm`}
-                    </div>
-                  </div>
-                  {l.vento ? (
-                    <span style={{ padding: "5px 10px", borderRadius: 20, fontSize: 11, fontWeight: 800, color: l.vento.cor, background: `${l.vento.cor}12`, border: `1px solid ${l.vento.cor}55` }}>
-                      {l.vento.emoji} {l.vento.tipo}
-                    </span>
-                  ) : (
-                    <span style={{ ...T.small, fontSize: 10, color: T.orange }}>⚠️ {l.erro}</span>
-                  )}
-                </div>
-              </div>
-            ))}
-            <div style={{ ...T.small, fontSize: 11, marginTop: 10 }}>
-              ⚠️ O arquivo climático (ERA5/Open-Meteo) fica pronto com ~5 dias de atraso — provas muito recentes podem aparecer sem clima. Fonte: Open-Meteo Archive (gratuito).
+function Check({id,feito,emoji,title,desc,time,toggle}:{id:string;feito:boolean;emoji:string;title:string;desc?:string;time?:string;toggle:(id:string)=>void}){return <button onClick={()=>toggle(id)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 13px",marginBottom:5,textAlign:"left",borderRadius:9,color:feito?T.green:T.white,background:feito?`${T.green}12`:"#ffffff05",border:`1px solid ${feito?T.green:T.border}`}}><span style={{width:27,height:27,display:"grid",placeItems:"center",borderRadius:"50%",background:feito?T.green:T.bgInput,color:T.bg}}>{feito?"✓":emoji}</span><span style={{flex:1}}><b style={{fontSize:13}}>{title}</b>{desc&&<span style={{...T.small,display:"block",marginTop:2}}>{desc}</span>}</span>{time&&<small style={{color:T.dim}}>{time}</small>}</button>}
+function Title({children,color=T.gold}:{children:React.ReactNode;color?:string}){return <div style={{fontSize:13,fontWeight:800,color,marginBottom:8}}>{children}</div>}
+
+/* Modo Extravio: pombo nao voltou da prova */
+type Extravio={id:string;anilha:string;nome?:string;desde:string};
+const KEY_EXTRA="nutripombos-extravios-v1";
+function ModoExtravio(){
+  const[abrir,setAbrir]=useState(false);
+  const[lista,setLista]=useState<Extravio[]>([]);
+  const[anilha,setAnilha]=useState("");
+  const[nome,setNome]=useState("");
+  const[desde,setDesde]=useState(new Date().toLocaleDateString("en-CA",{timeZone:"America/Sao_Paulo"}));
+  const[analises,setAnalises]=useState<Record<string,{dir:number;vento:number}|null|undefined>>({});
+  const[analisando,setAnalisando]=useState<string|null>(null);
+  useEffect(()=>{try{setLista(JSON.parse(localStorage.getItem(KEY_EXTRA)||"[]"))}catch{}},[]);
+  const salvar=(l:Extravio[])=>{setLista(l);try{localStorage.setItem(KEY_EXTRA,JSON.stringify(l))}catch{}};
+  const add=()=>{if(!anilha.trim())return;const id=typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():String(Date.now());salvar([...lista,{id,anilha:anilha.trim(),nome:nome.trim()||undefined,desde}]);setAnilha("");setNome("")};
+  const remover=(id:string)=>{salvar(lista.filter(x=>x.id!==id));setAnalises(a=>{const c={...a};delete c[id];return c})};
+  const [agora,setAgora]=useState(0);
+  useEffect(()=>{setAgora(Date.now())},[]);
+  const diasFora=(d:string)=>agora?Math.max(0,Math.floor((agora-new Date(d+"T12:00:00").getTime())/86400000)):0;
+  const analisar=async(ev:Extravio)=>{
+    setAnalisando(ev.id);
+    try{const p=getPombal();const c=await buscarClimaPassado(p.lat,p.lon,ev.desde);setAnalises(a=>({...a,[ev.id]:{dir:c.dirVento,vento:c.vento}}))}
+    catch{setAnalises(a=>({...a,[ev.id]:null}))}
+    finally{setAnalisando(null)}
+  };
+  const fmt=(d:string)=>d.split("-").reverse().slice(0,2).join("/");
+  return <section style={{...T.card,marginBottom:10,borderColor:lista.length?T.red+"55":T.border,background:lista.length?T.red+"0d":undefined}}>
+    <div onClick={()=>setAbrir(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,cursor:"pointer"}}>
+      <Title color={lista.length?T.red:T.gold}>{"🚨 Modo Extravio"+(lista.length?" — "+lista.length+" pombo(s) fora":" — pombo não voltou?")}</Title>
+      <small style={{color:T.dim}}>{abrir?"fechar ▲":"abrir ▼"}</small>
+    </div>
+    {abrir&&<div>
+      <div style={{...T.small,fontSize:12,marginBottom:10,lineHeight:1.5}}>Registre os pombos que não voltaram: o app conta os dias fora, calcula <b>pra onde o vento do dia provavelmente desviou</b> e monta o checklist de busca. Fica salvo neste aparelho.</div>
+      {lista.length===0&&<div style={{...T.small,fontSize:12,color:T.dim,marginBottom:10}}>Nenhum extravio registrado. 🎉</div>}
+      {lista.map(ev=>{
+        const d=diasFora(ev.desde);
+        const an=analises[ev.id];
+        const corDias=d>=7?T.red:d>=3?T.orange:T.gold;
+        return <div key={ev.id} style={{padding:10,borderRadius:9,background:"#ffffff08",marginBottom:8,border:"1px solid "+T.border}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>
+            <div><b style={{fontSize:13}}>🐦 {ev.anilha}{ev.nome?" — "+ev.nome:""}</b>
+            <div style={T.small}>Fora há <b style={{color:corDias}}>{d} dia(s)</b> (desde {fmt(ev.desde)})</div></div>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>analisar(ev)} disabled={analisando===ev.id} style={T.btnGhost}>{analisando===ev.id?"⏳":"🧭 Pra onde foi?"}</button>
+              <button onClick={()=>remover(ev.id)} style={{...T.btnGhost,color:T.green}}>✅ Voltou!</button>
             </div>
-          </section>
-        )}
+          </div>
+          {an===null&&<div style={{...T.small,fontSize:11,color:T.orange,marginTop:6}}>⚠️ Sem dados de vento dessa data ainda (o arquivo climático leva uns 5 dias).</div>}
+          {an&&<div style={{marginTop:8,padding:"8px 12px",borderRadius:8,fontSize:12,lineHeight:1.6,color:T.blue,background:T.blue+"12",border:"1px solid "+T.blue+"44"}}>
+            💨 No dia {fmt(ev.desde)} o vento no pombal vinha de <b>{direcaoCardeal(an.dir)}</b> ({an.vento}km/h) — pombo cansado tende a desviar pro lado <b>{direcaoCardeal((an.dir+180)%360)}</b> do pombal. Priorize busca e anúncio nessa direção e ao longo da rota.
+          </div>}
+        </div>;
+      })}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:6,marginBottom:10}}>
+        <input placeholder="Anilha (ex.: BRP-2024-1234)" value={anilha} onChange={e=>setAnilha(e.target.value)} style={{...T.input,minHeight:38}}/>
+        <input placeholder="Nome/apelido (opcional)" value={nome} onChange={e=>setNome(e.target.value)} style={{...T.input,minHeight:38}}/>
+        <input type="date" value={desde} onChange={e=>setDesde(e.target.value)} style={{...T.input,minHeight:38,width:140}}/>
       </div>
-    </main>
-  );
+      <button onClick={add} style={{...T.btn,padding:10}}>➕ Registrar extravio</button>
+      <div style={{marginTop:12,padding:"10px 12px",borderRadius:9,background:"#ffffff08",fontSize:12,lineHeight:1.7}}>
+        <b style={{color:T.gold}}>📋 Checklist de extravio:</b><br />
+        • Avisar o clube e columbófilos da região com anilha e foto do pombo<br />
+        • Postar a anilha nos grupos e páginas de achados (o chip pode ser lido por qualquer criador)<br />
+        • Deixar no pombal água com eletrólito e mistura leve — a rotina ajuda o retorno<br />
+        • Manter portinola aberta nas primeiras horas da manhã<br />
+        • <b>Ao voltar:</b> não dar ração pesada — siga o <Link href="/centro-provas/resgate" style={{color:T.blue}}>Protocolo de Resgate</Link> (desidratado/exausto)
+      </div>
+    </div>}
+  </section>;
+}
+
+/* 👟 Corta-Treino — devo soltar treino agora? */
+function CortaTreinoCard(){
+  const[dados,setDados]=useState<ClimaPonto|null>(null);
+  const[erro,setErro]=useState("");
+  const[loading,setLoading]=useState(false);
+  const consultar=useCallback(async()=>{
+    setLoading(true);setErro("");
+    try{const p=getPombal();setDados(await buscarClimaPonto(p.lat,p.lon))}
+    catch(e){setDados(null);setErro(e instanceof Error?e.message:"falhou")}
+    finally{setLoading(false)}
+  },[]);
+  const v=dados?vereditoTreino(dados):null;
+  return <section style={{...T.card,marginBottom:10,borderColor:v?v.cor+"55":T.border,background:v?v.cor+"0d":undefined}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+      <Title>👟 Corta-Treino — devo soltar treino agora?</Title>
+      <button onClick={consultar} disabled={loading} style={T.btnSm}>{loading?"⏳":"↻ Consultar"}</button>
+    </div>
+    {!dados&&!loading&&!erro&&<div style={{...T.small,fontSize:12}}>Consulta vento, rajada, chuva e temperatura AGORA no seu pombal e dá o veredito na hora — um toque, decisão tomada.</div>}
+    {loading&&!dados&&<div style={{...T.small}}>⏳ Medindo as condições no pombal...</div>}
+    {erro&&<div style={{...T.small,color:T.orange}}>⚠️ Não foi possível consultar ({erro}).</div>}
+    {v&&dados&&<div>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+        <span style={{fontSize:30}}>{v.emoji}</span>
+        <b style={{fontSize:15,color:v.cor}}>{v.titulo}</b>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:10}}>
+        {[["🌬️",dados.ventoKmh+"km/h"],["💨",dados.rajadaKmh+"km/h"],["🌧️",dados.chuvaMm+"mm"],["🌡️",dados.temp+"°C"],["💧",dados.umidade+"%"]].map(([e,val])=>(
+          <div key={val} style={{padding:7,borderRadius:8,background:"#ffffff08",textAlign:"center"}}><div>{e}</div><b style={{fontSize:12}}>{val}</b></div>
+        ))}
+      </div>
+      {v.motivos.map((m,i)=><div key={i} style={{padding:"7px 11px",borderRadius:8,background:"#ffffff08",fontSize:12,marginBottom:4,lineHeight:1.5}}>{m}</div>)}
+      <div style={{...T.small,fontSize:10,marginTop:8}}>Local: pombal configurado • Fonte: Open-Meteo (dados atuais)</div>
+    </div>}
+  </section>;
+}
+
+/* 🌙 Alerta de madrugada — manejo noturno do pombal com dados reais */
+function AlertaMadrugadaCard(){
+  const[dados,setDados]=useState<Madrugada|null>(null);
+  const[erro,setErro]=useState("");
+  const[loading,setLoading]=useState(true);
+  const consultar=useCallback(async()=>{
+    setLoading(true);setErro("");
+    try{const p=getPombal();setDados(await buscarMadrugada(p.lat,p.lon))}
+    catch(e){setDados(null);setErro(e instanceof Error?e.message:"falhou")}
+    finally{setLoading(false)}
+  },[]);
+  useEffect(()=>{consultar()},[consultar]);
+  const info=dados?alertaMadrugada(dados):null;
+  return <section style={{...T.card,marginBottom:10,borderColor:info?`${info.cor}55`:T.border,background:info?`${info.cor}0d`:undefined}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+      <Title>🌙 Alerta de Madrugada no Pombal (20h–06h)</Title>
+      <button onClick={consultar} style={T.btnSm} disabled={loading}>{loading?"⏳":"↻"}</button>
+    </div>
+    {loading&&!dados&&<div style={{...T.small}}>⏳ Consultando a madrugada no seu pombal...</div>}
+    {erro&&<div style={{...T.small,color:T.orange}}>⚠️ Não foi possível obter a previsão da madrugada ({erro}).</div>}
+    {info&&dados&&<div>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+        <span style={{fontSize:34}}>{info.emoji}</span>
+        <div><b style={{fontSize:14,color:info.cor}}>{info.titulo}</b>
+        <div style={T.small}>Mínima às {dados.horaMin} • máx. {dados.maxTemp}°C na virada • umidade média {dados.umidade}%{dados.chuvaMm>0?` • chuva ${dados.chuvaMm}mm`:""}</div></div>
+      </div>
+      {info.dicas.map((d,i)=><div key={i} style={{padding:"8px 12px",borderRadius:8,background:"#ffffff08",fontSize:12,marginBottom:5,lineHeight:1.5}}>• {d}</div>)}
+      <div style={{...T.small,fontSize:10,marginTop:8}}>Usa a localização configurada em Configuração → 🏠 Localização do Pombal • Fonte: Open-Meteo</div>
+    </div>}
+  </section>;
+}
+
+/* 🔔 Alerta de véspera de prova — notifica no navegador (gratuito, sem servidor) */
+const KEY_VESPERA="nutripombos-alerta-vespera-v1";
+function VesperaProva({provas}:{provas:ProvaCalendario[]}){
+  const[perm,setPerm]=useState<string>("default");
+  const[enviado,setEnviado]=useState(true);
+  useEffect(()=>{
+    setPerm(typeof Notification!=="undefined"?Notification.permission:"sem-suporte");
+    const hoje=new Date().toISOString().slice(0,10);
+    try{const st=JSON.parse(localStorage.getItem(KEY_VESPERA)||"{}");setEnviado(st.data===hoje)}catch{setEnviado(false)}
+  },[]);
+  const proximas=provas.filter(p=>{const d=diasParaProva(p.dataSolta);return d>=0&&d<=2});
+  const notificar=async(forcar=false)=>{
+    if(typeof Notification==="undefined")return;
+    const hoje=new Date().toISOString().slice(0,10);
+    try{const st=JSON.parse(localStorage.getItem(KEY_VESPERA)||"{}");if(!forcar&&st.data===hoje)return;localStorage.setItem(KEY_VESPERA,JSON.stringify({data:hoje}))}catch{}
+    setEnviado(true);
+    const p0=proximas[0];
+    const titulo=proximas.length?(diasParaProva(p0.dataSolta)===0?`🏁 Prova #${p0.num} ${p0.cidade} É HOJE!`:`⏰ Amanhã: prova #${p0.num} ${p0.cidade} (${p0.km}km)`):"✅ Sem provas nos próximos dias";
+    const corpo=proximas.length?"Toque para ver as condições da rota cidade por cidade":"Tudo tranquilo no calendário";
+    try{
+      const reg=await navigator.serviceWorker?.getRegistration();
+      if(reg)reg.showNotification(titulo,{body:corpo,icon:"/icon.svg",tag:"nutripombos-vespera"});
+      else new Notification(titulo,{body:corpo,icon:"/icon.svg"});
+    }catch{}
+  };
+  const ativar=async()=>{
+    if(typeof Notification==="undefined"){alert("Este navegador não suporta notificações.");return}
+    const p=await Notification.requestPermission();setPerm(p);
+    if(p==="granted")notificar(true);
+  };
+  return <section style={{...T.card,borderColor:`${T.gold}55`,background:`${T.gold}0d`,marginBottom:10}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+      <Title>🔔 Alerta de Véspera de Prova (grátis, no próprio celular)</Title>
+      {perm==="granted"?<button onClick={()=>notificar(true)} style={T.btnSm}>{enviado?"🔔 Testar":"🔔 Enviar agora"}</button>:<button onClick={ativar} style={T.btnSm}>🔔 Ativar notificações</button>}
+    </div>
+    {proximas.length===0&&<div style={{...T.small,fontSize:12}}>Nenhuma soltura nos próximos 2 dias. Quando chegar a véspera de uma prova, você recebe o alerta automático ao abrir o app.</div>}
+    {proximas.map(p=>{const d=diasParaProva(p.dataSolta);return <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:`1px solid ${T.border}`}}>
+      <span style={{fontSize:24}}>{d===0?"🏁":"⏰"}</span>
+      <div style={{flex:1}}><b style={{fontSize:13}}>#{p.num} {p.cidade} — {p.km}km</b><div style={T.small}>Solta em {p.diaSolta} {p.dataSolta.split("-").reverse().slice(0,2).join("/")} • {d===0?"É HOJE!":"faltam "+d+" dia(s)"}</div></div>
+      <Link href="/centro-provas/rota" style={{...T.btnGhost,textDecoration:"none",fontSize:11}}>🛣️ Ver rota</Link>
+    </div>})}
+    {perm==="denied"&&<div style={{...T.small,fontSize:11,color:T.orange,marginTop:8}}>⚠️ Notificações bloqueadas neste navegador — libere nas configurações do site para receber os alertas.</div>}
+    {perm==="default"&&<div style={{...T.small,fontSize:11,color:T.dim,marginTop:8}}>ℹ️ Toque em "Ativar" e permita as notificações — o alerta dispara na véspera e no dia da prova.</div>}
+  </section>;
 }

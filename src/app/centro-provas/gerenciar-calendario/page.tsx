@@ -21,10 +21,34 @@ export default function GerenciarCalendario() {
   const [form, setForm] = useState<Partial<ProvaCalendario>>(VAZIO);
   const [msg, setMsg] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
+  const [anoFiltro, setAnoFiltro] = useState<string>("todos");
 
   useEffect(() => { const stored = loadCalendario(); setProvas(stored); atualizarCalendarioGlobal(stored); setReady(true); }, []);
   useEffect(() => { if (ready) { saveCalendario(provas); atualizarCalendarioGlobal(provas); } }, [provas, ready]);
   const flash = (value: string) => { setMsg(value); window.setTimeout(() => setMsg(""), 3000); };
+  const exportarPDF = () => {
+    const porAno: Record<string, ProvaCalendario[]> = {};
+    [...provas].sort((a,b)=>a.dataSolta.localeCompare(b.dataSolta)).forEach(p=>{const ano=p.dataSolta.slice(0,4);(porAno[ano]=porAno[ano]||[]).push(p);});
+    const tabela = Object.entries(porAno).map(([ano, lista])=>`
+      <h2>Temporada ${ano} — ${lista.length} prova(s)</h2>
+      <table><tr><th>#</th><th>Cidade</th><th>km</th><th>Categoria</th><th>Embarque</th><th>Solta</th><th>Status</th></tr>
+      ${lista.map(p=>`<tr><td>${p.num}</td><td><b>${p.cidade}/${p.estado}</b>${p.latitude!=null?" LOCMARK":""}</td><td>${p.km}</td><td>${p.categoria||""}</td><td>${fmt(p.dataEmbarque)} <small>(${p.diaEmbarque||""})</small></td><td>${fmt(p.dataSolta)} <small>(${p.diaSolta||""})</small></td><td>${p.cancelada?"<b style=\"color:#b00\">Cancelada</b>":p.adiada?"Adiada":""}</td></tr>`).join("")}
+      </table>`).join("").replaceAll("LOCMARK", "📍");
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Calendário Nutri Pombos</title>
+      <style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px;max-width:820px}
+      h1{font-size:20px;margin:0 0 2px}.sub{color:#555;font-size:11px;margin-bottom:14px}
+      h2{font-size:14px;margin:18px 0 6px;color:#333}
+      table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #ccc;padding:5px 7px;text-align:left}th{background:#f3f3f3}
+      .leg{margin-top:14px;color:#777;font-size:10px}</style></head><body>
+      <h1>Nutri Pombos — Calendário de Provas</h1>
+      <div class="sub">Gerado em ${new Date().toLocaleString("pt-BR")} • ${provas.length} prova(s) • PIMARK = localização confirmada no mapa</div>
+      ${tabela}
+      <div class="leg">Gerado pelo app Nutri Pombos</div>
+      <script>window.onload=()=>{window.print()}</script></body></html>`.replaceAll("PIMARK", "🕊️");
+    const win = window.open("", "_blank");
+    if (!win) { window.alert("Permita pop-ups para exportar o PDF (ou toque novamente)."); return; }
+    win.document.write(html); win.document.close();
+  };
   const abrirNovo = () => { setForm({ ...VAZIO, num: provas.length ? Math.max(...provas.map(p => p.num)) + 1 : 1 }); setEditId(null); setTela("form"); };
   const abrirEdit = (p: ProvaCalendario) => { setForm({ ...p }); setEditId(p.id); setTela("form"); };
   const salvar = () => {
@@ -42,10 +66,13 @@ export default function GerenciarCalendario() {
   if (tela === "form") return <Shell><Form form={form} setForm={setForm} edit={!!editId} onCancel={() => setTela("lista")} onSave={salvar}/></Shell>;
   if (tela === "detalhe" && selecionada) return <Shell><Detalhe prova={selecionada} onBack={() => setTela("lista")} onEdit={() => abrirEdit(selecionada)} onStatus={tipo => status(selecionada.id,tipo)} onDelete={() => excluir(selecionada.id)}/></Shell>;
 
-  const ordenadas = [...provas].sort((a,b) => a.dataSolta.localeCompare(b.dataSolta));
+  const anos = Array.from(new Set(provas.map(p=>p.dataSolta.slice(0,4)))).sort();
+  const visiveis = anoFiltro==="todos" ? provas : provas.filter(p=>p.dataSolta.slice(0,4)===anoFiltro);
+  const ordenadas = [...visiveis].sort((a,b) => a.dataSolta.localeCompare(b.dataSolta));
   return <Shell>
-    <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"start",marginBottom:20}}><div><Link href="/centro-provas" style={{...T.small,textDecoration:"none"}}>← Centro de Provas</Link><h1 style={{...T.h1,marginTop:9}}>📅 Calendário de Provas</h1><p style={{...T.small,marginTop:4}}>{provas.length} provas • Totalmente editável</p></div><button onClick={abrirNovo} style={T.btnSm}>+ Nova prova</button></div>
+    <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"start",marginBottom:20}}><div><Link href="/centro-provas" style={{...T.small,textDecoration:"none"}}>← Centro de Provas</Link><h1 style={{...T.h1,marginTop:9}}>📅 Calendário de Provas</h1><p style={{...T.small,marginTop:4}}>{provas.length} provas • Totalmente editável</p></div><div style={{display:"flex",gap:6}}><button onClick={exportarPDF} style={{...T.btnGhost,fontWeight:800}}>🖨️ Salvar PDF</button><button onClick={abrirNovo} style={T.btnSm}>+ Nova prova</button></div></div>
     {msg && <div style={{padding:11,marginBottom:12,borderRadius:9,color:T.green,background:"#4ade8014",border:`1px solid ${T.green}55`}}>{msg}</div>}
+    {anos.length>1 && <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}><button onClick={()=>setAnoFiltro("todos")} style={{...T.btnGhost,padding:"6px 12px",fontSize:11,fontWeight:800,color:anoFiltro==="todos"?T.bg:T.white,background:anoFiltro==="todos"?T.gold:"#1b283c"}}>Todos</button>{anos.map(a=><button key={a} onClick={()=>setAnoFiltro(a)} style={{...T.btnGhost,padding:"6px 12px",fontSize:11,fontWeight:800,color:anoFiltro===a?T.bg:T.white,background:anoFiltro===a?T.gold:"#1b283c"}}>{a}</button>)}</div>}
     <div className="stats" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}><Stat label="Total" value={provas.length} color={T.gold}/><Stat label="Adiadas" value={provas.filter(p=>p.adiada).length} color="#FBBF24"/><Stat label="Canceladas" value={provas.filter(p=>p.cancelada).length} color={T.red}/></div>
     {ordenadas.map(p => <ProvaRow key={p.id} prova={p} onEdit={() => abrirEdit(p)} onView={() => {setSelId(p.id);setTela("detalhe");}} onDelete={() => excluir(p.id)}/>) }
     {!provas.length && <div style={{textAlign:"center",padding:40,color:T.dim}}>📅<h3>Nenhuma prova cadastrada</h3><p style={T.small}>Clique em “+ Nova prova” para adicionar.</p></div>}

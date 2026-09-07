@@ -212,8 +212,9 @@ export default function RotaDaProva() {
 
   useEffect(() => {
     if (provaSel && (modo === "agora" || previsivel)) consultar(rota, modo, provaSel.dataSolta);
+    // coordsExtras: quando a coordenada de cidade nova chega (ex.: Formosa-GO), refaz a consulta sozinho
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provaSel?.id, modo, pombal]);
+  }, [provaSel?.id, modo, pombal, coordsExtras]);
 
   // ⛰️ Altimetria do perfil da rota (41 amostras em 1 chamada)
   useEffect(() => {

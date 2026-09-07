@@ -126,8 +126,11 @@ const UFS = "AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|R
 
 export async function geocodeCidade(nome: string): Promise<Coords | null> {
   if (COORDS[nome]) return COORDS[nome];
-  // aceita "Formosa GO" → busca "Formosa" (geocodificador não aceita UF junto)
-  const semUF = nome.replace(new RegExp(`[\\s,-]+(${UFS})$`, "i"), "").trim();
+  // aceita "Formosa GO", "Formosa-GO", "Formosa-GO GO" → busca "Formosa" (repetindo o corte até limpar)
+  const re = new RegExp(`[\\s,-]+(${UFS})$`, "i");
+  let semUF = nome;
+  let anterior = "";
+  while (semUF !== anterior) { anterior = semUF; semUF = semUF.replace(re, "").replace(/[\s,-]+$/, "").trim(); }
   if (semUF && semUF !== nome && COORDS[semUF]) return COORDS[semUF];
   let cache: Record<string, Coords> = {};
   try { cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || "{}"); } catch { cache = {}; }

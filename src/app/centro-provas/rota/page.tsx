@@ -21,7 +21,7 @@ import { loadConfig } from "../config";
 
 type Modo = "agora" | "prova";
 
-type PontoRota = { chave: string; nome: string; estado: string; km: number; lat: number; lon: number; papel: "solta" | "intermediaria" | "pombal" };
+type PontoRota = { chave: string; nome: string; estado: string; km: number; lat: number; lon: number; papel: "solta" | "intermediaria" | "pombal"; semCoord?: boolean };
 type DadosPonto = { clima: ClimaPonto } | { erro: string };
 
 const LIMITE_PREVISAO_DIAS = 16;
@@ -158,10 +158,13 @@ export default function RotaDaProva() {
       .sort((a, b) => b.km - a.km)
       .map((p, i) => {
         const coord = p.latitude != null && p.longitude != null ? { lat: p.latitude, lon: p.longitude } : (COORDS[p.cidade] ?? coordsExtras[p.id]);
-        return { chave: `p${p.num}`, nome: p.cidade, estado: p.estado, km: p.km, lat: coord?.lat ?? base.lat, lon: coord?.lon ?? base.lon, papel: i === 0 ? ("solta" as const) : ("intermediaria" as const) };
+        return { chave: `p${p.num}`, nome: p.cidade, estado: p.estado, km: p.km, lat: coord?.lat ?? base.lat, lon: coord?.lon ?? base.lon, papel: i === 0 ? ("solta" as const) : ("intermediaria" as const), semCoord: !coord };
       });
     return [...waypoints, { chave: "pombal", nome: pombal.nome === POMBAL_BASE ? "Pombal (chegada)" : `${pombal.nome} (chegada)`, estado: "SP", km: 0, lat: base.lat, lon: base.lon, papel: "pombal" as const }];
   }, [provaSel, provas, pombal, coordsExtras]);
+
+  // pontos com coordenada válida (cidades não localizadas NÃO vão pro mapa)
+  const rotaGeo = useMemo(() => rota.filter((p) => !p.semCoord), [rota]);
 
   const diasAte = provaSel ? diasParaProva(provaSel.dataSolta) : 0;
   const previsivel = diasAte >= 0 && diasAte <= LIMITE_PREVISAO_DIAS;
@@ -171,20 +174,22 @@ export default function RotaDaProva() {
     if (forcar) limparCacheApi();
     setCarregando(true); setDados({}); setKp(null); setSolSolta(null); setSolPombal(null); setAr({});
     const dia = modoAtual === "prova" && dataSolta ? dataSolta : undefined;
-    const coords = rotaAtual.map((pt) => ({ lat: pt.lat, lon: pt.lon }));
+    const geo = rotaAtual.filter((pt) => !pt.semCoord);
+    const coords = geo.map((pt) => ({ lat: pt.lat, lon: pt.lon }));
     // 🚀 TODAS as cidades em UMA chamada (antes eram 11 — estourava o limite/429)
     const [climas, kpR] = await Promise.all([
       buscarClimaPontos(coords, dia).catch(() => undefined),
       buscarKpNoaa(),
     ]);
-    setDados(Object.fromEntries(rotaAtual.map((pt, i) => [
-      pt.chave,
-      climas?.[i] ? { clima: climas[i] as ClimaPonto } : { erro: "limite da API — toque ↻ Atualizar" },
-    ])));
+    setDados(Object.fromEntries(rotaAtual.map((pt) => {
+      const i = geo.indexOf(pt);
+      if (pt.semCoord) return [pt.chave, { erro: "cidade não localizada no mapa — confira o nome no calendário (use só o nome, ex.: Formosa)" }];
+      return i >= 0 && climas?.[i] ? [pt.chave, { clima: climas[i] as ClimaPonto }] : [pt.chave, { erro: "limite da API — toque ↻ Atualizar" }];
+    })));
     setKp(kpR);
     // 🌫️ Qualidade do ar em lote (somente modo "agora")
     if (modoAtual === "agora") {
-      buscarArPontos(coords).then((ars) => setAr(Object.fromEntries(rotaAtual.map((pt, i) => [pt.chave, ars[i]])))).catch(() => {});
+      buscarArPontos(coords).then((ars) => setAr(Object.fromEntries(geo.map((pt, i) => [pt.chave, ars[i]])))).catch(() => {});
     }
     // 🌅 Sol na soltura e no pombal (1 chamada)
     if (rotaAtual.length > 1) {
@@ -213,8 +218,9 @@ export default function RotaDaProva() {
   // ⛰️ Altimetria do perfil da rota (41 amostras em 1 chamada)
   useEffect(() => {
     if (!rota.length || !provaSel) return;
-    const solta = rota[0];
-    const base = rota[rota.length - 1];
+    const rotaOk = rota.filter((p) => !p.semCoord);
+    const solta = rotaOk[0];
+    const base = rotaOk[rotaOk.length - 1];
     setAltimetria(null); setAltErro("");
     buscarAltimetria(interpolarRota({ lat: solta.lat, lon: solta.lon }, { lat: base.lat, lon: base.lon }, 41))
       .then((v) => { if (v.length) setAltimetria(v); else setAltErro("sem dados"); })
@@ -267,7 +273,7 @@ export default function RotaDaProva() {
   const risco = provaSel ? riscoExtravio({ km: provaSel.km, scoreMedio: media, idp: idp?.idp ?? null, kp: kp?.kp ?? null }) : null;
 
   // 🕐 Score de cada hora da manhã na cidade da soltura (vento relativo à rota)
-  const bearingSolta = rota.length > 1 && provaSel ? bearingRota(rota[0].lat, rota[0].lon, base.lat, base.lon) : 180;
+  const bearingSolta = rotaGeo.length > 1 && provaSel ? bearingRota(rotaGeo[0].lat, rotaGeo[0].lon, base.lat, base.lon) : 180;
   const horasScored = (janela?.solta || []).map((h) => {
     const v = ventoNaRota(h.dir, bearingSolta, h.vento);
     const sc = scorePonto({ temp: h.temp, chuvaMm: h.chuva, ventoKmh: h.vento, rajadaKmh: h.rajada, dirVento: h.dir, umidade: h.umidade, pressaoMsl: 1013, nuvens: 0, visibilidadeKm: 24, wmo: h.wmo, horaRef: h.hora }, v.pen, kp?.kp ?? null);
@@ -449,8 +455,9 @@ export default function RotaDaProva() {
     const alvo: [string, string][] = [[provaSel.dataSolta, provaSel.diaSolta || nomeDiaSemana(provaSel.dataSolta)], [dia2, nomeDiaSemana(dia2)]];
     const saida: CompDia[] = [];
     for (const [data, label] of alvo) {
-      const climas = await buscarClimaPontos(rota.map((pt) => ({ lat: pt.lat, lon: pt.lon })), data).catch(() => undefined);
-      const pontos = rota.map((pt, i) => {
+      const rotaC = rota.filter((p) => !p.semCoord);
+      const climas = await buscarClimaPontos(rotaC.map((pt) => ({ lat: pt.lat, lon: pt.lon })), data).catch(() => undefined);
+      const pontos = rotaC.map((pt, i) => {
         const clima = climas?.[i];
         if (!clima) return null;
         const origem = pt.papel === "pombal" && i > 0 ? rota[i - 1] : pt;
@@ -490,7 +497,7 @@ export default function RotaDaProva() {
   // 🧭 Bússola da Chegada: horizonte certo + vento na reta final
   const dadoPombal = rota.length ? dados[rota[rota.length - 1].chave] : undefined;
   const climaPombal = dadoPombal && "clima" in dadoPombal ? dadoPombal.clima : null;
-  const rumoSoltura = rota.length > 1 && provaSel ? bearingRota(pombal.lat, pombal.lon, rota[0].lat, rota[0].lon) : null;
+  const rumoSoltura = rotaGeo.length > 1 && provaSel ? bearingRota(pombal.lat, pombal.lon, rotaGeo[0].lat, rotaGeo[0].lon) : null;
   const ventoFinal = climaPombal && rumoSoltura != null ? ventoNaRota(climaPombal.dirVento, (rumoSoltura + 180) % 360, climaPombal.ventoKmh) : null;
 
   // 🌡️ protocolo de recepção (clima na hora da chegada)
@@ -509,8 +516,9 @@ export default function RotaDaProva() {
     setMatrizCarregando(true); setMatriz(null);
     const dia = modo === "prova" ? provaSel.dataSolta : hojeSP();
     const horas = Array.from({ length: 12 }, (_, i) => `${String(7 + i).padStart(2, "0")}:00`); // 07h–18h
-    const janelas = await buscarJanelaSoltaPontos(rota.map((pt) => ({ lat: pt.lat, lon: pt.lon })), dia).catch(() => undefined);
-    const fracos = rota.map((pt, idx) => {
+    const rotaM = rota.filter((p) => !p.semCoord);
+    const janelas = await buscarJanelaSoltaPontos(rotaM.map((pt) => ({ lat: pt.lat, lon: pt.lon })), dia).catch(() => undefined);
+    const fracos = rotaM.map((pt, idx) => {
       const hs = janelas?.[idx];
       if (!hs?.length) return [pt.chave, horas.map(() => null)] as const;
       const ref = idx > 0 && idx === rota.length - 1 ? rota[idx - 1] : pt;
@@ -886,7 +894,7 @@ export default function RotaDaProva() {
 
             {modoMapa !== "google" && (radar || modoMapa === "satelite") && (() => {
               const Z = 6;
-              const lats = rota.map((p) => p.lat), lons = rota.map((p) => p.lon);
+              const lats = rotaGeo.map((p) => p.lat), lons = rotaGeo.map((p) => p.lon);
               parcPos.forEach((pp) => { lats.push(pp.lat); lons.push(pp.lon); });
               const maxLat = Math.max(...lats) + 0.7, minLat = Math.min(...lats) - 0.7;
               const maxLon = Math.max(...lons) + 1.4, minLon = Math.min(...lons) - 1.4;
@@ -923,7 +931,7 @@ export default function RotaDaProva() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img key={`r${gx}-${gy}-${frame.path}`} src={urlTileRadar(radar.host, frame.path, Z, x0 + gx, y0 + gy)} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256, opacity: modoMapa === "radar" ? 0.75 : 0.6 }} />
                       ))}
-                      {rota.map((pt, i) => {
+                      {rotaGeo.map((pt, i) => {
                         const p = pos(pt.lat, pt.lon);
                         const cor = i === 0 ? "#ff5d62" : pt.papel === "pombal" ? "#39e58c" : "#55a3ff";
                         return (
@@ -1175,7 +1183,7 @@ export default function RotaDaProva() {
               })}
             </div>
             <div style={{ ...T.small, fontSize: 10, marginTop: 10, lineHeight: 1.5 }}>
-              ⚠️ Estimativa: bando real não voa em linha reta perfeita nem velocidade constante (correntes, térmicas e liderança variam). Use como referência de vigilância — da 1ª cidade prevista em diante, fique de olho no horizonte {rota.length > 1 ? direcaoCardeal(bearingRota(pombal.lat, pombal.lon, rota[0].lat, rota[0].lon)).toUpperCase() : "NORTE"}.
+              ⚠️ Estimativa: bando real não voa em linha reta perfeita nem velocidade constante (correntes, térmicas e liderança variam). Use como referência de vigilância — da 1ª cidade prevista em diante, fique de olho no horizonte {rotaGeo.length > 1 ? direcaoCardeal(bearingRota(pombal.lat, pombal.lon, rotaGeo[0].lat, rotaGeo[0].lon)).toUpperCase() : "NORTE"}.
             </div>
           </section>
         )}

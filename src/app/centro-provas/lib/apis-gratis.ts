@@ -122,14 +122,19 @@ export function salvarPombal(lat: number, lon: number, nome?: string) {
 }
 
 /** Descobre a coordenada de qualquer cidade (cache em localStorage) */
+const UFS = "AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO";
+
 export async function geocodeCidade(nome: string): Promise<Coords | null> {
   if (COORDS[nome]) return COORDS[nome];
+  // aceita "Formosa GO" → busca "Formosa" (geocodificador não aceita UF junto)
+  const semUF = nome.replace(new RegExp(`[\\s,-]+(${UFS})$`, "i"), "").trim();
+  if (semUF && semUF !== nome && COORDS[semUF]) return COORDS[semUF];
   let cache: Record<string, Coords> = {};
   try { cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || "{}"); } catch { cache = {}; }
   if (cache[nome]) return cache[nome];
   try {
     const r = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nome)}&count=1&language=pt&format=json`
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(semUF || nome)}&count=1&language=pt&format=json`
     );
     if (!r.ok) return null;
     const j = await r.json();

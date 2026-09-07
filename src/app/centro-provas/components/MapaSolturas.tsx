@@ -27,6 +27,7 @@ export default function MapaSolturas() {
   const [selecionada, setSelecionada] = useState<string | null>(null);
   const [editando, setEditando] = useState<Local | null>(null);
   const [ready, setReady] = useState(false);
+  const [parceirosMapa, setParceirosMapa] = useState<{ nome: string; cidade: string; x: number; y: number }[]>([]);
 
   useEffect(() => {
     const calendario = loadCalendario();
@@ -39,6 +40,25 @@ export default function MapaSolturas() {
     return () => window.removeEventListener("nutripombos:calendario", sync);
   }, []);
   useEffect(() => { if (ready) localStorage.setItem(MAPA_KEY, JSON.stringify(locais)); }, [locais, ready]);
+  // 🤝 cidades parceiras (marcadores próprios, fora da rota)
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      let lista: { id: string; nome: string; cidade: string }[] = [];
+      try { lista = JSON.parse(localStorage.getItem("nutripombos-parceiros-v1") || "[]"); } catch { lista = []; }
+      const res: { nome: string; cidade: string; x: number; y: number }[] = [];
+      for (const pr of lista) {
+        if (!pr.cidade?.trim()) continue;
+        const c = await geocodeCidade(pr.cidade.trim());
+        if (!c) continue;
+        const x = 310 + (c.lon - -47.4017) * 26;
+        const y = 470 - (c.lat - -22.8864) * 49;
+        res.push({ nome: (pr.nome || "").trim() || pr.cidade.trim(), cidade: pr.cidade.trim(), x: Math.max(15, Math.min(385, x)), y: Math.max(20, Math.min(500, y)) });
+      }
+      if (vivo) setParceirosMapa(res);
+    })();
+    return () => { vivo = false; };
+  }, []);
 
   const hoje = new Date().toISOString().slice(0, 10);
   const proxima = provas.find(p => p.dataSolta >= hoje && !p.cancelada);
@@ -61,7 +81,8 @@ export default function MapaSolturas() {
       <path d="M100 510L390 510 390 420Q350 400 310 395T240 400Q200 415 155 375 110 350 100 410Z" fill="#0d2210" stroke="#1a3a18"/><path d="M125 370Q155 300 175 290T225 225Q230 180 195 142T138 170Q125 230 142 325Z" fill="#102820" stroke="#183528"/><rect x="178" y="104" width="34" height="26" rx="4" fill="#200840" stroke="#4a1a80"/><text x="275" y="460" fill="#ffffff18" fontSize="11">SÃO PAULO</text><text x="160" y="340" fill="#ffffff18" fontSize="9">MINAS GERAIS</text><text x="135" y="210" fill="#ffffff18" fontSize="9">GOIÁS</text>
       <polyline points={`${POMBAL.x},${POMBAL.y} ${provas.slice(0,10).map((_,i)=>`${POSICOES[i].x},${POSICOES[i].y}`).join(" ")}`} fill="none" stroke={T.gold} strokeWidth="2.5" strokeDasharray="9 5" opacity=".5"/><circle cx={POMBAL.x} cy={POMBAL.y} r="20" fill="url(#map-gold)"/><circle cx={POMBAL.x} cy={POMBAL.y} r="12" fill={T.gold}/><text x={POMBAL.x} y={POMBAL.y+4} textAnchor="middle" fontSize="13">🏠</text><text x={POMBAL.x} y={POMBAL.y+28} textAnchor="middle" fill={T.gold} fontSize="8">SEU POMBAL</text>
       {provas.slice(0,10).map((p,i)=>{const pos=POSICOES[i],c=classificarProva(p.km),passou=diasParaProva(p.dataSolta)<0,ativo=selecionada===idProva(p),cor=passou?T.green:c.cor,r=ativo?14:p.num===proxima?.num?12:10;return <g key={idProva(p)} onClick={()=>setSelecionada(ativo?null:idProva(p))} style={{cursor:"pointer"}}>{p.num===proxima?.num&&<circle cx={pos.x} cy={pos.y} r="26" fill="url(#map-gold)"/>}{ativo&&<circle cx={pos.x} cy={pos.y} r="23" fill="url(#map-blue)"/>}<line x1={pos.x} y1={pos.y+r} x2={pos.x} y2={pos.y+r+14} stroke={cor} strokeWidth="3"/><circle cx={pos.x} cy={pos.y} r={r} fill={cor} stroke={ativo?"white":"#0006"} strokeWidth="2"/><text x={pos.x} y={pos.y+3} textAnchor="middle" fill={T.bg} fontSize="9" fontWeight="900">{passou?"✓":p.num}</text><text x={pos.x+r+5} y={pos.y-2} fill={ativo?"white":cor} fontSize="8" fontWeight="bold">{p.cidade}</text><text x={pos.x+r+5} y={pos.y+9} fill="#ffffff77" fontSize="7">{p.km}km — {p.estado}</text></g>})}
-    </svg></div><div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 9 }}>{[[T.gold,"⚡ Velocidade"],[T.blue,"🏃 Meio Fundo"],[T.orange,"🦅 Fundo"],[T.green,"✓ Realizada"]].map(([cor,label])=><small key={label} style={{color:T.dim}}><i style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:cor,marginRight:4}}/>{label}</small>)}</div></section>
+      {parceirosMapa.map((pp, i) => <g key={`parc-${i}`}><circle cx={pp.x} cy={pp.y} r="8" fill="#1b283c" stroke="#c4b4ff" strokeWidth="2"/><text x={pp.x} y={pp.y + 3} textAnchor="middle" fontSize="7">🤝</text><text x={pp.x + 11} y={pp.y + 2} fill="#c4b4ff" fontSize="7.5" fontWeight="bold">{pp.nome}</text></g>)}
+    </svg></div><div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 9 }}>{[[T.gold,"⚡ Velocidade"],[T.blue,"🏃 Meio Fundo"],[T.orange,"🦅 Fundo"],[T.green,"✓ Realizada"],["#c4b4ff","🤝 Parceiro"]].map(([cor,label])=><small key={label} style={{color:T.dim}}><i style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:cor,marginRight:4}}/>{label}</small>)}</div></section>
 
     {provaSel && <Painel prova={provaSel} local={localSel} onEdit={() => localSel && setEditando({...localSel})}/>} 
     <section style={T.card}><Title>📋 Todas as Cidades</Title>{provas.map(p=>{const c=classificarProva(p.km),local=locais.find(l=>l.provaId===idProva(p)),vel=velocidade(local),passou=diasParaProva(p.dataSolta)<0;return <div key={idProva(p)} onClick={()=>setSelecionada(selecionada===idProva(p)?null:idProva(p))} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:`1px solid ${T.border}`,cursor:"pointer",opacity:passou?.65:1}}><span style={{width:30,height:30,display:"grid",placeItems:"center",borderRadius:"50%",color:c.cor,border:`2px solid ${c.cor}`,fontWeight:900,fontSize:10}}>{passou?"✓":p.num}</span><div style={{flex:1}}><b style={{fontSize:13}}>{p.cidade} — {p.estado}</b><div style={T.small}><span style={{color:c.cor}}>{c.emoji} {c.tipo}</span> • {p.km}km {local?.tempoMedio?`• ⏱️ ${local.tempoMedio}min`:""} {vel&&<span style={{color:T.green}}>• ⚡ {vel}km/h</span>}</div></div><button onClick={e=>{e.stopPropagation();if(local)setEditando({...local})}} style={T.btnGhost}>✏️</button></div>})}</section>

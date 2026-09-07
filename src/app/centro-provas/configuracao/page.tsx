@@ -8,6 +8,12 @@ import { DEFAULT_CONFIG, loadConfig, saveConfig, type ConfigPlantel } from "../c
 import { getPombal, salvarPombal } from "../lib/apis-gratis";
 
 const KEY_POMBAIS = "nutripombos-pombais-v1";
+const KEY_PARC = "nutripombos-parceiros-v1";
+type Parceiro = { id: string; nome: string; cidade: string };
+const PARCEIROS_PADRAO: Parceiro[] = [
+  { id: "p1", nome: "", cidade: "Ribeirão Preto" },
+  { id: "p2", nome: "", cidade: "Franca" },
+];
 type PombalSalvo = { nome: string; lat: number; lon: number };
 
 function escalar(base: number, consumo: number) {
@@ -30,8 +36,13 @@ export default function Configuracao() {
   const [pombalNome, setPombalNome] = useState("");
   const [pombalSalvo, setPombalSalvo] = useState(false);
   const [gpsMsg, setGpsMsg] = useState("");
-  // 👨‍🌾 Multi-pombal
+  // 👨‍🌾 Multi-pombal + 🤝 Parceiros
   const [pombais, setPombais] = useState<PombalSalvo[]>([]);
+  const [parceiros, setParceiros] = useState<Parceiro[]>([]);
+  useEffect(() => {
+    try { const l = JSON.parse(localStorage.getItem(KEY_PARC) || "null"); setParceiros(Array.isArray(l) ? l : PARCEIROS_PADRAO); } catch { setParceiros(PARCEIROS_PADRAO); }
+  }, []);
+  const salvarParceiros = (l: Parceiro[]) => { setParceiros(l); try { localStorage.setItem(KEY_PARC, JSON.stringify(l)); } catch { /* ignora */ } };
   const [novoNome, setNovoNome] = useState("");
   useEffect(() => {
     try { setPombais(JSON.parse(localStorage.getItem(KEY_POMBAIS) || "[]")); } catch { setPombais([]); }
@@ -216,6 +227,22 @@ export default function Configuracao() {
               <input aria-label="Horário fixo da soltura" type="time" value={cfg.soltaHoraManual || "07:00"} onChange={(e) => setCfg((prev) => ({ ...prev, soltaHoraManual: e.target.value }))} style={{ ...T.input, textAlign: "center", fontSize: 20, fontWeight: 800 }} />
             </div>
           )}
+        </section>
+
+        {/* 🤝 PARCEIROS — cidades no mapa (não são provas) */}
+        <section style={T.card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>🤝 Cidades Parceiras (aparecem no mapa)</div>
+          <div style={{ ...T.small, fontSize: 12, marginBottom: 12, lineHeight: 1.6 }}>
+            Marque parceiros, apoios e pontos de apoio no mapa da <b>Rota da Prova</b> e no <b>Mapa de Solturas</b> — como 🤝, sem entrar na rota nem nos cálculos. A coordenada é achada automaticamente pelo nome da cidade.
+          </div>
+          {parceiros.map((pr) => (
+            <div key={pr.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 6, marginBottom: 6 }}>
+              <input aria-label="Nome do parceiro" type="text" placeholder="Nome (opcional)" value={pr.nome} onChange={(e) => salvarParceiros(parceiros.map((x) => x.id === pr.id ? { ...x, nome: e.target.value } : x))} style={{ ...T.input, minHeight: 38 }} />
+              <input aria-label="Cidade do parceiro" type="text" placeholder="Cidade (ex.: Franca)" value={pr.cidade} onChange={(e) => salvarParceiros(parceiros.map((x) => x.id === pr.id ? { ...x, cidade: e.target.value } : x))} style={{ ...T.input, minHeight: 38 }} />
+              <button type="button" onClick={() => salvarParceiros(parceiros.filter((x) => x.id !== pr.id))} style={{ ...T.btnGhost, color: T.red, minHeight: 38 }}>×</button>
+            </div>
+          ))}
+          <button type="button" onClick={() => salvarParceiros([...parceiros, { id: String(Date.now()), nome: "", cidade: "" }])} style={{ ...T.btnGhost, width: "100%" }}>➕ Adicionar cidade parceira</button>
         </section>
 
         {/* 🗺️ MAPA DE SATÉLITE (Google) — opcional, com API Key própria */}

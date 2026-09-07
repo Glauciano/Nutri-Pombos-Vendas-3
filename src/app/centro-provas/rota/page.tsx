@@ -15,6 +15,7 @@ import {
   NowcastPasso, buscarNowcastChuva, calcularIdp, confiancaPrevisao, protocoloRecepcao,
   riscoExtravio, gerarIcsProvas,
   buscarClimaPontos, buscarSolPontos, buscarArPontos, buscarJanelaSoltaPontos, limparCacheApi, baseTileGoes,
+  geocodeCidade,
 } from "../lib/apis-gratis";
 import { loadConfig } from "../config";
 
@@ -74,6 +75,23 @@ export default function RotaDaProva() {
   const [compCarregando, setCompCarregando] = useState(false);
   // 🧭 Bússola da chegada (quem espera no pombal)
   const [tick, setTick] = useState(0);
+  // 🤝 cidades parceiras (marcadores no mapa, fora da rota)
+  const [parcPos, setParcPos] = useState<{ nome: string; cidade: string; lat: number; lon: number }[]>([]);
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      let lista: { id: string; nome: string; cidade: string }[] = [];
+      try { lista = JSON.parse(localStorage.getItem("nutripombos-parceiros-v1") || "[]"); } catch { lista = []; }
+      const res: { nome: string; cidade: string; lat: number; lon: number }[] = [];
+      for (const pr of lista) {
+        if (!pr.cidade?.trim()) continue;
+        const c = await geocodeCidade(pr.cidade.trim());
+        if (c) res.push({ nome: (pr.nome || "").trim() || pr.cidade.trim(), cidade: pr.cidade.trim(), lat: c.lat, lon: c.lon });
+      }
+      if (vivo) setParcPos(res);
+    })();
+    return () => { vivo = false; };
+  }, []);
 
   // 🔢 Matriz cidade × hora (onda do clima) + 🐦 risco de extravio + 📆 ICS
   const [matriz, setMatriz] = useState<{ horas: string[]; celulas: Record<string, (number | null)[]> } | null>(null);
@@ -849,6 +867,7 @@ export default function RotaDaProva() {
             {modoMapa !== "google" && (radar || modoMapa === "satelite") && (() => {
               const Z = 6;
               const lats = rota.map((p) => p.lat), lons = rota.map((p) => p.lon);
+              parcPos.forEach((pp) => { lats.push(pp.lat); lons.push(pp.lon); });
               const maxLat = Math.max(...lats) + 0.7, minLat = Math.min(...lats) - 0.7;
               const maxLon = Math.max(...lons) + 1.4, minLon = Math.min(...lons) - 1.4;
               const a = tileXY(maxLat, minLon, Z), b = tileXY(minLat, maxLon, Z);
@@ -896,6 +915,17 @@ export default function RotaDaProva() {
                           </div>
                         );
                       })}
+                      {parcPos.map((pp) => {
+                        const p2 = pos(pp.lat, pp.lon);
+                        return (
+                          <div key={`parc-${pp.cidade}-${pp.lat}`} style={{ position: "absolute", left: p2.left, top: p2.top, transform: "translate(-50%,-50%)", textAlign: "center", zIndex: 5 }}>
+                            <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#1b283c", border: "2px solid #c4b4ff", display: "grid", placeItems: "center", fontSize: 9, boxShadow: "0 0 8px rgba(0,0,0,.7)" }}>🤝</div>
+                            <small style={{ display: "block", marginTop: 3, fontSize: 9, fontWeight: 800, color: "#c4b4ff", textShadow: "0 1px 3px #000, 0 0 6px #000" }}>
+                              {pp.nome !== pp.cidade ? `${pp.nome} · ${pp.cidade}` : pp.cidade}
+                            </small>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, flexWrap: "wrap", gap: 6 }}>
@@ -905,7 +935,7 @@ export default function RotaDaProva() {
                     <small style={{ color: T.dim }}>
                       {modoMapa === "satelite" ? "🗺️ Satélite © Esri · chuva: RainViewer"
                         : modoMapa === "nuvens" ? "☁️ Nuvens reais: NASA GOES-East (~15-30min) · pontos de chuva: RainViewer"
-                        : "verde=fraca · amarelo=moderada · vermelho=forte · Mapa © Esri/OSM · Chuva: RainViewer"}
+                        : "verde=fraca · amarelo=moderada · vermelho=forte · 🤝=parceiro · Mapa © Esri/OSM · Chuva: RainViewer"}
                     </small>
                   </div>
                   {modoMapa === "radar" && (

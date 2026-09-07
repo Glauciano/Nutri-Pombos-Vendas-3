@@ -88,6 +88,7 @@ export default function CentroProvas() {
   }, []);
 
   const hoje = new Date().toISOString().slice(0, 10);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- calendarVersion forca releitura do calendario ao editar
   const provas = useMemo(() => loadCalendario().filter(p => !p.cancelada), [calendarVersion]);
   const proxima = provas.find(p => p.dataSolta >= hoje) ?? provas.at(-1);
   const passadas = provas.filter(p => p.dataSolta < hoje).length;

@@ -430,13 +430,19 @@ export function ventoNaRota(dirVentoDeg: number, bearingDestino: number, velocid
 
 /** Score de segurança do ponto (0-100) */
 export function scorePonto(c: ClimaPonto, penVento: number, kpGlobal: number | null): { pts: number; label: string; cor: string } {
-  let p = 100 - penVento;
-  if (c.temp > 35) p -= 30; else if (c.temp > 30) p -= 12; else if (c.temp < 5) p -= 25; else if (c.temp < 10) p -= 8;
-  if (c.chuvaMm > 5) p -= 40; else if (c.chuvaMm > 1) p -= 20; else if (c.chuvaMm > 0) p -= 5;
-  if (c.rajadaKmh > 50) p -= 30; else if (c.rajadaKmh > 35) p -= 15;
-  if (c.wmo >= 95) p -= 30; else if (c.wmo >= 80) p -= 15;
-  if (c.visibilidadeKm < 4) p -= 25; else if (c.visibilidadeKm < 8) p -= 10;
-  if (kpGlobal !== null && kpGlobal >= 7) p -= 25; else if (kpGlobal !== null && kpGlobal >= 5) p -= 12;
+  // 🎚️ pesos do usuário (0–2; 1 = padrão) — ajustáveis em Configuração → Pesos do Score
+  let w = { chuva: 1, vento: 1, temp: 1, rajada: 1, vis: 1, kp: 1 };
+  try {
+    const cfg = loadConfig().scorePesos;
+    if (cfg) w = { chuva: cfg.chuva ?? 1, vento: cfg.vento ?? 1, temp: cfg.temp ?? 1, rajada: cfg.rajada ?? 1, vis: cfg.vis ?? 1, kp: cfg.kp ?? 1 };
+  } catch { /* padrão */ }
+  let p = 100 - Math.round(penVento * w.vento);
+  if (c.temp > 35) p -= Math.round(30 * w.temp); else if (c.temp > 30) p -= Math.round(12 * w.temp); else if (c.temp < 5) p -= Math.round(25 * w.temp); else if (c.temp < 10) p -= Math.round(8 * w.temp);
+  if (c.chuvaMm > 5) p -= Math.round(40 * w.chuva); else if (c.chuvaMm > 1) p -= Math.round(20 * w.chuva); else if (c.chuvaMm > 0) p -= Math.round(5 * w.chuva);
+  if (c.rajadaKmh > 50) p -= Math.round(30 * w.rajada); else if (c.rajadaKmh > 35) p -= Math.round(15 * w.rajada);
+  if (c.wmo >= 95) p -= Math.round(30 * w.chuva); else if (c.wmo >= 80) p -= Math.round(15 * w.chuva);
+  if (c.visibilidadeKm < 4) p -= Math.round(25 * w.vis); else if (c.visibilidadeKm < 8) p -= Math.round(10 * w.vis);
+  if (kpGlobal !== null && kpGlobal >= 7) p -= Math.round(25 * w.kp); else if (kpGlobal !== null && kpGlobal >= 5) p -= Math.round(12 * w.kp);
   p = Math.max(0, Math.min(100, Math.round(p)));
   if (p >= 75) return { pts: p, label: "Ótimas condições", cor: "#39e58c" };
   if (p >= 55) return { pts: p, label: "Condições razoáveis", cor: "#fbbf24" };

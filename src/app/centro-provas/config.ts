@@ -14,6 +14,8 @@ export interface ConfigPlantel {
   soltaHoraManual?: string;
   /** Chave do Google Maps Embed API (opcional — habilita mapa de satélite na soltura) */
   mapaApiKey?: string;
+  /** 🎚️ Pesos do score (multiplicadores 0–2; 1 = padrão do app) */
+  scorePesos?: { chuva: number; vento: number; temp: number; rajada: number; vis: number; kp: number };
 }
 
 export const DEFAULT_CONFIG: ConfigPlantel = {
@@ -22,6 +24,7 @@ export const DEFAULT_CONFIG: ConfigPlantel = {
   condicaoCorporal: "Ideal",
   soltaModo: "auto",
   soltaMinAposNascer: 20,
+  scorePesos: { chuva: 1, vento: 1, temp: 1, rajada: 1, vis: 1, kp: 1 },
 };
 
 export function loadConfig(): ConfigPlantel {

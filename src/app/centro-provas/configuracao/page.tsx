@@ -296,6 +296,36 @@ export default function Configuracao() {
           </div>
         </section>
 
+        {/* 🎚️ PESOS DO SCORE — calibre com sua experiência */}
+        <section style={T.card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>🎚️ Pesos do Score (calibre com sua experiência)</div>
+          <div style={{ ...T.small, fontSize: 12, marginBottom: 12, lineHeight: 1.6 }}>
+            O score de condições (aquele "Ótimas/Razoáveis/Difíceis") desconta pontos por chuva, vento, rajada, temperatura, visibilidade e Kp. Aqui você ajusta o <b>peso de cada fator</b>: 1× é o padrão do app; <b>0× ignora</b> o fator; <b>2× pune em dobro</b>. Ex.: se pra você garoa não é problema, deixe chuva em 0,5×.
+          </div>
+          {([
+            ["chuva", "🌧️ Chuva/tempestade", "padrão: −40 numa chuva forte"],
+            ["vento", "💨 Vento contra a rota", "padrão: −20 no vento contra"],
+            ["rajada", "🌪️ Rajadas", "padrão: −30 rajada >50km/h"],
+            ["temp", "🌡️ Temperatura extrema", "padrão: −30 acima de 35°C"],
+            ["vis", "👁️ Visibilidade", "padrão: −25 abaixo de 4km"],
+            ["kp", "🧲 Kp geomagnético", "padrão: −25 se Kp ≥7"],
+          ] as const).map(([k, lbl, dica]) => {
+            const atual = (cfg.scorePesos?.[k] ?? 1);
+            return (
+              <div key={k} style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                  <b>{lbl}</b>
+                  <b style={{ color: atual > 1 ? T.red : atual < 1 ? T.green : T.dim }}>{atual.toFixed(1)}× {atual === 1 ? "(padrão)" : atual === 0 ? "(ignora)" : ""}</b>
+                </div>
+                <input type="range" min="0" max="2" step="0.1" value={atual} onChange={(e) => setCfg((prev) => ({ ...prev, scorePesos: { ...(prev.scorePesos || { chuva: 1, vento: 1, temp: 1, rajada: 1, vis: 1, kp: 1 }), [k]: Number(e.target.value) } }))} style={{ width: "100%", accentColor: T.gold }} />
+                <div style={{ ...T.small, fontSize: 10 }}>{dica} • com {atual.toFixed(1)}× → desconto de {Math.round({ chuva: 40, vento: 20, rajada: 30, temp: 30, vis: 25, kp: 25 }[k] * atual)} pontos</div>
+              </div>
+            );
+          })}
+          <button type="button" onClick={() => setCfg((prev) => ({ ...prev, scorePesos: { chuva: 1, vento: 1, temp: 1, rajada: 1, vis: 1, kp: 1 } }))} style={T.btnGhost}>↩️ Restaurar padrão</button>
+          <div style={{ ...T.small, fontSize: 10, marginTop: 10 }}>Não esqueça de 💾 Salvar Configuração lá embaixo — a Rota da Prova recalcula na hora.</div>
+        </section>
+
         {/* 💾 BACKUP DOS DADOS — exportar / importar */}
         <section style={T.card}>
           <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>💾 Backup dos Dados</div>

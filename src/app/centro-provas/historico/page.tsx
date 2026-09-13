@@ -58,6 +58,7 @@ export default function Historico() {
   const [impTexto, setImpTexto] = useState("");
   const [impAberto, setImpAberto] = useState(false);
   const [impMsg, setImpMsg] = useState("");
+  const [impColoc, setImpColoc] = useState(true);
   const [impData, setImpData] = useState(new Date().toISOString().slice(0, 10));
   const [impKm, setImpKm] = useState(300);
 
@@ -80,6 +81,7 @@ export default function Historico() {
     impTexto.split(/\n/).forEach((linha) => {
       const anilha = linha.match(/([A-Z]{2,4}[-\s]?\d{2,4}[-\s]?\d{3,6})/i);
       const hora = linha.match(/(\d{1,2}[:h](\d{2}))(?::(\d{2}))?/);
+      const colocMatch = linha.match(/(\d{1,3})\s*[º°.][ºo°]?\s|[º°]\s?(\d{1,3})\b/);
       if (!anilha) return;
       let velocidade = 1200;
       if (hora) {
@@ -88,9 +90,10 @@ export default function Historico() {
         const min = H * 60 + M - soltaMin;
         if (min > 10) velocidade = Math.round((distancia * 1000) / min);
       }
+      const colocacao = (impColoc && colocMatch) ? Number(colocMatch[1] || colocMatch[2]) : coloc++;
       linhasValidas.push({
         data: impData, competicao: `Importado ${new Date(impData).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`,
-        distancia, colocacao: coloc++, velocidade, observacoes: `anilha ${anilha[1]}${hora ? ` • chegada ${hora[1]}` : ""} (importado)`,
+        distancia, colocacao, velocidade, observacoes: `anilha ${anilha[1]}${hora ? ` • chegada ${hora[1]}` : ""} (importado)`,
       });
     });
     if (!linhasValidas.length) { setImpMsg("⚠️ Não achei anilhas no texto — cole o resultado do clube (com anilha e hora)."); return; }
@@ -148,6 +151,18 @@ export default function Historico() {
           <div>
             <Link href="/centro-provas" style={{ ...T.small, textDecoration: "none" }}>← Centro de Provas</Link>
             <h1 style={{ ...T.h1, marginTop: 9 }}>📜 Histórico de Provas</h1>
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <button type="button" onClick={() => {
+                const linhas = [["Data", "Competição", "Distância (km)", "Colocação", "Velocidade (m/min)", "Observações"].join(";")];
+                provas.forEach((p) => linhas.push([p.data, (p.competicao || "").replace(/;/g, ","), String(p.distancia), String(p.colocacao), String(p.velocidade), (p.observacoes || "").replace(/;/g, ",")].join(";")));
+                const blob = new Blob(["\uFEFF" + linhas.join("\n")], { type: "text/csv;charset=utf-8" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `nutri-pombos-historico-${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+              }} style={{ ...T.btnGhost, fontSize: 11 }}>📊 Exportar CSV (Excel)</button>
+            </div>
             <button type="button" onClick={() => setImpAberto((v) => !v)} style={{ ...T.btnGhost, marginTop: 8 }}>📥 Importar resultado do clube</button>
             {impAberto && (
               <section style={{ ...T.card, marginTop: 10, borderColor: `${T.gold}55`, background: `${T.gold}0d` }}>
@@ -162,6 +177,10 @@ export default function Historico() {
                   <button type="button" onClick={importar} style={{ ...T.btn, flex: 1 }}>📥 Importar</button>
                   <button type="button" onClick={() => { setImpAberto(false); setImpMsg(""); }} style={T.btnGhost}>Fechar</button>
                 </div>
+                <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8, fontSize: 11, color: T.dim, cursor: "pointer" }}>
+                  <input type="checkbox" checked={impColoc} onChange={(e) => setImpColoc(e.target.checked)} />
+                  Usar a colocação que está no texto (1º, 2º...) em vez de ordenar pela hora
+                </label>
                 {impMsg && <div style={{ ...T.small, fontSize: 12, marginTop: 8, color: impMsg.startsWith("✅") ? T.green : T.orange }}>{impMsg}</div>}
               </section>
             )}

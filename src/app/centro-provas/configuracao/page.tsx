@@ -296,6 +296,18 @@ export default function Configuracao() {
           </div>
         </section>
 
+        {/* ☁️ SINCRONIZAÇÃO — mesmo login, mesmos dados em qualquer aparelho */}
+        <section style={{ ...T.card, borderColor: `${T.blue}55`, background: `${T.blue}0d` }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.blue, marginBottom: 8 }}>☁️ Sincronização entre aparelhos</div>
+          <div style={{ ...T.small, fontSize: 12, marginBottom: 10, lineHeight: 1.6 }}>
+            Seus dados (calendário, histórico, configurações, parceiros, equipes, vendas...) agora <b>acompanham seu login</b>: configurou no PC, abre no celular com tudo lá. A sincronização é automática ao abrir o app e a cada 5 minutos — ou toque no botão pra forçar agora.
+          </div>
+          <button type="button" id="btn-sync-agora" onClick={() => { const b = document.getElementById("btn-sync-agora"); if (b) b.textContent = "⏳ Sincronizando..."; window.dispatchEvent(new Event("nutripombos:sync-agora")); window.setTimeout(() => { if (b) b.textContent = "☁️ Sincronizar agora"; }, 2500); }} style={{ ...T.btn, background: T.blue, borderColor: T.blue }}>☁️ Sincronizar agora</button>
+          <div style={{ ...T.small, fontSize: 11, marginTop: 10, lineHeight: 1.6 }}>
+            📌 Precisa estar logado na <b>mesma conta</b> nos dois aparelhos (o login é o seu e-mail de cadastro). Fotos dos pombos ficam no aparelho (use o 💾 Backup pra levá-las).
+          </div>
+        </section>
+
         {/* 🎚️ PESOS DO SCORE — calibre com sua experiência */}
         <section style={T.card}>
           <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>🎚️ Pesos do Score (calibre com sua experiência)</div>

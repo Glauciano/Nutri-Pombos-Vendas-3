@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { T } from "../theme";
 
@@ -14,6 +14,23 @@ type Pombo = {
 type Tab = "lista" | "pedigree" | "novo" | "editar";
 
 const KEY_CUSTOM = "nutripombos-pombos-custom-v1";
+import { getFoto, salvarFoto } from "../lib/fotos";
+
+function FotoPombo({ anilha, tamanho = 34 }: { anilha: string; tamanho?: number }) {
+  const [src, setSrc] = useState<string | null>(getFoto(anilha));
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <span style={{ position: "relative", display: "inline-block", width: tamanho, height: tamanho, flexShrink: 0 }}>
+      {src ? (
+        <img src={src} alt={anilha} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", border: "2px solid #f7bd0066" }} />
+      ) : (
+        <span style={{ width: "100%", height: "100%", borderRadius: "50%", background: "#0b1529", display: "grid", placeItems: "center", fontSize: tamanho * 0.5, border: `1px dashed #31415a` }}>📷</span>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const r = await salvarFoto(anilha, f); if (r) setSrc(r); e.target.value = ""; }} />
+      <button type="button" title="foto do pombo" onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }} style={{ position: "absolute", right: -4, bottom: -4, width: 16, height: 16, borderRadius: "50%", border: 0, background: "#f7bd00", color: "#0b1426", fontSize: 9, cursor: "pointer", display: "grid", placeItems: "center" }}>+</button>
+    </span>
+  );
+}
 
 const SEXO_COR:Record<string,string> = { macho:"#3B82F6", femea:"#EC4899" };
 const STATUS_COR:Record<string,string> = { ativo:"#4ADE80", inativo:"#94A3B8", vendido:"#FBBF24", morto:"#EF4444", tratamento:"#F97316" };
@@ -173,6 +190,7 @@ export default function PombosPage(){
         const mae=pombos.find(x=>x.id===p.maeId);
         return <div key={p.id} style={{marginBottom:8,borderRadius:11,background:T.bgCard,border:`1px solid ${SEXO_COR[p.sexo]||T.border}44`,borderLeft:`4px solid ${SEXO_COR[p.sexo]||T.border}`,overflow:"hidden"}}>
           <button onClick={()=>{setSel(p);loadPedigree(p.id)}} style={{width:"100%",textAlign:"left",padding:14,color:T.white,background:"transparent",border:"none",cursor:"pointer"}}>
+            <div style={{display:"flex",gap:10,alignItems:"center"}}><FotoPombo anilha={p.anilha} />
             <div style={{display:"flex",justifyContent:"space-between",gap:10}}>
               <div style={{flex:1}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -189,7 +207,7 @@ export default function PombosPage(){
               </div>
               <span style={{color:T.dim,fontSize:18}}>›</span>
             </div>
-          </button>
+          </div></button>
           {/* Quick actions */}
           <div style={{display:"flex",borderTop:`1px solid ${T.border}`}}>
             <button onClick={(e)=>{e.stopPropagation();setEditPombo(p)}} style={{flex:1,padding:"8px 0",fontSize:11,fontWeight:700,color:T.blue,background:"transparent",border:"none",cursor:"pointer",borderRight:`1px solid ${T.border}`}}>✏️ Editar</button>

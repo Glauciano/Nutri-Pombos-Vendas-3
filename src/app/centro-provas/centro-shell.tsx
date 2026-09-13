@@ -27,6 +27,7 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/telao", label: "Modo Telão (clube)", icon: Tv },
       { href: "/centro-provas/equipe", label: "Seleção de equipe", icon: Bird },
       { href: "/centro-provas/primeiros-passos", label: "🎓 Primeiros passos", icon: Sparkles },
+      { href: "/centro-provas/ranking", label: "Ranking do plantel", icon: Trophy },
       { href: "/centro-provas/pombo-as", label: "Pombo Ás Oficial (FCI)", icon: Trophy },
     ],
   },
@@ -38,6 +39,7 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/geomagnetico", label: "Radar Geomagnético Kp", icon: Radio },
       { href: "/centro-provas/clima-avancado", label: "Radar Aero-Clima & Pressão", icon: CloudSun },
       { href: "/centro-provas/dia-prova", label: "Dia da prova", icon: Target },
+      { href: "/centro-provas/checklist", label: "Checklist de encestamento", icon: ShieldCheck },
       { href: "/centro-provas/gps-chip", label: "GPS e chip", icon: Radio },
       { href: "/centro-provas/historico", label: "Histórico", icon: Trophy },
       { href: "/centro-provas/treinamentos", label: "Treinamentos", icon: Activity },
@@ -57,6 +59,7 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/geodesica", label: "Geodésica e Relevo", icon: Map },
       { href: "/centro-provas/fotoperiodo", label: "Fotoperíodo (Darkness)", icon: CloudSun },
       { href: "/centro-provas/custos", label: "Custos e ROI", icon: Calculator },
+      { href: "/centro-provas/vendas", label: "Vendas de pombos", icon: PackageOpen },
     ],
   },
   {

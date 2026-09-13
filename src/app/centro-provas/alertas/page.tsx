@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { diasParaProva, loadCalendario, type ProvaCalendario } from "../data/calendario";
-import { Madrugada, alertaMadrugada, buscarMadrugada, getPombal, buscarClimaPassado, direcaoCardeal, ClimaPonto, buscarClimaPonto, vereditoTreino } from "../lib/apis-gratis";
+import { Madrugada, alertaMadrugada, buscarMadrugada, getPombal, buscarClimaPassado, direcaoCardeal, ClimaPonto, buscarClimaPonto, vereditoTreino, buscarNowcastChuva, NowcastPasso, buscarKpNoaa } from "../lib/apis-gratis";
 import { T } from "../theme";
 
 type Tab="hoje"|"semana"|"preventivo";
@@ -112,6 +112,7 @@ export default function Alertas(){
   return <main style={{minHeight:"100vh",background:T.bg,color:T.white,padding:"18px 12px 50px"}}><div style={{maxWidth:760,margin:"0 auto"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",marginBottom:14}}><h1 style={T.h1}>🔔 Central de Alertas</h1><Link href="/centro-provas" style={{...T.btnGhost,textDecoration:"none"}}>← Centro</Link></div>
     <VesperaProva provas={provas.filter(p=>!p.cancelada)}/>
+    <ResumoFalado/>
     <AlertaMadrugadaCard/>
     <CortaTreinoCard/>
     <ModoExtravio/>
@@ -282,6 +283,56 @@ function AlertaMadrugadaCard(){
       {info.dicas.map((d,i)=><div key={i} style={{padding:"8px 12px",borderRadius:8,background:"#ffffff08",fontSize:12,marginBottom:5,lineHeight:1.5}}>• {d}</div>)}
       <div style={{...T.small,fontSize:10,marginTop:8}}>Usa a localização configurada em Configuração → 🏠 Localização do Pombal • Fonte: Open-Meteo</div>
     </div>}
+  </section>;
+}
+
+/* 🔊 Resumo falado do dia — ouça dirigindo pro clube (voz do próprio aparelho) */
+function ResumoFalado(){
+  const[falando,setFalando]=useState(false);
+  const[msg,setMsg]=useState("");
+  const falar=async()=>{
+    setFalando(true);setMsg("");
+    try{
+      const p=getPombal();
+      const [clima,nowcast,kpR]=await Promise.all([
+        buscarClimaPonto(p.lat,p.lon).catch(()=>null),
+        buscarNowcastChuva(p.lat,p.lon).catch(()=>null),
+        buscarKpNoaa(),
+      ]);
+      const provas=loadCalendario().filter(x=>!x.cancelada);
+      const hoje=new Date().toISOString().slice(0,10);
+      const prox=provas.find(x=>x.dataSolta>=hoje);
+      const partes:string[]=[];
+      partes.push(`Bom dia! Resumo do dia do seu pombal.`);
+      if(clima){
+        partes.push(`Agora no pombal: ${clima.temp} graus, vento de ${clima.ventoKmh} quilômetros por hora, ${clima.chuvaMm>0?`chuva de ${clima.chuvaMm} milímetros`:"sem chuva"}.`);
+      }
+      const chuva=nowcast?.find((n:NowcastPasso)=>n.mm>0.1);
+      partes.push(chuva?`Atenção: chuva prevista no pombal por volta das ${chuva.hora}.`:"Nenhuma chuva prevista no pombal nas próximas duas horas.");
+      if(kpR)partes.push(`Índice geomagnético Kp em ${kpR.kp.toFixed(1)}, ${kpR.kp<=2?"magnetosfera calma.":kpR.kp<=4?"levemente instável.":"tempestade geomagnética, cuidado com solturas longas."}`);
+      if(prox){
+        const d=Math.ceil((new Date(prox.dataSolta+"T00:00:00").getTime()-new Date(hoje+"T00:00:00").getTime())/86400000);
+        partes.push(d===0?`Hoje é dia de prova! Solta em ${prox.cidade}, ${prox.km} quilômetros. Boa sorte e bom voo!`:d===1?`Amanhã tem prova em ${prox.cidade}, ${prox.km} quilômetros. Confira a rota e a janela de soltura.`:`Próxima prova em ${d} dias, em ${prox.cidade}.`);
+      }
+      const texto=partes.join(" ");
+      if(typeof speechSynthesis==="undefined"){setMsg("⚠️ Este aparelho não tem voz — leia o resumo: "+texto);setFalando(false);return}
+      const utt=new SpeechSynthesisUtterance(texto);
+      utt.lang="pt-BR";utt.rate=1.02;
+      utt.onend=()=>setFalando(false);
+      utt.onerror=()=>setFalando(false);
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utt);
+      setMsg("🔊 Falando... (toque de novo pra parar)");
+    }catch{setMsg("⚠️ Não deu pra montar o resumo agora.");setFalando(false)}
+  };
+  const parar=()=>{try{speechSynthesis.cancel()}catch{}setFalando(false);setMsg("")};
+  return <section style={{...T.card,marginBottom:10,borderColor:`${T.blue}55`,background:`${T.blue}0d`}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+      <Title>🔊 Resumo Falado do Dia</Title>
+      <button onClick={falando?parar:falar} style={{...T.btnSm,background:T.blue,borderColor:T.blue}}>{falando?"⏹ Parar":"▶️ Ouvir resumo"}</button>
+    </div>
+    <div style={{...T.small,fontSize:11,lineHeight:1.5}}>Clima no pombal, chuva nas próximas 2h, Kp e a próxima prova — narrado com a voz do próprio aparelho. Perfeito pra ouvir no caminho do clube. 🔊</div>
+    {msg&&<div style={{...T.small,fontSize:11,marginTop:8,color:T.blue}}>{msg}</div>}
   </section>;
 }
 

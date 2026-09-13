@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { alternarTema, temaAtual, EVENTO_TEMA } from "./theme";
 import {
-  Activity, Bell, Bird, Bot, Calculator, CalendarDays, ChevronDown,
+  Activity, Bell, Bird, Bot, Calculator, CalendarDays, ChevronDown, Tv,
   CloudSun, Dna, HeartPulse, LayoutDashboard, Map, Menu, PackageOpen,
   Radio, Search, Settings, ShieldCheck, Sparkles, Target, TrendingUp, Trophy,
   UtensilsCrossed, X, LogOut,
@@ -23,6 +24,9 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/clima-desempenho", label: "Clima × Desempenho", icon: TrendingUp },
       { href: "/centro-provas/graficos", label: "Gráficos da temporada", icon: Activity },
       { href: "/centro-provas/cronicas", label: "Crônicas da temporada", icon: Trophy },
+      { href: "/centro-provas/telao", label: "Modo Telão (clube)", icon: Tv },
+      { href: "/centro-provas/equipe", label: "Seleção de equipe", icon: Bird },
+      { href: "/centro-provas/primeiros-passos", label: "🎓 Primeiros passos", icon: Sparkles },
       { href: "/centro-provas/pombo-as", label: "Pombo Ás Oficial (FCI)", icon: Trophy },
     ],
   },
@@ -102,6 +106,13 @@ const allItems = groups.flatMap((group) => group.items);
 
 export default function CentroShell({ children, user }: { children: ReactNode; user: { nome: string; email: string; plano: string } }) {
   const pathname = usePathname();
+  const [tema, setTema] = useState<"escuro" | "claro">("escuro");
+  useEffect(() => {
+    setTema(temaAtual());
+    const att = () => setTema(temaAtual());
+    window.addEventListener(EVENTO_TEMA, att);
+    return () => window.removeEventListener(EVENTO_TEMA, att);
+  }, []);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const active = allItems.find((item) => item.href === pathname) ?? allItems[0];
@@ -138,6 +149,14 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
             className="min-w-0 flex-1 border-0 bg-transparent text-xs text-white outline-none placeholder:text-slate-500"
           />
         </label>
+        <button
+          type="button"
+          onClick={alternarTema}
+          title={tema === "claro" ? "Voltar ao tema escuro" : "Tema claro (sol do pombal)"}
+          className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[.035] text-[11px] font-bold text-slate-400 transition hover:border-amber-400/40 hover:text-amber-400"
+        >
+          {tema === "claro" ? "🌙 Modo escuro" : "☀️ Modo claro"}
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:thin] [scrollbar-color:#334155_transparent]">

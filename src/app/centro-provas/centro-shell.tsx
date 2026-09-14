@@ -28,6 +28,7 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/equipe", label: "Seleção de equipe", icon: Bird },
       { href: "/centro-provas/primeiros-passos", label: "🎓 Primeiros passos", icon: Sparkles },
       { href: "/centro-provas/ranking", label: "Ranking do plantel", icon: Trophy },
+      { href: "/centro-provas/relatorio-temporada", label: "Relatório da temporada", icon: Activity },
       { href: "/centro-provas/pombo-as", label: "Pombo Ás Oficial (FCI)", icon: Trophy },
     ],
   },

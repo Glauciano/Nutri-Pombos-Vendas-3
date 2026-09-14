@@ -1,1 +1,31 @@
 @import "tailwindcss";
+
+/* ===== 📱 Revisão geral de telas (mobile) =====
+   Colapsa grades fixas que apertam em telas pequenas.
+   O React serializa style inline como kebab-case no atributo style,
+   então os seletores abaixo alcançam os grids inline das páginas. */
+@media (max-width: 540px) {
+  [style*="grid-template-columns: 1fr 1fr 1fr"],
+  [style*="grid-template-columns: repeat(3, 1fr)"],
+  [style*="grid-template-columns: 2fr 1fr"],
+  [style*="grid-template-columns: 1fr 2fr"],
+  [style*="grid-template-columns: 1fr 1fr auto"] {
+    grid-template-columns: 1fr !important;
+  }
+  [style*="grid-template-columns: repeat(4, 1fr)"],
+  [style*="grid-template-columns: repeat(5, 1fr)"],
+  [style*="grid-template-columns: repeat(6, 1fr)"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  /* tabelas respiram melhor */
+  table { font-size: 10px; }
+  /* nada estoura a tela */
+  img, svg, iframe, video { max-width: 100%; }
+}
+@media (max-width: 380px) {
+  [style*="grid-template-columns: repeat(4, 1fr)"],
+  [style*="grid-template-columns: repeat(5, 1fr)"],
+  [style*="grid-template-columns: repeat(6, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}

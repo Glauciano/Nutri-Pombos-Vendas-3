@@ -3,10 +3,15 @@
   "short_name": "Nutri Pombos",
   "description": "Gestão de pombos-correio: rota da prova, clima, Kp, nutrição e desempenho",
   "start_url": "/centro-provas",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0b1426",
   "theme_color": "#f7bd00",
   "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

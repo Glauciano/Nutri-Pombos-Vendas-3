@@ -12,6 +12,7 @@ export default function ModoTelao() {
   const [agora, setAgora] = useState(new Date());
   const [slide, setSlide] = useState<Slide>(0);
   const [proxima, setProxima] = useState<ProvaCalendario | null>(null);
+  const [proximas, setProximas] = useState<ProvaCalendario[]>([]);
   const [clima, setClima] = useState<ClimaPonto | null>(null);
   const [kp, setKp] = useState<KpReal | null>(null);
   const [nomePombal, setNomePombal] = useState("Pombal");
@@ -29,6 +30,7 @@ export default function ModoTelao() {
     setNomePombal(p.nome === "Pombal (sua base)" ? "Pombal" : p.nome);
     const lista = loadCalendario().filter((x) => !x.cancelada);
     const hoje = new Date().toISOString().slice(0, 10);
+    setProximas(lista.filter((x) => x.dataSolta >= hoje).slice(0, 4));
     setProxima(lista.find((x) => x.dataSolta >= hoje) || lista[lista.length - 1] || null);
     buscarClimaPonto(p.lat, p.lon).then(setClima).catch(() => setClima(null));
     buscarKpNoaa().then(setKp);
@@ -124,15 +126,25 @@ export default function ModoTelao() {
           </div>
         )}
 
-        {/* SLIDE 3 — instrução */}
+        {/* SLIDE 3 — próximas provas da temporada */}
         {slide === 3 && (
           <div style={{ width: "100%", textAlign: "center" }}>
-            <div style={{ fontSize: "min(3.6vw, 24px)", color: T.dim, fontWeight: 800 }}>🕊️ NUTRI POMBOS — CENTRO DE PROVAS</div>
-            <div style={{ fontSize: "min(6vw, 40px)", fontWeight: 900, margin: "10px 0", lineHeight: 1.3 }}>
-              Rota cidade a cidade · Radar de chuva ao vivo<br />
-              Janela de soltura · Alarme de chegada
-            </div>
-            <div style={{ fontSize: "min(3vw, 18px)", color: T.dim }}>Slides passam sozinhos · fonte: Open-Meteo + NOAA (gratuitos)</div>
+            <div style={{ fontSize: "min(4vw, 26px)", color: T.dim, fontWeight: 800 }}>📅 PRÓXIMAS PROVAS DA TEMPORADA</div>
+            {proximas.length === 0 && <div style={{ fontSize: "min(5vw, 32px)", fontWeight: 900, marginTop: 20 }}>Calendário sem provas futuras</div>}
+            {proximas.map((p, i) => {
+              const cc = classificarProva(p.km);
+              const d = Math.max(0, Math.ceil((new Date(p.dataSolta + "T00:00:00").getTime() - new Date(new Date().toISOString().slice(0, 10) + "T00:00:00").getTime()) / 86400000));
+              return (
+                <div key={p.id} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "min(4vw, 32px)", margin: "min(1.6vw, 12px) 0", flexWrap: "wrap" }}>
+                  <div style={{ minWidth: "min(8vw, 64px)", fontSize: "min(5.5vw, 36px)", fontWeight: 900, color: i === 0 ? T.gold : T.dim }}>{i === 0 ? "➡️" : i + 1 + "."}</div>
+                  <div style={{ fontSize: "min(5.5vw, 36px)", fontWeight: 900 }}>#{p.num} {p.cidade}</div>
+                  <div style={{ fontSize: "min(3.2vw, 20px)", color: cc.cor, fontWeight: 800 }}>{cc.emoji} {p.km}km</div>
+                  <div style={{ fontSize: "min(3.2vw, 20px)", color: T.dim, fontWeight: 800 }}>{p.dataSolta.split("-").reverse().slice(0, 2).join("/")}</div>
+                  <div style={{ fontSize: "min(4.5vw, 30px)", fontWeight: 900, color: d <= 7 ? T.gold : T.dim }}>{d === 0 ? "HOJE!" : d === 1 ? "amanhã" : `${d}d`}</div>
+                </div>
+              );
+            })}
+            <div style={{ fontSize: "min(2.6vw, 15px)", color: T.dim, marginTop: 10 }}>🕊️ Nutri Pombos · dados: Open-Meteo + NOAA</div>
           </div>
         )}
       </div>

@@ -310,7 +310,7 @@ export default function RotaDaProva() {
 
   // ⏱️ Linha do tempo do voo — passagem estimada por cidade (vento+chuva+Kp por trecho)
   const passagens = (() => {
-    if (!provaSel || !validos.length) return [] as { nome: string; papel: string; km: number; hora: string; horaMin: number; vel: number; vento: { emoji: string; tipo: string; cor: string } | null }[];
+    if (!provaSel || !validos.length) return [] as { nome: string; papel: string; km: number; hora: string; horaMin: number; vel: number; vento: { emoji: string; tipo: string; cor: string } | null; ventoTxt: string }[];
     const velo = veloBase || 1200;
     const kpPen = kp && kp.kp >= 5 ? 0.97 : 1;
     const [h0, m0] = horaSolta.split(":").map(Number);
@@ -326,7 +326,8 @@ export default function RotaDaProva() {
       distAnt = distSolta;
       const tot = base0 + minutos;
       const horaMin = tot;
-      return { nome: v.pt.nome, papel: v.pt.papel, km: v.pt.km, hora: `${String(Math.floor(tot / 60) % 24).padStart(2, "0")}:${String(Math.round(tot % 60)).padStart(2, "0")}`, horaMin, vel, vento: v.vento };
+      const ventoTxt = cl ? `${cl.ventoKmh}km/h ${direcaoCardeal(cl.dirVento)}${cl.ventoKmh < 4 ? " (calmo)" : ""}` : "";
+      return { nome: v.pt.nome, papel: v.pt.papel, km: v.pt.km, hora: `${String(Math.floor(tot / 60) % 24).padStart(2, "0")}:${String(Math.round(tot % 60)).padStart(2, "0")}`, horaMin: tot, vel, vento: v.vento, ventoTxt };
     });
   })();
 
@@ -1182,7 +1183,7 @@ export default function RotaDaProva() {
                       <b style={{ fontSize: 13 }}>{pa.nome}</b>
                       <div style={{ ...T.small, fontSize: 11 }}>
                         {pa.papel === "solta" ? "soltura dos cestos" : pa.papel === "pombal" ? "chegada no pombal 🎉" : `a ${pa.km}km do pombal`}
-                        {pa.papel !== "solta" && pa.vento ? ` • ${pa.vento.tipo.toLowerCase()} • ~${pa.vel} m/min` : ""}
+                        {pa.papel !== "solta" && pa.vento ? ` • ${pa.vento.tipo.toLowerCase()}${pa.ventoTxt ? ` ${pa.ventoTxt}` : ""} • ~${pa.vel} m/min` : ""}
                       </div>
                     </div>
                     {ultimo && <span style={{ padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 800, color: T.green, background: `${T.green}12`, border: `1px solid ${T.green}55` }}>CHEGADA ±8%</span>}

@@ -12,7 +12,7 @@ import {
   buscarRadar, urlTileRadar, tileXY,
   aplicarPombalSalvo, getPombal, EVENTO_POMBAL, Coords,
   HoraSolta, buscarJanelaSolta, hojeSP, somarMinutosHHMM, faseLua,
-  NowcastPasso, buscarNowcastChuva, calcularIdp, confiancaPrevisao, protocoloRecepcao,
+  NowcastPasso, buscarNowcastChuva, calcularIdp, confiancaPrevisao, protocoloRecepcao, fatorVentoTrecho,
   riscoExtravio, gerarIcsProvas,
   buscarClimaPontos, buscarSolPontos, buscarArPontos, buscarJanelaSoltaPontos, limparCacheApi, baseTileGoes,
   geocodeCidade, loadParceiros,
@@ -319,7 +319,7 @@ export default function RotaDaProva() {
     return validos.map((v) => {
       const cl = v.d && "clima" in v.d ? v.d.clima : null;
       const distSolta = v.pt.papel === "pombal" ? provaSel.km : provaSel.km - v.pt.km;
-      const fator = 1.08 - (v.vento?.pen ?? 0) * 0.013; // a favor 1.08 · lateral 0.95 · contra 0.82
+      const fator = cl ? fatorVentoTrecho(cl.dirVento, v.bearing ?? 180, cl.ventoKmh) : 1; // ângulo real + intensidade do vento
       const chuvaPen = cl ? (cl.chuvaMm > 5 ? 0.9 : cl.chuvaMm > 1 ? 0.95 : 1) : 1;
       const vel = Math.round(velo * fator * chuvaPen * kpPen);
       minutos += (Math.max(0, distSolta - distAnt) * 1000) / vel;
@@ -1167,7 +1167,7 @@ export default function RotaDaProva() {
           <section style={T.card}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>⏱️ Linha do Tempo do Voo — passagem por cidade</div>
             <div style={{ ...T.small, fontSize: 11, marginBottom: 12, lineHeight: 1.5 }}>
-              Estimativa trecho a trecho: solta às {horaSolta} + velocidade do seu plantel ({veloBase || 1200} m/min) ajustada pelo <b>vento de cada trecho</b> (🟢 +8% · 🟡 −5% · 🔴 −18%), <b>chuva</b> (−5% a −10%) e <b>Kp</b> (−3% se ≥5).
+              Estimativa trecho a trecho: solta às {horaSolta} + velocidade do seu plantel ({veloBase || 1200} m/min) ajustada pelo <b>vento real de cada trecho</b> (ângulo a favor/contra + intensidade em km/h), <b>chuva</b> (−5% a −10%) e <b>Kp</b> (−3% se ≥5). Vento fraco (&lt;4km/h) conta como neutro.
             </div>
             <div>
               {passagens.map((pa, i) => {

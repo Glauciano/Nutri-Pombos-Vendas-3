@@ -428,6 +428,19 @@ export function ventoNaRota(dirVentoDeg: number, bearingDestino: number, velocid
   return { tipo: "Vento lateral", emoji: "🟡", cor: "#fbbf24", pen: 10 };
 }
 
+/**
+ * Fator de velocidade do trecho pelo vento REAL (contínuo):
+ * interpola o ângulo (a favor +8% · lateral −5% · contra −18%) e modula pela
+ * intensidade do vento (vento fraco ≈ neutro; ≥14 km/h usa a faixa cheia).
+ */
+export function fatorVentoTrecho(dirVentoDeg: number, bearingDestino: number, ventoKmh?: number): number {
+  if (ventoKmh !== undefined && ventoKmh < 4) return 1; // calmo: neutro
+  const r = ((dirVentoDeg - bearingDestino) % 360 + 360) % 360; // 0 = vento na cara
+  const comp = -Math.cos((r * Math.PI) / 180); // +1 = a favor · −1 = contra
+  const amp = ventoKmh === undefined ? 1 : Math.min(1, Math.max(0.3, ventoKmh / 14));
+  return 1 + (-0.05 + 0.13 * comp) * amp;
+}
+
 /** Score de segurança do ponto (0-100) */
 export function scorePonto(c: ClimaPonto, penVento: number, kpGlobal: number | null): { pts: number; label: string; cor: string } {
   // 🎚️ pesos do usuário (0–2; 1 = padrão) — ajustáveis em Configuração → Pesos do Score

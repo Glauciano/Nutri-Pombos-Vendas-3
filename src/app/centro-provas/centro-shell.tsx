@@ -205,15 +205,40 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
           onClick={async () => {
             const url = "https://nutri-pombos-vendas-3.vercel.app";
             const dados = { title: "🕊️ Nutri Pombos — Centro de Provas", text: "Rota da prova, clima, radar de chuva, nutrição e mais — app do columbófilo!", url };
+            const avisar = (m: string) => { const el = document.getElementById("share-aviso"); if (el) { el.textContent = m; el.style.display = "block"; window.setTimeout(() => { el.style.display = "none"; }, 4000); } };
+            // 1) compartilhador nativo
             try {
-              if (navigator.share) await navigator.share(dados);
-              else { await navigator.clipboard.writeText(url); alert("Link copiado! Cole no WhatsApp ou onde quiser 📋"); }
-            } catch { /* usuário cancelou */ }
+              if (navigator.share) { await navigator.share(dados); return; }
+            } catch (e) {
+              // usuário cancelou (AbortError) ou o share falhou — segue pro plano B
+              if (e instanceof Error && e.name === "AbortError") return;
+            }
+            // 2) copiar pro clipboard
+            try {
+              await navigator.clipboard.writeText(url);
+              avisar("✅ Link copiado! Cole no WhatsApp ou onde quiser");
+              return;
+            } catch { /* clipboard bloqueado — plano C */ }
+            // 3) método antigo de cópia (funciona em mais lugares)
+            try {
+              const ta = document.createElement("textarea");
+              ta.value = url;
+              ta.style.position = "fixed"; ta.style.opacity = "0";
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand("copy");
+              document.body.removeChild(ta);
+              avisar("✅ Link copiado! Cole no WhatsApp ou onde quiser");
+              return;
+            } catch { /* nada funciona — plano D */ }
+            // 4) último recurso: mostra o link pra copiar na mão
+            avisar("Copie o link: " + url);
           }}
           className="mb-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500/10 text-[11px] font-bold text-emerald-300 transition hover:bg-emerald-500/20"
         >
           📤 Compartilhar app
         </button>
+        <div id="share-aviso" style={{ display: "none", margin: "0 0 8px", padding: "8px 10px", borderRadius: 8, fontSize: 11, background: "rgba(16,185,129,.15)", color: "#6ee7b7", textAlign: "center" }} />
         <div className="mb-2 flex items-center gap-3 rounded-xl bg-white/[.035] px-3 py-3">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-emerald-400/10 text-xs font-black uppercase text-emerald-300">{user.nome.slice(0, 1)}</span>
           <span className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{user.nome}</strong><small className="block truncate text-[9px] uppercase tracking-wider text-slate-500">Plano {user.plano}</small></span>

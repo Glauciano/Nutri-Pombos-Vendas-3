@@ -28,6 +28,7 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/equipe", label: "Seleção de equipe", icon: Bird },
       { href: "/centro-provas/primeiros-passos", label: "🎓 Primeiros passos", icon: Sparkles },
       { href: "/centro-provas/ranking", label: "Ranking do plantel", icon: Trophy },
+      { href: "/centro-provas/cartao-campeao", label: "Cartão do campeão", icon: Sparkles },
       { href: "/centro-provas/relatorio-temporada", label: "Relatório da temporada", icon: Activity },
       { href: "/centro-provas/pombo-as", label: "Pombo Ás Oficial (FCI)", icon: Trophy },
     ],
@@ -104,6 +105,12 @@ const groups: NavGroup[] = [
       { href: "/centro-provas/nutribot", label: "NutriBot offline", icon: Sparkles },
     ],
   },
+  {
+    label: "Ajuda",
+    items: [
+      { href: "/centro-provas/sobre", label: "Sobre o app e fontes", icon: ShieldCheck },
+    ],
+  },
 ];
 
 const allItems = groups.flatMap((group) => group.items);
@@ -156,10 +163,10 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         <button
           type="button"
           onClick={alternarTema}
-          title={tema === "claro" ? "Voltar ao tema escuro" : "Tema claro (sol do pombal)"}
+          title={tema === "claro" ? "Mudar para o tema escuro" : "Mudar para o tema claro (sol do pombal)"}
           className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[.035] text-[11px] font-bold text-slate-400 transition hover:border-amber-400/40 hover:text-amber-400"
         >
-          {tema === "claro" ? "🌙 Modo escuro" : "☀️ Modo claro"}
+          {tema === "claro" ? "🌙 Ir p/ escuro" : "☀️ Ir p/ claro"} <small style={{ opacity: 0.6 }}>({tema === "claro" ? "claro ativo" : "escuro ativo"})</small>
         </button>
       </div>
 
@@ -193,6 +200,20 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
       </nav>
 
       <div className="border-t border-white/8 p-4">
+        <button
+          type="button"
+          onClick={async () => {
+            const url = "https://nutri-pombos-vendas-3.vercel.app";
+            const dados = { title: "🕊️ Nutri Pombos — Centro de Provas", text: "Rota da prova, clima, radar de chuva, nutrição e mais — app do columbófilo!", url };
+            try {
+              if (navigator.share) await navigator.share(dados);
+              else { await navigator.clipboard.writeText(url); alert("Link copiado! Cole no WhatsApp ou onde quiser 📋"); }
+            } catch { /* usuário cancelou */ }
+          }}
+          className="mb-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500/10 text-[11px] font-bold text-emerald-300 transition hover:bg-emerald-500/20"
+        >
+          📤 Compartilhar app
+        </button>
         <div className="mb-2 flex items-center gap-3 rounded-xl bg-white/[.035] px-3 py-3">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-emerald-400/10 text-xs font-black uppercase text-emerald-300">{user.nome.slice(0, 1)}</span>
           <span className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{user.nome}</strong><small className="block truncate text-[9px] uppercase tracking-wider text-slate-500">Plano {user.plano}</small></span>

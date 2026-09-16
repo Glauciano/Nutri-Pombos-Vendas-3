@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { atualizarCalendarioGlobal, classificarProva, diasParaProva, loadCalendario, type ProvaCalendario } from "./data/calendario";
+import { getPombal, buscarClimaPonto, ClimaPonto, wmoInfo } from "./lib/apis-gratis";
 import { T } from "./theme";
 import MapaSolturas from "./components/MapaSolturas";
 import PrevisaoTempo from "./components/PrevisaoTempo";
@@ -74,6 +75,40 @@ function CalcVelocidade({ onBack }: { onBack: () => void }) {
   </div>;
 }
 
+function ResumoDia({ provas }: { provas: ProvaCalendario[] }) {
+  const [clima, setClima] = useState<ClimaPonto | null>(null);
+  useEffect(() => {
+    const p = getPombal();
+    buscarClimaPonto(p.lat, p.lon).then(setClima).catch(() => setClima(null));
+  }, []);
+  const hoje = new Date().toISOString().slice(0, 10);
+  const proxEmbarque = provas.find((p) => p.dataEmbarque >= hoje);
+  const dEmb = proxEmbarque ? diasParaProva(proxEmbarque.dataEmbarque) : null;
+  const wi = clima ? wmoInfo(clima.wmo) : null;
+  return (
+    <div style={{ ...T.card, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "stretch", padding: 12 }}>
+      <Link href="/centro-provas/rota" style={{ flex: "1 1 150px", textDecoration: "none", padding: 10, borderRadius: 10, background: "#ffffff08", textAlign: "center" }}>
+        <div style={{ fontSize: 22 }}>{wi ? wi.emoji : "🌡️"}</div>
+        <div style={{ ...T.small, fontSize: 10 }}>POMBAL AGORA</div>
+        <b style={{ color: T.gold, fontSize: 16 }}>{clima ? `${clima.temp}°C` : "—"}</b>
+        <div style={{ ...T.small, fontSize: 9 }}>{clima ? `💨 ${clima.ventoKmh}km/h · 🌧️ ${clima.chuvaMm}mm` : "toque p/ ver a rota"}</div>
+      </Link>
+      <Link href="/centro-provas/checklist" style={{ flex: "1 1 150px", textDecoration: "none", padding: 10, borderRadius: 10, background: dEmb !== null && dEmb <= 3 ? "#f9731615" : "#ffffff08", textAlign: "center" }}>
+        <div style={{ fontSize: 22 }}>{dEmb === 0 ? "🚨" : "📦"}</div>
+        <div style={{ ...T.small, fontSize: 10 }}>PRÓXIMO EMBARQUE</div>
+        <b style={{ color: dEmb !== null && dEmb <= 3 ? T.orange : T.gold, fontSize: 13 }}>{proxEmbarque ? `#${proxEmbarque.num} ${proxEmbarque.cidade.split(" ")[0]}` : "—"}</b>
+        <div style={{ ...T.small, fontSize: 9 }}>{dEmb === 0 ? "É HOJE!" : dEmb !== null ? `em ${dEmb} dia(s) · ${proxEmbarque?.dataEmbarque.split("-").reverse().slice(0, 2).join("/")}` : "sem data"}</div>
+      </Link>
+      <Link href="/centro-provas/alertas" style={{ flex: "1 1 150px", textDecoration: "none", padding: 10, borderRadius: 10, background: "#ffffff08", textAlign: "center" }}>
+        <div style={{ fontSize: 22 }}>🔔</div>
+        <div style={{ ...T.small, fontSize: 10 }}>ROTINA DO DIA</div>
+        <b style={{ color: T.gold, fontSize: 13 }}>Central de Alertas</b>
+        <div style={{ ...T.small, fontSize: 9 }}>madrugada · corta-treino · extraviados</div>
+      </Link>
+    </div>
+  );
+}
+
 export default function CentroProvas() {
   const [aba, setAba] = useState<Aba>("hub");
   const [provaNum, setProvaNum] = useState<number | null>(null);
@@ -105,6 +140,7 @@ export default function CentroProvas() {
       <div><h1 style={T.h1}>🏁 Centro de Provas</h1><p style={{ ...T.small, marginTop: 4 }}>Todos os módulos do Nutri Pombos em um só lugar</p></div>
       <Link href="/" style={{ ...T.btnGhost, textDecoration: "none", whiteSpace: "nowrap" }}>← Nutri Pombos</Link>
     </div>
+    <ResumoDia provas={provas} />
     {proxima && <Proxima prova={proxima} onOpen={() => { setProvaNum(proxima.num); setAba("detalhe"); }} />}
     <div className="two-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}><Stat label="📅 Provas 2026" value={provas.length} info={`${passadas} realizadas`} color={T.gold} /><Stat label="✅ Realizadas" value={passadas} info={`${provas.length - passadas} restantes`} color={T.green} /></div>
     <div style={{ ...T.card, background: "#eab3080f", borderColor: "#eab30855" }}><div style={{ display: "flex", justifyContent: "space-between", color: T.gold, fontWeight: 800, fontSize: 13 }}><span>📊 Temporada 2026</span><span>{passadas}/{provas.length}</span></div><div style={{ height: 9, borderRadius: 6, background: "#ffffff14", marginTop: 10 }}><div style={{ height: "100%", width: `${passadas / provas.length * 100}%`, background: T.gold, borderRadius: 6 }} /></div></div>

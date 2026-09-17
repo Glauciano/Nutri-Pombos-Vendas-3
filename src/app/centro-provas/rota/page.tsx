@@ -879,7 +879,7 @@ export default function RotaDaProva() {
                 <button onClick={() => setModoMapa("satelite")} style={{ ...T.btnGhost, color: modoMapa === "satelite" ? T.bg : T.white, background: modoMapa === "satelite" ? T.gold : "#1b283c" }}>🗺️ Satélite</button>
                 <button onClick={() => setModoMapa("nuvens")} style={{ ...T.btnGhost, color: modoMapa === "nuvens" ? T.bg : T.white, background: modoMapa === "nuvens" ? T.gold : "#1b283c" }}>☁️ AO VIVO</button>
                 {gKey && <button onClick={() => setModoMapa("google")} style={{ ...T.btnGhost, color: modoMapa === "google" ? T.bg : T.white, background: modoMapa === "google" ? T.gold : "#1b283c" }}>🧭 Rota Google</button>}
-                {radar && modoMapa !== "google" && (
+                {radar && radar.frames.length > 0 && modoMapa !== "google" && (
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <button onClick={() => setRadarIdx((i) => (i - 1 + radar.frames.length) % radar.frames.length)} style={T.btnGhost}>‹</button>
                     <button onClick={() => setRadarPlay((p) => !p)} style={T.btnSm}>{radarPlay ? "⏸" : "▶"}</button>
@@ -896,7 +896,7 @@ export default function RotaDaProva() {
               </div>
             )}
 
-            {modoMapa !== "google" && (radar || modoMapa === "satelite") && (() => {
+            {modoMapa !== "google" && (radar || modoMapa === "satelite" || modoMapa === "nuvens") && (() => {
               const Z = 6;
               const lats = rotaGeo.map((p) => p.lat), lons = rotaGeo.map((p) => p.lon);
               parcPos.forEach((pp) => { lats.push(pp.lat); lons.push(pp.lon); });
@@ -913,7 +913,7 @@ export default function RotaDaProva() {
                 const yy = ((1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2) * n * 256;
                 return { left: xx - x0 * 256, top: yy - y0 * 256 };
               };
-              const frame = radar?.frames[radarIdx];
+              const frame = radar && radar.frames.length ? radar.frames[Math.min(radarIdx, radar.frames.length - 1)] : undefined;
               const hora = frame ? new Date(frame.time * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
               const tiles: { gx: number; gy: number }[] = [];
               for (let gx = 0; gx < cols; gx++) for (let gy = 0; gy < rows; gy++) tiles.push({ gx, gy });
@@ -931,7 +931,7 @@ export default function RotaDaProva() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img key={`b${gx}-${gy}`} src={`${baseTile}/${Z}/${y0 + gy}/${x0 + gx}${extTile}`} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256 }} />
                       ))}
-                      {frame && tiles.map(({ gx, gy }) => (
+                      {frame && radar && tiles.map(({ gx, gy }) => (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img key={`r${gx}-${gy}-${frame.path}`} src={urlTileRadar(radar.host, frame.path, Z, x0 + gx, y0 + gy)} alt="" width={256} height={256} style={{ position: "absolute", left: gx * 256, top: gy * 256, opacity: modoMapa === "radar" ? 0.75 : 0.6 }} />
                       ))}
@@ -962,7 +962,11 @@ export default function RotaDaProva() {
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, flexWrap: "wrap", gap: 6 }}>
                     <small style={{ color: frame?.previsto ? T.blue : T.gold, fontWeight: 800 }}>
-                      {frame ? `${frame.previsto ? "🔮 Previsão" : "🛰️ Observado"} · ${hora} · quadro ${radarIdx + 1}/${radar.frames.length}` : "🛰️ Chuva carregando..."}
+                      {frame
+                        ? `${frame.previsto ? "🔮 Previsão" : "🛰️ Observado"} · ${hora}${radar ? ` · quadro ${Math.min(radarIdx + 1, radar.frames.length)}/${radar.frames.length}` : ""}`
+                        : modoMapa === "nuvens"
+                          ? "☁️ Nuvens por satélite NASA — sem pontos de chuva agora"
+                          : "🛰️ Chuva carregando..."}
                     </small>
                     <small style={{ color: T.dim }}>
                       {modoMapa === "satelite" ? "🗺️ Satélite © Esri · chuva: RainViewer"
@@ -1011,7 +1015,11 @@ export default function RotaDaProva() {
                 ⚠️ {rota.length - rotaGeo.length} cidade(s) desta prova não aparecem no mapa por falta de localização — edite a prova no 📅 Calendário, apague o nome da cidade, digite de novo e <b>escolha na lista 📍 que aparece</b> (aparece "localização confirmada ✓").
               </div>
             )}
-            {modoMapa === "radar" && !radar && <div style={{ ...T.small, textAlign: "center", padding: 16 }}>⏳ Carregando radar de chuva...</div>}
+            {modoMapa === "radar" && !radar && (
+              <div style={{ ...T.small, textAlign: "center", padding: 16 }}>
+                ⏳ Carregando radar de chuva... Se demorar, pode ser o serviço RainViewer fora do ar — use o modo AO VIVO (nuvens NASA), que cobre o Brasil todo.
+              </div>
+            )}
           </section>
         )}
 

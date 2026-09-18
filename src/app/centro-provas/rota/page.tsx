@@ -49,8 +49,11 @@ export default function RotaDaProva() {
   const [altErro, setAltErro] = useState("");
   // 🛰️ Radar de chuva (RainViewer)
   const [radar, setRadar] = useState<{ host: string; frames: FrameRadar[] } | null>(null);
-  const [radarIdx, setRadarIdx] = useState(0);
+  // índice -1 = "sempre o quadro mais recente" (o default). Como frames chegam async,
+  // guardamos null e resolvemos no render: mostra o AGORA, não 2h atrás.
+  const [radarIdxRaw, setRadarIdx] = useState<number | null>(null);
   const [radarPlay, setRadarPlay] = useState(true);
+  const radarIdx = radarIdxRaw === null ? Math.max(0, (radar?.frames.length ?? 1) - 1) : Math.min(radarIdxRaw, (radar?.frames.length ?? 1) - 1);
   // 🏁 Configuração de soltura (Configuração → Horário da Soltura)
   const [cfgSolta, setCfgSolta] = useState<{ modo: "auto" | "manual"; min: number; manual: string }>({ modo: "auto", min: 20, manual: "07:00" });
   useEffect(() => {
@@ -233,7 +236,7 @@ export default function RotaDaProva() {
   useEffect(() => { buscarRadar().then((r) => { if (r) setRadar(r); }); }, []);
   useEffect(() => {
     if (!radar || !radarPlay) return;
-    const t = setInterval(() => setRadarIdx((i) => (i + 1) % radar.frames.length), 900);
+    const t = setInterval(() => setRadarIdx((i0) => ((i0 === null ? radar.frames.length - 1 : i0) + 1) % radar.frames.length), 900);
     return () => clearInterval(t);
   }, [radar, radarPlay]);
 
@@ -881,9 +884,9 @@ export default function RotaDaProva() {
                 {gKey && <button onClick={() => setModoMapa("google")} style={{ ...T.btnGhost, color: modoMapa === "google" ? T.bg : T.white, background: modoMapa === "google" ? T.gold : "#1b283c" }}>🧭 Rota Google</button>}
                 {radar && radar.frames.length > 0 && modoMapa !== "google" && (
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <button onClick={() => setRadarIdx((i) => (i - 1 + radar.frames.length) % radar.frames.length)} style={T.btnGhost}>‹</button>
+                    <button onClick={() => setRadarIdx((i0) => ((i0 === null ? radar.frames.length - 1 : i0) - 1 + radar.frames.length) % radar.frames.length)} style={T.btnGhost}>‹</button>
                     <button onClick={() => setRadarPlay((p) => !p)} style={T.btnSm}>{radarPlay ? "⏸" : "▶"}</button>
-                    <button onClick={() => setRadarIdx((i) => (i + 1) % radar.frames.length)} style={T.btnGhost}>›</button>
+                    <button onClick={() => setRadarIdx((i0) => ((i0 === null ? radar.frames.length - 1 : i0) + 1) % radar.frames.length)} style={T.btnGhost}>›</button>
                   </div>
                 )}
               </div>
@@ -897,11 +900,17 @@ export default function RotaDaProva() {
             )}
 
             {modoMapa !== "google" && (radar || modoMapa === "satelite" || modoMapa === "nuvens") && (() => {
-              const Z = 6;
-              const lats = rotaGeo.map((p) => p.lat), lons = rotaGeo.map((p) => p.lon);
-              parcPos.forEach((pp) => { lats.push(pp.lat); lons.push(pp.lon); });
-              const maxLat = Math.max(...lats) + 0.7, minLat = Math.min(...lats) - 0.7;
-              const maxLon = Math.max(...lons) + 1.4, minLon = Math.min(...lons) - 1.4;
+              // zoom adaptativo: 6 pra rotas longas, 7 se o quadro ficar estreito (<3 colunas)
+              let Z = 6;
+              const tamBbox = (zz: number) => {
+                const aa = tileXY(Math.max(...latsBbox) , Math.min(...lonsBbox), zz), bb = tileXY(Math.min(...latsBbox), Math.max(...lonsBbox), zz);
+                return { cols: Math.max(...[aa.x, bb.x]) - Math.min(...[aa.x, bb.x]) + 1, rows: Math.max(...[aa.y, bb.y]) - Math.min(...[aa.y, bb.y]) + 1 };
+              };
+              const latsBbox = [...rotaGeo.map((p) => p.lat), ...parcPos.map((p) => p.lat)];
+              const lonsBbox = [...rotaGeo.map((p) => p.lon), ...parcPos.map((p) => p.lon)];
+              if (tamBbox(6).cols < 3) Z = 7; // rota estreita: aproxima pra preencher a tela
+              const maxLat = Math.max(...latsBbox) + 0.7, minLat = Math.min(...latsBbox) - 0.7;
+              const maxLon = Math.max(...lonsBbox) + 1.4, minLon = Math.min(...lonsBbox) - 1.4;
               const a = tileXY(maxLat, minLon, Z), b = tileXY(minLat, maxLon, Z);
               const x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x);
               const y0 = Math.min(a.y, b.y), y1 = Math.max(a.y, b.y);

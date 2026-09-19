@@ -28,7 +28,13 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
   useEffect(() => {
     try { const salvo = localStorage.getItem("nutripombos-idioma"); if (salvo === "es" || salvo === "en" || salvo === "pt") setIdioma(salvo); } catch { /* ignora */ }
   }, []);
-  const t = (txt: string) => traduz(txt, idioma) || (TRAD[idioma] && TRAD[idioma][txt]) || txt;
+  const [, bumpTrad] = useState(0);
+  useEffect(() => {
+    const aoTraduzir = () => bumpTrad((v) => v + 1);
+    window.addEventListener("nutripombos:traduziu", aoTraduzir);
+    return () => window.removeEventListener("nutripombos:traduziu", aoTraduzir);
+  }, []);
+  const t = (txt: string) => traduz(txt, idioma);
 
   const groups: NavGroup[] = [
     {

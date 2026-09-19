@@ -143,6 +143,17 @@ export default function PombosPage(){
         <PedigreeTree pombo={pedigreeData} onSelect={p=>{setSel(p);loadPedigree(p.id)}}/>
       </section>
 
+      <section style={T.card}><Title>🏷️ QR de Venda</Title>
+        <div style={{ ...T.small, marginBottom: 10, fontSize: 11.5, lineHeight: 1.5 }}>Gere o QR Code da ficha pública deste pombo (anilha + linhagem) — cole no box/cesto ou mande pro comprador no WhatsApp. Quem escanear vê a ficha no celular, sem precisar do app.</div>
+        <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=6&data=${encodeURIComponent(`${window.location.origin}/ficha?anilha=${encodeURIComponent(sel.anilha)}`)}`} alt={`QR ${sel.anilha}`} style={{ borderRadius: 10, background: "#fff", padding: 5, width: 150, height: 150 }} />
+          <div>
+            <a href={`/ficha?anilha=${encodeURIComponent(sel.anilha)}`} target="_blank" rel="noreferrer" style={{ ...T.btnGhost, textDecoration: "none", display: "inline-block" }}>📄 Abrir ficha pública ↗</a>
+            <div style={{ ...T.small, fontSize: 10, marginTop: 8, fontFamily: "monospace", wordBreak: "break-all" }}>{`${typeof window !== "undefined" ? window.location.origin : ""}/ficha?anilha=${encodeURIComponent(sel.anilha)}`}</div>
+          </div>
+        </div>
+      </section>
+
       <section style={T.card}><Title>🩸 Informações Sanguíneas</Title>
         <BloodInfo pombo={pedigreeData} pombos={pombos}/>
       </section>

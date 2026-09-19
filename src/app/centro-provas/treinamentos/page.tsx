@@ -1,5 +1,7 @@
 "use client";
 
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
@@ -27,7 +29,24 @@ export default function Treinamentos(){
     {treinos.length>0&&<div style={{...T.small,marginBottom:12,textAlign:"right"}}>Distância média: {media}km</div>}
     {show&&<section style={T.card}><Title>{editId?"✏️ Editar Treino":"➕ Novo Treino"}</Title><div className="training-form-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Field label="📅 Data"><input type="date" value={form.data} onChange={e=>setForm(v=>({...v,data:e.target.value}))} style={T.input}/></Field><Field label="📏 Distância (km)"><input type="number" min={1} value={form.distancia} onChange={e=>setForm(v=>({...v,distancia:+e.target.value}))} style={T.input}/></Field></div><Field label="📍 Local *"><input value={form.local} onChange={e=>setForm(v=>({...v,local:e.target.value}))} placeholder="Ex.: Varginha" style={T.input}/></Field><div style={{...T.label,marginBottom:5}}>⏱️ Duração (HH:MM:SS)</div><div className="duration-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>{[["HH","horas",form.horas],["MM","minutos",form.minutos],["SS","segundos",form.segundos]].map(([l,k,v])=><label key={k}><small style={{color:T.dim}}>{l}</small><input type="number" min={0} max={k==="horas"?99:59} value={v} onChange={e=>setForm(p=>({...p,[k]:+e.target.value}))} style={{...T.input,textAlign:"center",fontSize:18,fontWeight:800}}/></label>)}</div>{segundos>0&&<div style={{padding:9,marginBottom:10,borderRadius:8,color:T.green,background:`${T.green}12`}}>⏱️ {hms(segundos)} • ⚡ {velKmh.toFixed(1)}km/h • {Math.round(velMmin).toLocaleString("pt-BR")}m/min</div>}<Field label="🌤️ Clima"><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{CLIMAS.map(c=><button key={c} onClick={()=>setForm(v=>({...v,clima:c}))} style={{padding:"7px 10px",borderRadius:20,fontSize:11,color:form.clima===c?T.bg:T.dim,background:form.clima===c?T.gold:T.bgInput,border:`1px solid ${form.clima===c?T.gold:T.border}`}}>{c}</button>)}</div></Field><Field label="📝 Observações"><textarea rows={3} value={form.observacoes} onChange={e=>setForm(v=>({...v,observacoes:e.target.value}))} placeholder="Condições, comportamento e recuperação..." style={{...T.input,height:80}}/></Field><div style={{display:"flex",gap:8}}><button onClick={()=>{setShow(false);setEditId(null)}} style={{...T.btnGhost,flex:1}}>Cancelar</button><button onClick={salvar} style={{...T.btn,flex:2}}>💾 Salvar</button></div></section>}
     {[...treinos].reverse().map(t=>{const seg=Math.round(t.tempoMin*60),kmh=t.tempoMin>0?t.distancia/(t.tempoMin/60):0,mmin=t.tempoMin>0?t.distancia*1000/t.tempoMin:0;return <section key={t.id} style={T.card}><div style={{display:"flex",justifyContent:"space-between",gap:9}}><div><b>{t.local}</b><div style={{...T.small,marginTop:3}}>{t.data} • {t.clima}</div><div style={{display:"flex",gap:11,flexWrap:"wrap",marginTop:5}}><b style={{color:T.gold}}>{t.distancia}km</b><span style={T.small}>⏱️ {hms(seg)}</span><b style={{color:T.green,fontSize:12}}>⚡ {kmh.toFixed(1)}km/h • {Math.round(mmin)}m/min</b></div>{t.observacoes&&<p style={{...T.small,fontStyle:"italic"}}>{t.observacoes}</p>}</div><div style={{display:"flex",gap:5}}><button onClick={()=>abrir(t)} style={T.btnGhost}>✏️</button><button onClick={()=>{if(confirm("Excluir treino?"))setTreinos(v=>v.filter(x=>x.id!==t.id))}} style={T.btnDanger}>🗑️</button></div></div><div style={{height:4,marginTop:9,borderRadius:3,background:"#ffffff14"}}><div style={{height:"100%",width:`${Math.min(100,t.distancia/500*100)}%`,background:T.gold}}/></div></section>})}{ready&&!treinos.length&&<div style={{padding:32,textAlign:"center",color:T.dim}}>Nenhum treino registrado.</div>}
-  </div><style jsx global>{`button,input,textarea{font-family:inherit}button{cursor:pointer}@media(max-width:520px){.training-form-grid{grid-template-columns:1fr!important}.duration-grid{grid-template-columns:repeat(3,1fr)!important}.training-stats{grid-template-columns:repeat(3,1fr)!important}}`}</style></main>
+  </div><style jsx global>{`button,input,textarea{font-family:inherit}button{cursor:pointer}@media(max-width:520px){.training-form-grid{grid-template-columns:1fr!important}.duration-grid{grid-template-columns:repeat(3,1fr)!important}.training-stats{grid-template-columns:repeat(3,1fr)!important}}`}</style><section style={T.card}><Title2>📈 Evolução dos treinos (km/h)</Title2>
+      {treinos.length >= 2 ? (
+        <div style={{ height: 240 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={[...treinos].sort((a, b) => a.data.localeCompare(b.data)).map(t => ({ d: t.data.slice(8, 10) + "/" + t.data.slice(5, 7) + " " + t.distancia + "km", kmh: t.tempoMin > 0 ? +((t.distancia / (t.tempoMin / 60)).toFixed(1)) : 0 }))} margin={{ top: 6, right: 12, bottom: 4, left: -18 }}>
+              <CartesianGrid stroke="#31415a33" />
+              <XAxis dataKey="d" tick={{ fill: "#9aa8bc", fontSize: 9 }} stroke="#31415a" />
+              <YAxis tick={{ fill: "#9aa8bc", fontSize: 10 }} stroke="#31415a" />
+              <Tooltip contentStyle={{ background: "#1b283c", border: "1px solid #31415a", borderRadius: 9, fontSize: 12 }} />
+              <Line type="monotone" dataKey="kmh" stroke="#f7bd00" strokeWidth={2.5} dot={{ r: 3, fill: "#f7bd00" }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      ) : <div style={T.small}>Registre 2+ treinos pra ver a evolução aqui.</div>}
+    </section>
+  </main>
 }
 function Title({children}:{children:React.ReactNode}){return <div style={{fontSize:13,fontWeight:800,color:T.gold,marginBottom:11}}>{children}</div>}
 function Field({label,children}:{label:string;children:React.ReactNode}){return <label style={{display:"block",marginBottom:11}}><span style={{...T.label,display:"block",marginBottom:5}}>{label}</span>{children}</label>}
+
+function Title2({ children }: { children: React.ReactNode }) { return <div style={{ fontSize: 13, fontWeight: 800, color: "#f7bd00", marginBottom: 10 }}>{children}</div>; }

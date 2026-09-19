@@ -14,109 +14,125 @@ import {
 type NavItem = { href: string; label: string; icon: typeof Activity };
 type NavGroup = { label: string; items: NavItem[] };
 
-const groups: NavGroup[] = [
-  {
-    label: "Visão geral",
-    items: [
-      { href: "/centro-provas", label: "Painel principal", icon: LayoutDashboard },
-      { href: "/centro-provas/alertas", label: "Central de alertas", icon: Bell },
-      { href: "/centro-provas/performance", label: "Performance", icon: Activity },
-      { href: "/centro-provas/clima-desempenho", label: "Clima × Desempenho", icon: TrendingUp },
-      { href: "/centro-provas/graficos", label: "Gráficos da temporada", icon: Activity },
-      { href: "/centro-provas/cronicas", label: "Crônicas da temporada", icon: Trophy },
-      { href: "/centro-provas/telao", label: "Modo Telão (clube)", icon: Tv },
-      { href: "/centro-provas/equipe", label: "Seleção de equipe", icon: Bird },
-      { href: "/centro-provas/primeiros-passos", label: "🎓 Primeiros passos", icon: Sparkles },
-      { href: "/centro-provas/ranking", label: "Ranking do plantel", icon: Trophy },
-      { href: "/centro-provas/cartao-campeao", label: "Cartão do campeão", icon: Sparkles },
-      { href: "/centro-provas/relatorio-temporada", label: "Relatório da temporada", icon: Activity },
-      { href: "/centro-provas/pombo-as", label: "Pombo Ás Oficial (FCI)", icon: Trophy },
-    ],
-  },
-  {
-    label: "Provas",
-    items: [
-      { href: "/centro-provas/gerenciar-calendario", label: "Calendário de provas", icon: CalendarDays },
-      { href: "/centro-provas/rota", label: "Rota da prova (cidades)", icon: Map },
-      { href: "/centro-provas/geomagnetico", label: "Radar Geomagnético Kp", icon: Radio },
-      { href: "/centro-provas/clima-avancado", label: "Radar Aero-Clima & Pressão", icon: CloudSun },
-      { href: "/centro-provas/dia-prova", label: "Dia da prova", icon: Target },
-      { href: "/centro-provas/checklist", label: "Checklist de encestamento", icon: ShieldCheck },
-      { href: "/centro-provas/gps-chip", label: "GPS e chip", icon: Radio },
-      { href: "/centro-provas/historico", label: "Histórico", icon: Trophy },
-      { href: "/centro-provas/treinamentos", label: "Treinamentos", icon: Activity },
-      { href: "/centro-provas/treinamento-orientacao", label: "Orientação", icon: Map },
-    ],
-  },
-  {
-    label: "Ferramentas",
-    items: [
-      { href: "/centro-provas/calculadora", label: "Calculadora do plantel", icon: Calculator },
-      { href: "/centro-provas/mistura-semanal", label: "Mistura semanal (16 sementes)", icon: UtensilsCrossed },
-      { href: "/centro-provas/mix-energetico", label: "Mix energético (lote)", icon: Sparkles },
-      { href: "/centro-provas/planejamento-anual", label: "Planejamento anual", icon: CalendarDays },
-      { href: "/centro-provas/calendario-anual", label: "Calendário nutricional", icon: CalendarDays },
-      { href: "/centro-provas/configuracao", label: "Configuração", icon: Settings },
-      { href: "/centro-provas/simulador-vento", label: "Simulador de Vento", icon: CloudSun },
-      { href: "/centro-provas/geodesica", label: "Geodésica e Relevo", icon: Map },
-      { href: "/centro-provas/fotoperiodo", label: "Fotoperíodo (Darkness)", icon: CloudSun },
-      { href: "/centro-provas/custos", label: "Custos e ROI", icon: Calculator },
-      { href: "/centro-provas/vendas", label: "Vendas de pombos", icon: PackageOpen },
-    ],
-  },
-  {
-    label: "Protocolos",
-    items: [
-      { href: "/centro-provas/protocolos", label: "Protocolos gerais", icon: Trophy },
-      { href: "/centro-provas/velocidade-extrema", label: "Velocidade", icon: Sparkles },
-      { href: "/centro-provas/meio-fundo", label: "Meio fundo", icon: Target },
-      { href: "/centro-provas/fundo-extremo", label: "Fundo extremo", icon: Bird },
-      { href: "/centro-provas/viuvez", label: "Sistema de viuvez", icon: Dna },
-    ],
-  },
-  {
-    label: "Plantel",
-    items: [
-      { href: "/centro-provas/pombos", label: "Pombos e Pedigree", icon: Bird },
-      { href: "/centro-provas/classificacao", label: "Classificação por Km", icon: Trophy },
-      { href: "/centro-provas/simulador-cruzamento", label: "Simulador Genético", icon: Dna },
-      { href: "/centro-provas/olho", label: "Análise de Olho (Eye-Sign)", icon: Search },
-      { href: "/centro-provas/anatomia", label: "Triângulo de Ouro Anatômico", icon: Activity },
-      { href: "/centro-provas/asa", label: "Índice da Asa e Muda", icon: Activity },
-      { href: "/centro-provas/certificado", label: "Certificado de Leilão", icon: Trophy },
-    ],
-  },
-  {
-    label: "Nutrição e saúde",
-    items: [
-      { href: "/centro-provas/receitas", label: "Receitas", icon: UtensilsCrossed },
-      { href: "/centro-provas/suplementacao", label: "Suplementação", icon: PackageOpen },
-      { href: "/centro-provas/carbo-lipideo", label: "Abastecimento Carbo-Lipídeo", icon: PackageOpen },
-      { href: "/centro-provas/osmolaridade", label: "Hidratação & Osmolaridade", icon: HeartPulse },
-      { href: "/centro-provas/recuperacao", label: "Recuperação Cardiorrespiratória", icon: Activity },
-      { href: "/centro-provas/controle-sanitario", label: "Controle sanitário", icon: ShieldCheck },
-      { href: "/centro-provas/guia-terapeutico", label: "Guia terapêutico", icon: HeartPulse },
-      { href: "/centro-provas/resgate", label: "Resgate e Triagem", icon: HeartPulse },
-    ],
-  },
-  {
-    label: "Assistentes",
-    items: [
-      { href: "/centro-provas/nutribot", label: "NutriBot offline", icon: Sparkles },
-    ],
-  },
-  {
-    label: "Ajuda",
-    items: [
-      { href: "/centro-provas/sobre", label: "Sobre o app e fontes", icon: ShieldCheck },
-    ],
-  },
-];
 
-const allItems = groups.flatMap((group) => group.items);
+const TRAD: Record<string, Record<string, string>> = {
+  pt: {},
+  es: { "Visão geral": "General", "Provas": "Pruebas", "Buscar módulo...": "Buscar módulo...", "📤 Compartilhar app": "📤 Compartir app", "Centro de Provas": "Centro de Competencias", "🌙 Ir p/ escuro": "🌙 Cambiar a oscuro", "☀️ Ir p/ claro": "☀️ Cambiar a claro" },
+  en: { "Visão geral": "Overview", "Provas": "Races", "Buscar módulo...": "Search module...", "📤 Compartilhar app": "📤 Share app", "Centro de Provas": "Racing Center", "🌙 Ir p/ escuro": "🌙 Switch to dark", "☀️ Ir p/ claro": "☀️ Switch to light" },
+};
 
 export default function CentroShell({ children, user }: { children: ReactNode; user: { nome: string; email: string; plano: string } }) {
   const pathname = usePathname();
+  const [idioma, setIdioma] = useState<"pt" | "es" | "en">("pt");
+  useEffect(() => {
+    try { const salvo = localStorage.getItem("nutripombos-idioma"); if (salvo === "es" || salvo === "en" || salvo === "pt") setIdioma(salvo); } catch { /* ignora */ }
+  }, []);
+  const t = (txt: string) => (TRAD[idioma] && TRAD[idioma][txt]) || txt;
+
+  const groups: NavGroup[] = [
+    {
+      label: t("Visão geral"),
+      items: [
+        { href: "/centro-provas", label: "Painel principal", icon: LayoutDashboard },
+        { href: "/centro-provas/alertas", label: "Central de alertas", icon: Bell },
+        { href: "/centro-provas/performance", label: "Performance", icon: Activity },
+        { href: "/centro-provas/clima-desempenho", label: "Clima × Desempenho", icon: TrendingUp },
+        { href: "/centro-provas/graficos", label: "Gráficos da temporada", icon: Activity },
+        { href: "/centro-provas/cronicas", label: "Crônicas da temporada", icon: Trophy },
+        { href: "/centro-provas/telao", label: "Modo Telão (clube)", icon: Tv },
+        { href: "/centro-provas/equipe", label: "Seleção de equipe", icon: Bird },
+        { href: "/centro-provas/primeiros-passos", label: "🎓 Primeiros passos", icon: Sparkles },
+        { href: "/centro-provas/ranking", label: "Ranking do plantel", icon: Trophy },
+        { href: "/centro-provas/cartao-campeao", label: "Cartão do campeão", icon: Sparkles },
+        { href: "/centro-provas/relatorio-temporada", label: "Relatório da temporada", icon: Activity },
+        { href: "/centro-provas/pombo-as", label: "Pombo Ás Oficial (FCI)", icon: Trophy },
+      ],
+    },
+    {
+      label: t("Provas"),
+      items: [
+        { href: "/centro-provas/gerenciar-calendario", label: "Calendário de provas", icon: CalendarDays },
+        { href: "/centro-provas/rota", label: "Rota da prova (cidades)", icon: Map },
+        { href: "/centro-provas/geomagnetico", label: "Radar Geomagnético Kp", icon: Radio },
+        { href: "/centro-provas/clima-avancado", label: "Radar Aero-Clima & Pressão", icon: CloudSun },
+        { href: "/centro-provas/dia-prova", label: "Dia da prova", icon: Target },
+        { href: "/centro-provas/checklist", label: "Checklist de encestamento", icon: ShieldCheck },
+        { href: "/centro-provas/gps-chip", label: "GPS e chip", icon: Radio },
+        { href: "/centro-provas/historico", label: "Histórico", icon: Trophy },
+        { href: "/centro-provas/treinamentos", label: "Treinamentos", icon: Activity },
+        { href: "/centro-provas/treinamento-orientacao", label: "Orientação", icon: Map },
+      ],
+    },
+    {
+      label: t("Ferramentas"),
+      items: [
+        { href: "/centro-provas/calculadora", label: "Calculadora do plantel", icon: Calculator },
+        { href: "/centro-provas/mistura-semanal", label: "Mistura semanal (16 sementes)", icon: UtensilsCrossed },
+        { href: "/centro-provas/mix-energetico", label: "Mix energético (lote)", icon: Sparkles },
+        { href: "/centro-provas/planejamento-anual", label: "Planejamento anual", icon: CalendarDays },
+        { href: "/centro-provas/calendario-anual", label: "Calendário nutricional", icon: CalendarDays },
+        { href: "/centro-provas/configuracao", label: "Configuração", icon: Settings },
+        { href: "/centro-provas/simulador-vento", label: "Simulador de Vento", icon: CloudSun },
+        { href: "/centro-provas/geodesica", label: "Geodésica e Relevo", icon: Map },
+        { href: "/centro-provas/fotoperiodo", label: "Fotoperíodo (Darkness)", icon: CloudSun },
+        { href: "/centro-provas/custos", label: "Custos e ROI", icon: Calculator },
+        { href: "/centro-provas/vendas", label: "Vendas de pombos", icon: PackageOpen },
+        { href: "/centro-provas/acasalamento", label: "Assistente de acasalamento", icon: HeartPulse },
+        { href: "/centro-provas/comparador", label: "Comparador de pombos", icon: Activity },
+        { href: "/centro-provas/ficha-pombo", label: "Ficha de avaliação", icon: ShieldCheck },
+      ],
+    },
+    {
+      label: t("Protocolos"),
+      items: [
+        { href: "/centro-provas/protocolos", label: "Protocolos gerais", icon: Trophy },
+        { href: "/centro-provas/velocidade-extrema", label: "Velocidade", icon: Sparkles },
+        { href: "/centro-provas/meio-fundo", label: "Meio fundo", icon: Target },
+        { href: "/centro-provas/fundo-extremo", label: "Fundo extremo", icon: Bird },
+        { href: "/centro-provas/viuvez", label: "Sistema de viuvez", icon: Dna },
+      ],
+    },
+    {
+      label: t("Plantel"),
+      items: [
+        { href: "/centro-provas/pombos", label: "Pombos e Pedigree", icon: Bird },
+        { href: "/centro-provas/classificacao", label: "Classificação por Km", icon: Trophy },
+        { href: "/centro-provas/simulador-cruzamento", label: "Simulador Genético", icon: Dna },
+        { href: "/centro-provas/olho", label: "Análise de Olho (Eye-Sign)", icon: Search },
+        { href: "/centro-provas/anatomia", label: "Triângulo de Ouro Anatômico", icon: Activity },
+        { href: "/centro-provas/asa", label: "Índice da Asa e Muda", icon: Activity },
+        { href: "/centro-provas/certificado", label: "Certificado de Leilão", icon: Trophy },
+      ],
+    },
+    {
+      label: t("Nutrição e saúde"),
+      items: [
+        { href: "/centro-provas/receitas", label: "Receitas", icon: UtensilsCrossed },
+        { href: "/centro-provas/suplementacao", label: "Suplementação", icon: PackageOpen },
+        { href: "/centro-provas/carbo-lipideo", label: "Abastecimento Carbo-Lipídeo", icon: PackageOpen },
+        { href: "/centro-provas/osmolaridade", label: "Hidratação & Osmolaridade", icon: HeartPulse },
+        { href: "/centro-provas/recuperacao", label: "Recuperação Cardiorrespiratória", icon: Activity },
+        { href: "/centro-provas/controle-sanitario", label: "Controle sanitário", icon: ShieldCheck },
+        { href: "/centro-provas/guia-terapeutico", label: "Guia terapêutico", icon: HeartPulse },
+        { href: "/centro-provas/resgate", label: "Resgate e Triagem", icon: HeartPulse },
+      ],
+    },
+    {
+      label: t("Assistentes"),
+      items: [
+        { href: "/centro-provas/nutribot", label: "NutriBot offline", icon: Sparkles },
+      ],
+    },
+    {
+      label: t("Ajuda"),
+      items: [
+        { href: "/centro-provas/sobre", label: "Sobre o app e fontes", icon: ShieldCheck },
+      ],
+    },
+  ];
+  
+  const allItems = groups.flatMap((group) => group.items);
+
   const [tema, setTema] = useState<"escuro" | "claro">("escuro");
   useEffect(() => {
     setTema(temaAtual());
@@ -134,7 +150,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
       ...group,
       items: group.items.filter((item) => item.label.toLocaleLowerCase("pt-BR").includes(query)),
     })).filter((group) => group.items.length > 0);
-  }, [search]);
+  }, [search, idioma]);
 
   const navigation = (
     <>
@@ -145,7 +161,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
           </span>
           <span>
             <strong className="block text-[15px] leading-tight tracking-tight">Nutri Pombos</strong>
-            <small className="mt-1 block text-[9px] font-bold uppercase tracking-[.18em] text-amber-400">Centro de Provas</small>
+            <small className="mt-1 block text-[9px] font-bold uppercase tracking-[.18em] text-amber-400">{t("Centro de Provas")}</small>
           </span>
         </Link>
       </div>
@@ -156,7 +172,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar módulo..."
+            placeholder={t("Buscar módulo...")}
             className="min-w-0 flex-1 border-0 bg-transparent text-xs text-white outline-none placeholder:text-slate-500"
           />
         </label>
@@ -166,7 +182,15 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
           title={tema === "claro" ? "Mudar para o tema escuro" : "Mudar para o tema claro (sol do pombal)"}
           className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[.035] text-[11px] font-bold text-slate-400 transition hover:border-amber-400/40 hover:text-amber-400"
         >
-          {tema === "claro" ? "🌙 Ir p/ escuro" : "☀️ Ir p/ claro"} <small style={{ opacity: 0.6 }}>({tema === "claro" ? "claro ativo" : "escuro ativo"})</small>
+          {t(tema === "claro" ? "🌙 Ir p/ escuro" : "☀️ Ir p/ claro")} <small style={{ opacity: 0.6 }}>({tema === "claro" ? "claro ativo" : "escuro ativo"})</small>
+        </button>
+        <button
+          type="button"
+          onClick={() => { const prox: "pt" | "es" | "en" = idioma === "pt" ? "es" : idioma === "es" ? "en" : "pt"; setIdioma(prox); try { localStorage.setItem("nutripombos-idioma", prox); } catch { /* ignora */ } }}
+          title="Idioma / Language / Idioma"
+          className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[.035] text-[11px] font-bold text-slate-400 transition hover:border-amber-400/40 hover:text-amber-400"
+        >
+          🌐 {idioma === "pt" ? "Português" : idioma === "es" ? "Español" : "English"}
         </button>
       </div>
 
@@ -236,7 +260,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
           }}
           className="mb-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500/10 text-[11px] font-bold text-emerald-300 transition hover:bg-emerald-500/20"
         >
-          📤 Compartilhar app
+          {t("📤 Compartilhar app")}
         </button>
         <div id="share-aviso" style={{ display: "none", margin: "0 0 8px", padding: "8px 10px", borderRadius: 8, fontSize: 11, background: "rgba(16,185,129,.15)", color: "#6ee7b7", textAlign: "center" }} />
         <div className="mb-2 flex items-center gap-3 rounded-xl bg-white/[.035] px-3 py-3">

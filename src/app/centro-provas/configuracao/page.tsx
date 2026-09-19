@@ -31,6 +31,7 @@ export default function Configuracao() {
   const [pombalNome, setPombalNome] = useState("");
   const [pombalSalvo, setPombalSalvo] = useState(false);
   const [gpsMsg, setGpsMsg] = useState("");
+  const [pushMsg, setPushMsg] = useState("");
   // 👨‍🌾 Multi-pombal + 🤝 Parceiros
   const [pombais, setPombais] = useState<PombalSalvo[]>([]);
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
@@ -294,6 +295,36 @@ export default function Configuracao() {
           <div style={{ ...T.small, fontSize: 11, marginTop: 8, lineHeight: 1.6 }}>
             Como obter: <a href="https://console.cloud.google.com/google/maps-embed-api" target="_blank" rel="noreferrer" style={{ color: T.blue }}>console.cloud.google.com</a> → ativar <b>Maps Embed API</b> → Credenciais → Criar chave. Depois toque em <b>💾 Salvar Configuração</b> lá embaixo.
           </div>
+        </section>
+
+        {/* 🔔 NOTIFICAÇÕES com o app fechado (web push) */}
+        <section style={{ ...T.card, borderColor: `${T.green}55`, background: `${T.green}0d` }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.green, marginBottom: 8 }}>🔔 Notificações no celular (app fechado)</div>
+          <div style={{ ...T.small, fontSize: 12, marginBottom: 10, lineHeight: 1.6 }}>
+            Avisos de verdade mesmo com o app fechado: <b>véspera/dia de embarque</b>, <b>dia da prova</b> e <b>madrugada fria no pombal</b>. Chegam às 06h30, todo dia. Precisa ativar uma vez em cada aparelho.
+          </div>
+          <button type="button" id="btn-push-ativar" onClick={async () => {
+            const b = document.getElementById("btn-push-ativar");
+            try {
+              const kc = await (await fetch("/api/push/chave")).json();
+              if (!kc.publicKey) { setPushMsg("⚠️ Falta configurar as chaves VAPID na Vercel (VAPID_PUBLIC_KEY e VAPID_PRIVATE_KEY) — veja as instruções no chat."); return; }
+              const perm = await Notification.requestPermission();
+              if (perm !== "granted") { setPushMsg("⚠️ Permissão de notificação negada — libere nas configurações do navegador."); return; }
+              if (b) b.textContent = "⏳ Ativando...";
+              const reg = await navigator.serviceWorker.ready;
+              let sub = await reg.pushManager.getSubscription();
+              if (!sub) {
+                const raw = kc.publicKey;
+                const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0));
+                sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes });
+              }
+              const r = await fetch("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: sub.toJSON() }) });
+              if (!r.ok) throw new Error();
+              setPushMsg("✅ Notificações ATIVAS neste aparelho! (cancela apagando o app ou nas configurações do navegador)");
+            } catch { setPushMsg("⚠️ Não foi possível ativar agora — tente de novo em seguida."); }
+            finally { if (b) b.textContent = "🔔 Ativar notificações"; }
+          }} style={{ ...T.btn, background: T.green, borderColor: T.green }}>🔔 Ativar notificações</button>
+          {pushMsg && <div style={{ ...T.small, fontSize: 12, marginTop: 10, color: pushMsg.startsWith("✅") ? T.green : T.orange, lineHeight: 1.5 }}>{pushMsg}</div>}
         </section>
 
         {/* ☁️ SINCRONIZAÇÃO — mesmo login, mesmos dados em qualquer aparelho */}

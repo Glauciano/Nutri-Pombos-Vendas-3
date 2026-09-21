@@ -352,6 +352,17 @@ export default function Configuracao() {
               detalhe("Falha inesperada: " + (e instanceof Error ? e.message : "erro desconhecido") + " — se persistir, me diga esta mensagem no chat.");
             } finally { if (b) b.textContent = "🔔 Ativar notificações"; }
           }} style={{ ...T.btn, background: T.green, borderColor: T.green }}>🔔 Ativar notificações</button>
+          <button type="button" id="btn-push-teste" onClick={async () => {
+            const b = document.getElementById("btn-push-teste");
+            if (b) b.textContent = "⏳ Enviando teste...";
+            try {
+              const r = await fetch("/api/push/teste", { method: "POST" });
+              const j = await r.json();
+              if (j.ok) setPushMsg("✅ Teste ENVIADO! Se não chegou em ~30s, veja se o aparelho não está em 'Não perturbe' e se as notificações do site estão permitidas. (" + j.enviados + " aparelho(s))");
+              else setPushMsg("⚠️ " + (j.erro || ("envio falhou" + (j.detalhes ? ": " + j.detalhes.join(" | ") : ""))));
+            } catch { setPushMsg("⚠️ Sem conexão com o servidor — tente de novo."); }
+            finally { if (b) b.textContent = "🧪 Enviar notificação de teste"; }
+          }} style={{ ...T.btnGhost, marginTop: 10, fontWeight: 800 }}>🧪 Enviar notificação de teste</button>
           {pushMsg && <div style={{ ...T.small, fontSize: 12, marginTop: 10, color: pushMsg.startsWith("✅") ? T.green : T.orange, lineHeight: 1.5 }}>{pushMsg}</div>}
         </section>
 

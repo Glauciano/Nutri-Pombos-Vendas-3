@@ -1,7 +1,7 @@
 import { db, isDbConfigured } from "@/db";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import webpush from "web-push";
+import type webpushType from "web-push";
 
 /**
  * 🔔 Cron diário (Vercel — 09:30 UTC / 06:30 de Brasília):
@@ -22,6 +22,8 @@ export async function GET() {
   if (!isDbConfigured()) return NextResponse.json({ ok: false, motivo: "sem banco" });
 
   try {
+    const mod = await import("web-push");
+    const webpush: typeof webpushType = (mod as unknown as { default?: typeof webpushType }).default ?? (mod as unknown as typeof webpushType);
     webpush.setVapidDetails("mailto:contato@nutripombos.app", pub, priv);
 
     const hojeBR = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
@@ -107,7 +109,8 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, usuarios: usuarios.length, enviados, removidos });
   } catch (e) {
-    console.error(e);
-    return NextResponse.json({ ok: false, erro: "falha geral" }, { status: 500 });
+    const err = e as { message?: string };
+    console.error("push/diario:", err?.message || e);
+    return NextResponse.json({ ok: false, erro: "falha geral: " + (err?.message || String(e)) }, { status: 500 });
   }
 }

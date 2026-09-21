@@ -305,24 +305,49 @@ export default function Configuracao() {
           </div>
           <button type="button" id="btn-push-ativar" onClick={async () => {
             const b = document.getElementById("btn-push-ativar");
+            const detalhe = (motivo: string) => setPushMsg("⚠️ " + motivo);
             try {
-              const kc = await (await fetch("/api/push/chave")).json();
-              if (!kc.publicKey) { setPushMsg("⚠️ Falta configurar as chaves VAPID na Vercel (VAPID_PUBLIC_KEY e VAPID_PRIVATE_KEY) — veja as instruções no chat."); return; }
-              const perm = await Notification.requestPermission();
-              if (perm !== "granted") { setPushMsg("⚠️ Permissão de notificação negada — libere nas configurações do navegador."); return; }
+              // 1) navegador suporta notificação push?
+              if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+                detalhe("Este navegador não suporta notificações push (use Chrome Android / Chrome ou Edge no PC). Safari do iPhone não suporta.");
+                return;
+              }
+              // 2) contexto seguro (HTTPS / app instalado)?
+              if (!window.isSecureContext && location.hostname !== "localhost") {
+                detalhe("Notificações exigem conexão segura — abra o app pelo endereço https:// do site ou pelo app instalado.");
+                return;
+              }
+              // 3) chaves VAPID
               if (b) b.textContent = "⏳ Ativando...";
+              const kc = await (await fetch("/api/push/chave")).json();
+              if (!kc.publicKey) { detalhe("Faltam as chaves VAPID na Vercel (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY)."); return; }
+              // 4) permissão
+              let perm: string;
+              try { perm = await Notification.requestPermission(); }
+              catch { detalhe("O navegador bloqueou o pedido de permissão — libere notificações nas configurações do site."); return; }
+              if (perm !== "granted") {
+                detalhe(perm === "denied"
+                  ? "Permissão NEGADA. Para liberar: no Chrome, toque no 🔒 ao lado do endereço → Permissões → Notificações → Permitir, e tente de novo."
+                  : "Permissão ficou pendente — toque no 🔒 ao lado do endereço e defina Notificações = Permitir.");
+                return;
+              }
+              // 5) service worker
               const reg = await navigator.serviceWorker.ready;
               let sub = await reg.pushManager.getSubscription();
               if (!sub) {
-                const raw = kc.publicKey;
-                const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0));
+                const bytes = Uint8Array.from(atob(kc.publicKey), (c) => c.charCodeAt(0));
                 sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes });
               }
+              // 6) salva no servidor
               const r = await fetch("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: sub.toJSON() }) });
-              if (!r.ok) throw new Error();
-              setPushMsg("✅ Notificações ATIVAS neste aparelho! (cancela apagando o app ou nas configurações do navegador)");
-            } catch { setPushMsg("⚠️ Não foi possível ativar agora — tente de novo em seguida."); }
-            finally { if (b) b.textContent = "🔔 Ativar notificações"; }
+              if (!r.ok) {
+                if (r.status === 401) { detalhe("Você não está logado — entre com sua conta e tente de novo."); return; }
+                detalhe("O servidor recusou a inscrição (erro " + r.status + ") — me avise esse número no chat."); return;
+              }
+              setPushMsg("✅ Notificações ATIVAS neste aparelho! Vou te avisar de embarques, provas e madrugadas frias às 06h30. (Para cancelar: desinstale o app ou desative notificações do navegador.)");
+            } catch (e) {
+              detalhe("Falha inesperada: " + (e instanceof Error ? e.message : "erro desconhecido") + " — se persistir, me diga esta mensagem no chat.");
+            } finally { if (b) b.textContent = "🔔 Ativar notificações"; }
           }} style={{ ...T.btn, background: T.green, borderColor: T.green }}>🔔 Ativar notificações</button>
           {pushMsg && <div style={{ ...T.small, fontSize: 12, marginTop: 10, color: pushMsg.startsWith("✅") ? T.green : T.orange, lineHeight: 1.5 }}>{pushMsg}</div>}
         </section>

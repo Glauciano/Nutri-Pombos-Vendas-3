@@ -335,7 +335,10 @@ export default function Configuracao() {
               const reg = await navigator.serviceWorker.ready;
               let sub = await reg.pushManager.getSubscription();
               if (!sub) {
-                const bytes = Uint8Array.from(atob(kc.publicKey), (c) => c.charCodeAt(0));
+                // VAPID vem em Base64URL (- e _); pushManager exige Base64 clássico (+ e /) — converte
+                const b64 = kc.publicKey.replace(/-/g, "+").replace(/_/g, "/");
+                const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+                const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
                 sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes });
               }
               // 6) salva no servidor

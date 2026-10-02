@@ -1,13 +1,13 @@
 import { db, isDbConfigured } from "@/db";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { exijaPago } from "@/lib/seguranca";
 
 /** 🔔 Salva a inscrição de notificação deste aparelho (push 2º plano) */
 export async function POST(request: Request) {
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
-  const user = await getCurrentUser();
-  if (!user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  const { user, erro } = await exijaPago();
+  if (erro) return erro;
   try {
     const body = (await request.json()) as { subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } } };
     const sub = body.subscription;
@@ -39,8 +39,8 @@ export async function POST(request: Request) {
 /** Remove a inscrição deste aparelho (desativar) */
 export async function DELETE(request: Request) {
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
-  const user = await getCurrentUser();
-  if (!user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  const { user, erro } = await exijaPago();
+  if (erro) return erro;
   try {
     const { endpoint } = (await request.json()) as { endpoint?: string };
     if (endpoint) await db.execute(sql`DELETE FROM push_subs WHERE endpoint = ${endpoint}`);

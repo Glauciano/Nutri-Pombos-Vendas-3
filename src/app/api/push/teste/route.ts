@@ -1,7 +1,7 @@
 import { db, isDbConfigured } from "@/db";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { exijaPago } from "@/lib/seguranca";
 
 /**
  * 🔔 Envia uma notificação de TESTE para UM aparelho logado (ou todos os do usuário).
@@ -16,8 +16,8 @@ function linhas<T>(r: unknown): T[] {
 
 export async function POST() {
   if (!isDbConfigured()) return NextResponse.json({ ok: false, erro: "banco não configurado" }, { status: 503 });
-  const user = await getCurrentUser();
-  if (!user?.id) return NextResponse.json({ ok: false, erro: "não autenticado" }, { status: 401 });
+  const { user, erro } = await exijaPago();
+  if (erro) return erro;
 
   const pub = process.env.VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;

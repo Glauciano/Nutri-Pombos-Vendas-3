@@ -1,4 +1,5 @@
 import "server-only";
+import { nivelDoPlano } from "./permissoes";
 
 import { createHash, randomBytes } from "crypto";
 import { cookies, headers } from "next/headers";
@@ -66,10 +67,10 @@ export async function getCurrentUser() {
           .limit(1);
         if (result && result.acessoAtivo) {
           if (result.acessoAte && result.acessoAte < new Date() && result.plano !== "vitalicio" && result.plano !== "admin") {
-            // expired access
-          } else {
-            return result;
+            // assinatura vencida: pode entrar como teste
+            return { ...result, plano: "teste", nivel: 0 };
           }
+          return { ...result, nivel: nivelDoPlano(result.plano, result.acessoAte) };
         }
       }
     } catch {}

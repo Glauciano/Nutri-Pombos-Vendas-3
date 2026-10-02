@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { alternarTema, temaAtual, EVENTO_TEMA } from "./theme";
+import { EXIGE_PAGO } from "../../lib/permissoes";
 import {
   Activity, Bell, Bird, Bot, Calculator, CalendarDays, ChevronDown, Tv,
   CloudSun, Dna, HeartPulse, LayoutDashboard, Map, Menu, PackageOpen,
@@ -15,7 +16,7 @@ type NavItem = { href: string; label: string; icon: typeof Activity };
 type NavGroup = { label: string; items: NavItem[] };
 
 
-export default function CentroShell({ children, user }: { children: ReactNode; user: { nome: string; email: string; plano: string } }) {
+export default function CentroShell({ children, user }: { children: ReactNode; user: { nome: string; email: string; plano: string; nivel: number } }) {
   const pathname = usePathname();
 
 
@@ -121,6 +122,8 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
     },
   ];
   
+  const nivelPago = user.nivel >= 1;
+  const bloqueado = (href: string) => !nivelPago && EXIGE_PAGO.some((m: string) => href.startsWith(m));
   const allItems = groups.flatMap((group) => group.items);
 
   const [tema, setTema] = useState<"escuro" | "claro">("escuro");
@@ -192,10 +195,11 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
                     key={item.href}
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold no-underline transition ${selected ? "bg-amber-400 text-slate-950 shadow-[0_7px_20px_rgba(250,204,21,.12)]" : "text-slate-400 hover:bg-white/[.055] hover:text-white"}`}
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold no-underline transition ${selected ? "bg-amber-400 text-slate-950 shadow-[0_7px_20px_rgba(250,204,21,.12)]" : "text-slate-400 hover:bg-white/[.055] hover:text-white"} ${bloqueado(item.href) ? "opacity-60" : ""}`}
                   >
                     <Icon size={16} strokeWidth={selected ? 2.5 : 1.8} />
                     {item.label}
+                    {bloqueado(item.href) && <span title="Plano pago" className="ml-auto text-[10px]">🔒</span>}
                   </Link>
                 );
               })}
@@ -247,7 +251,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         <div id="share-aviso" style={{ display: "none", margin: "0 0 8px", padding: "8px 10px", borderRadius: 8, fontSize: 11, background: "rgba(16,185,129,.15)", color: "#6ee7b7", textAlign: "center" }} />
         <div className="mb-2 flex items-center gap-3 rounded-xl bg-white/[.035] px-3 py-3">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-emerald-400/10 text-xs font-black uppercase text-emerald-300">{user.nome.slice(0, 1)}</span>
-          <span className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{user.nome}</strong><small className="block truncate text-[9px] uppercase tracking-wider text-slate-500">Plano {user.plano}</small></span>
+          <span className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{user.nome}</strong><small className="block truncate text-[9px] uppercase tracking-wider text-slate-500">Plano {user.plano}{user.nivel === 0 ? " · recursos livres" : user.nivel >= 2 ? " · admin" : " · completo"}</small></span>
         </div>
         <form action="/api/auth/logout" method="post">
           <button type="submit" className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-500 hover:bg-rose-400/[.07] hover:text-rose-300"><LogOut size={15}/> Sair da conta</button>

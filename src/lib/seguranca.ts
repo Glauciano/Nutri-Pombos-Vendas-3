@@ -41,6 +41,17 @@ export function resposta401(msg = "Não autenticado") {
   return Response.json({ error: msg }, { status: 401 });
 }
 
+/** Exige plano pago (nível ≥ 1). Retorna { user } ou { erro: resposta 402 }. */
+export async function exijaPago(): Promise<{ user: UsuarioAut; erro: null } | { user: null; erro: Response }> {
+  const u = await exijaUsuario();
+  if (!u) return { user: null, erro: resposta401() };
+  const { nivelDoPlano } = await import("./permissoes");
+  if (nivelDoPlano(u.plano) < 1) {
+    return { user: null, erro: Response.json({ error: "Recurso disponível no plano pago." }, { status: 402 }) };
+  }
+  return { user: u, erro: null };
+}
+
 /* ---------------- Rate limit (em memória; sobrevive ao processo) ---------------- */
 const tentativas = new Map<string, { n: number; ate: number }>();
 

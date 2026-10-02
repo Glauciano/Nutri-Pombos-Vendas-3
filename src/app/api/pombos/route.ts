@@ -3,6 +3,7 @@ import { pombos } from "@/db/schema";
 import { eq, desc, asc } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { exijaUsuario, resposta401 } from "@/lib/seguranca";
+import { LIMITE_POMBOS, nivelDoPlano } from "@/lib/permissoes";
 
 export async function GET(request: Request) {
   const user = await exijaUsuario();
@@ -65,6 +66,15 @@ function formatDbError(error: any, defaultMsg: string) {
 export async function POST(request: Request) {
   const user = await exijaUsuario();
   if (!user) return resposta401();
+  // 🎫 limite de pombos por plano (teste = 8)
+  const nivel = nivelDoPlano(user.plano);
+  try {
+    const { sql } = await import("drizzle-orm");
+    const [cont] = await db.select({ n: sql<number>`count(*)` }).from(pombos);
+    if (Number(cont?.n || 0) >= LIMITE_POMBOS[nivel]) {
+      return NextResponse.json({ error: `Limite do plano atingido (${LIMITE_POMBOS[nivel]} pombos no teste grátis). Assine para cadastrar mais.` }, { status: 402 });
+    }
+  } catch {}
 
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   try {

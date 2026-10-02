@@ -1,7 +1,7 @@
 import { db, isDbConfigured } from "@/db";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { exijaPago } from "@/lib/seguranca";
 
 /** ☁️ Sincronização de dados entre aparelhos — guarda o "localStorage" do usuário no banco */
 async function garantirTabela() {
@@ -17,8 +17,8 @@ async function garantirTabela() {
 
 export async function GET() {
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
-  const user = await getCurrentUser();
-  if (!user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  const { user, erro } = await exijaPago();
+  if (erro) return erro;
   try {
     await garantirTabela();
     const r = await db.execute(sql`SELECT chave, valor, atualizado_em FROM dados_usuario WHERE usuario_id = ${user.id}`);
@@ -34,8 +34,8 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
-  const user = await getCurrentUser();
-  if (!user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  const { user, erro } = await exijaPago();
+  if (erro) return erro;
   try {
     const body = (await request.json()) as { chave?: string; valor?: string | null; at?: number };
     const chave = String(body.chave || "");

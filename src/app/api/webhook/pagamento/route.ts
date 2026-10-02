@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { webhookAutorizado } from "@/lib/seguranca";
 import { db, isDbConfigured } from "@/db";
 import { usuarios } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -8,6 +9,11 @@ import { eq } from "drizzle-orm";
  * URL de destino na plataforma de cobrança: https://SEU-APP.vercel.app/api/webhook/pagamento
  */
 export async function POST(request: Request) {
+  // 🛡️ exige segredo compartilhado com a plataforma de cobrança (env WEBHOOK_SECRET)
+  if (!webhookAutorizado(request)) {
+    return NextResponse.json({ error: "Webhook não autorizado" }, { status: 403 });
+  }
+
   if (!isDbConfigured()) {
     return NextResponse.json({ error: "Banco de dados não configurado" }, { status: 503 });
   }

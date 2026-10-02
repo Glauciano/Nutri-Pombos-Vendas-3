@@ -2,8 +2,12 @@ import { db, isDbConfigured } from "@/db";
 import { pombos } from "@/db/schema";
 import { eq, desc, asc } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { exijaUsuario, resposta401 } from "@/lib/seguranca";
 
 export async function GET(request: Request) {
+  const user = await exijaUsuario();
+  if (!user) return resposta401();
+
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   try {
     const { searchParams } = new URL(request.url);
@@ -59,6 +63,9 @@ function formatDbError(error: any, defaultMsg: string) {
 }
 
 export async function POST(request: Request) {
+  const user = await exijaUsuario();
+  if (!user) return resposta401();
+
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   try {
     const body = await request.json();
@@ -85,6 +92,9 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  const user = await exijaUsuario();
+  if (!user) return resposta401();
+
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   try {
     const body = await request.json();
@@ -113,6 +123,9 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const user = await exijaUsuario();
+  if (!user) return resposta401();
+
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   try {
     const { searchParams } = new URL(request.url);

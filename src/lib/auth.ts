@@ -3,7 +3,7 @@ import "server-only";
 import { createHash, randomBytes } from "crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, lt } from "drizzle-orm";
 import { db, isDbConfigured } from "@/db";
 import { sessoes, usuarios } from "@/db/schema";
 
@@ -15,6 +15,8 @@ function hashToken(token: string) {
 }
 
 export async function createSession(usuarioId: number) {
+  // 🛡️ higiene: remove sessões expiradas (globais) ao criar nova
+  if (isDbConfigured()) { try { await db.delete(sessoes).where(lt(sessoes.expiresAt, new Date())); } catch {} }
   if (!isDbConfigured()) return; // Skip if no DB
   // ANTI-COMPARTILHAMENTO DE CONTA:
   // Remove sessões anteriores do mesmo usuário para garantir uso individual por dispositivo
@@ -73,15 +75,7 @@ export async function getCurrentUser() {
     } catch {}
   }
 
-  // 2. Check for fallback user cookie
-  const store = await cookies();
-  const fallbackUser = store.get("nutripombos_fallback_user")?.value;
-  if (fallbackUser) {
-    try {
-      return JSON.parse(fallbackUser) as { id: number; nome: string; email: string; plano: string; acessoAtivo: boolean; acessoAte: null };
-    } catch {}
-  }
-
+  // 🛡️ fallback cookie REMOVIDO: sem sessão real = sem acesso
   // 3. No session found
   return null;
 }

@@ -2,9 +2,12 @@ import { db, isDbConfigured } from "@/db";
 import { pombos } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { rateLimit, ipDaRequisicao, resposta429 } from "@/lib/seguranca";
 
 /** 🏷️ Ficha PÚBLICA do pombo (para o QR Code de venda) — sem login, dados mínimos */
 export async function GET(request: Request) {
+  if (rateLimit("ficha:" + ipDaRequisicao(request), 60, 60_000)) return resposta429();
+
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   try {
     const { searchParams } = new URL(request.url);

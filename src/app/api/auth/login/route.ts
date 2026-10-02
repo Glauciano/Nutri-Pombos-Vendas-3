@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
+import { rateLimit, ipDaRequisicao, resposta429 } from "@/lib/seguranca";
 
-// Simple in-memory users for when DATABASE_URL is not configured
-const USERS: Record<string, { nome: string; senha: string; plano: string }> = {
-  "admin@nutripombos.com": { nome: "Admin", senha: "nutri2026", plano: "admin" },
-};
+// 🛡️ Sem mais usuários hardcoded: senha de admin NUNCA em código-fonte.
+// Admin real = cadastro normal no banco + plano 'admin' ajustado direto no banco.
 
 export async function POST(request: Request) {
+  if (rateLimit("login:" + ipDaRequisicao(request), 8, 10 * 60_000)) return resposta429();
   try {
     const body = await request.json();
     const email = String(body.email || "").trim().toLowerCase();
@@ -35,29 +35,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fallback: check in-memory users
-    const user = USERS[email];
-    if (user && user.senha === senha) {
-      const response = NextResponse.json({ ok: true, nome: user.nome, plano: user.plano });
-      // Set fallback cookie (always, for when DB is not available or DB lookup failed)
-      response.cookies.set("nutripombos_fallback_user", JSON.stringify({
-        id: 1,
-        nome: user.nome,
-        email: email,
-        plano: user.plano,
-        acessoAtivo: true,
-        acessoAte: null,
-      }), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 30 * 86_400, // 30 days
-      });
-      return response;
-    }
-
     return NextResponse.json({ error: "Email ou senha incorretos." }, { status: 401 });
+
   } catch {
     return NextResponse.json({ error: "Não foi possível entrar agora." }, { status: 500 });
   }

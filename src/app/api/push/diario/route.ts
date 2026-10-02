@@ -1,6 +1,7 @@
 import { db, isDbConfigured } from "@/db";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { cronAutorizado } from "@/lib/seguranca";
 import type webpushType from "web-push";
 
 /**
@@ -15,7 +16,12 @@ function linhas<T>(r: unknown): T[] {
   return (((r as { rows?: unknown[] })?.rows ?? r) as T[]) || [];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // 🛡️ apenas o cron da Vercel (Bearer CRON_SECRET) ou teste manual autorizado
+  if (!cronAutorizado(request)) {
+    return NextResponse.json({ ok: false, erro: "não autorizado" }, { status: 403 });
+  }
+
   const pub = process.env.VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) return NextResponse.json({ ok: false, motivo: "VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY não configuradas na Vercel" });

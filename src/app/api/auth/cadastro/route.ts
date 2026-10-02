@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { rateLimit, ipDaRequisicao, resposta429 } from "@/lib/seguranca";
 
 export async function POST(request: Request) {
+  if (rateLimit("cadastro:" + ipDaRequisicao(request), 5, 60 * 60_000)) return resposta429();
   try {
     const body = await request.json();
     const nome = String(body.nome || "").trim();

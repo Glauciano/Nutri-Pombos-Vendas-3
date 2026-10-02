@@ -1,8 +1,14 @@
+import { cronAutorizado } from "@/lib/seguranca";
 import { neon } from "@neondatabase/serverless";
 import { NextResponse } from "next/server";
 import { isDbConfigured } from "@/db";
 
-export async function GET() {
+export async function GET(request: Request) {
+  // rota privilegiada: exige ?secret=WEBHOOK_SECRET (ou Bearer CRON_SECRET)
+  if (!cronAutorizado(request)) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
+  }
+
   if (!isDbConfigured()) {
     return NextResponse.json({ error: "DATABASE_URL não configurada nas variáveis de ambiente" }, { status: 503 });
   }

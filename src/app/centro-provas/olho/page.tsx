@@ -348,7 +348,7 @@ export default function AnaliseOlhoPombo() {
 
       {/* 📚 ESCOLA EYE-SIGN — conteúdo pesquisado (Jack Barkel + Hofmann + ciência) */}
       <section style={T.card}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>📚 Escola Eye-Sign — Jack Barkel e a teoria dos 5 círculos</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>📚 Escolas Clássicas do Eye-Sign — tradição columófila internacional</div>
         <div style={{ ...T.small, fontSize: 11, marginBottom: 10, lineHeight: 1.5 }}>
           Pesquisa direta das fontes clássicas (Alberta Classic, fórum PigeonBasics com o próprio Barkel). O sul-africano <b>Jack Barkel</b> divide o olho em <b>5 círculos</b>: pupila, adaptação, correlação, íris e o círculo reprodutor (perímetro/círculo da saúde).
         </div>
@@ -394,10 +394,13 @@ export default function AnaliseOlhoPombo() {
           MAS: esses mecanismos funcionam em nível molecular/neurológico — <b>não alteram a cor, textura ou granulação da íris</b> de forma diagnosticável. Não há evidência científica de que feições visíveis do olho prevejam desempenho. O que o olho revela bem: <b>saúde geral, vitalidade e calma</b> do pombo.<br /><br />
           <b style={{ color: T.gold }}>Uso sábio:</b> use o eye-sign como mais uma ferramenta de seleção (junte com linhagem, resultados no cesto, asa/osso/saúde) — nunca como única. Como dizem os próprios Barkel e Hofmann: os melhores pombos se revelam <b>voando</b>, não só no olho.
         </div>
-        <div style={{ ...T.small, fontSize: 10, marginTop: 10, lineHeight: 1.8 }}>
-          🔗 Fontes: <a href="http://www.albertaclassic.com/eyes/barkel.php" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Alberta Classic — Jack Barkel</a> • <a href="http://www.albertaclassic.com/eyes/hofmann.php" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Alberta Classic — Josef Hofmann</a> • <a href="https://pigeonweb.co.uk/pigeon-racing-explained/pigeon-racing-science-and-theory/eye-sign-and-navigation-right-question-wrong-evidence" target="_blank" rel="noreferrer" style={{ color: T.blue }}>PigeonWeb — ciência e navegação</a> • <a href="http://forum.pigeonbasics.com/topic/20687-jack-barkel-eyesign/" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Fórum PigeonBasics (posts do próprio Barkel)</a>
+        <div style={{ marginTop: 10, padding: "9px 12px", borderRadius: 9, background: "#ffffff08", fontSize: 10, lineHeight: 1.6 }}>
+          ℹ️ <b>Nota:</b> o Eye-Sign é uma tradição histórica da columofilia, desenvolvida e divulgada ao longo de décadas por diversos autores e criadores — entre eles Jack Barkel (África do Sul), Josef Hofmann (Alemanha) e outros. Este material é <b>educativo e informativo</b>, baseado em conhecimento público do esporte, com <b>crédito e links às fontes</b>. O app não tem vínculo, afiliação ou endosso desses autores ou sites. As regras de acasalamento são referências tradicionais — a decisão de criação é sempre sua.
         </div>
-      </section>
+        <div style={{ ...T.small, fontSize: 10, marginTop: 8, lineHeight: 1.8 }}>
+          🔗 Fontes: <a href="http://www.albertaclassic.com/eyes/barkel.php" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Alberta Classic — Jack Barkel</a> • <a href="http://www.albertaclassic.com/eyes/hofmann.php" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Alberta Classic — Josef Hofmann</a> • <a href="https://pigeonweb.co.uk/pigeon-racing-explained/pigeon-racing-science-and-theory/eye-sign-and-navigation-right-question-wrong-evidence" target="_blank" rel="noreferrer" style={{ color: T.blue }}>PigeonWeb — ciência e navegação</a> • <a href="http://forum.pigeonbasics.com/topic/20687-jack-barkel-eyesign/" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Fórum PigeonBasics</a>
+        </div>
+              </section>
       </div>
     </main>
   );

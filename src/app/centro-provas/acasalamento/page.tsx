@@ -177,7 +177,7 @@ export default function AssistenteAcasalamento() {
                 <b style={{ color: s.score >= 70 ? T.green : s.score >= 45 ? "#fbbf24" : T.red, fontSize: 15 }}>{s.score}</b>
               </div>
             ))}
-            <div style={{ ...T.small, fontSize: 10, marginTop: 8 }}>Sugestões automáticas: priorizam sangue aberto e olhos complementares (amarelo × pérola). A decisão final é sempre do criador 😉</div>
+            <div style={{ ...T.small, fontSize: 10, marginTop: 8 }}>Sugestões automáticas: priorizam sangue aberto e olhos complementares (regra clássica da tradição eye-sign). Nota: referências tradicionais do esporte — sem vínculo com qualquer autor; a decisão final é sempre do criador 😉</div>
           </section>
         )}
       </div>

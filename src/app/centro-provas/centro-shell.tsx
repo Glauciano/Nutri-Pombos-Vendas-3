@@ -33,6 +33,8 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         { href: "/centro-provas/telao", label: "Modo Telão (clube)", icon: Tv },
         { href: "/centro-provas/equipe", label: "Seleção de equipe", icon: Bird },
         { href: "/centro-provas/primeiros-passos", label: "🎓 Primeiros passos", icon: Sparkles },
+      { href: "/centro-provas/guia-iniciante", label: "Guia do iniciante", icon: Sparkles },
+      { href: "/centro-provas/admin", label: "👑 Painel Admin", icon: ShieldCheck },
         { href: "/centro-provas/ranking", label: "Ranking do plantel", icon: Trophy },
         { href: "/centro-provas/cartao-campeao", label: "Cartão do campeão", icon: Sparkles },
         { href: "/centro-provas/relatorio-temporada", label: "Relatório da temporada", icon: Activity },
@@ -72,6 +74,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         { href: "/centro-provas/comparador", label: "Comparador de pombos", icon: Activity },
         { href: "/centro-provas/ficha-pombo", label: "Ficha de avaliação", icon: ShieldCheck },
       { href: "/centro-provas/genetica75", label: "Genética dos 75%", icon: Dna },
+      { href: "/centro-provas/ninhadas", label: "Controle de ninhadas", icon: Bird },
       ],
     },
     {

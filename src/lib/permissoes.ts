@@ -30,6 +30,7 @@ export function nivelDoPlano(plano: string | undefined | null, acessoAte?: strin
 export const MODULOS_LIVRES: string[] = [
   "/centro-provas",            // painel
   "/centro-provas/primeiros-passos",
+  "/centro-provas/guia-iniciante",
   "/centro-provas/configuracao",
   "/centro-provas/alertas",
   "/centro-provas/gerenciar-calendario",
@@ -53,11 +54,12 @@ export const EXIGE_PAGO: string[] = [
   "/centro-provas/ficha-pombo",
   "/centro-provas/vendas",
   "/centro-provas/acasalamento",
+  "/centro-provas/ninhadas",
 ];
 
 /** Módulos só do DONO do app (nível 2) */
 export const EXIGE_ADMIN: string[] = [
-  "/centro-provas/pombos-admin", // (futuro: gestão de usuários)
+  "/centro-provas/admin",   // painel do administrador
 ];
 
 /** Rotas de API que exigem plano pago */

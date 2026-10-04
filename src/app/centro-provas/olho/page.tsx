@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
+import { GuiaCampo, TiposOlhos, SinaisEyeSign } from "./extras";
 
 type Pupila = "puntiforme" | "media" | "larga";
 type Circulo = "serrilhado_largo" | "completo_fino" | "incompleto" | "ausente";
@@ -79,6 +80,7 @@ function OlhoInterativo() {
 }
 
 export default function AnaliseOlhoPombo() {
+  const [aba, setAba] = useState<"interativo" | "guia" | "tipos" | "sinais" | "teoria">("interativo");
   const [pupila, setPupila] = useState<Pupila>("puntiforme");
   const [circulo, setCirculo] = useState<Circulo>("serrilhado_largo");
   const [iris, setIris] = useState<IrisCor>("amarelo_ouro");
@@ -173,6 +175,16 @@ export default function AnaliseOlhoPombo() {
           </Link>
         </div>
 
+        {/* abas do eye-sign */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, marginBottom: 14 }}>
+          {([["interativo", "🔬 Analisar"], ["guia", "📖 Guia de Campo"], ["tipos", "🎨 Tipos"], ["sinais", "⚡ Sinais"], ["teoria", "📚 Teoria"]] as const).map(([k, lbl]) => (
+            <button key={k} type="button" onClick={() => setAba(k)} style={{ padding: "10px 2px", borderRadius: 10, cursor: "pointer", fontSize: 10.5, fontWeight: 800, color: aba === k ? "#0b1426" : "#9aa8bc", background: aba === k ? "#f7bd00" : "#1b283c", border: `1.5px solid ${aba === k ? "#f7bd00" : "#31415a"}`, textAlign: "center", lineHeight: 1.3 }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+
+        {aba === "interativo" && (<>
         <section style={T.card}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 14 }}>
             🔍 Características Visuais do Olho do Pombo
@@ -345,6 +357,21 @@ export default function AnaliseOlhoPombo() {
           </div>
         </section>
       <OlhoInterativo />
+        </>)}
+
+        {aba === "guia" && (<>
+          <GuiaCampo />
+        </>)}
+
+        {aba === "tipos" && (<>
+          <TiposOlhos />
+        </>)}
+
+        {aba === "sinais" && (<>
+          <SinaisEyeSign />
+        </>)}
+
+        {aba === "teoria" && (<>
 
       {/* 📚 ESCOLA EYE-SIGN — conteúdo pesquisado (Jack Barkel + Hofmann + ciência) */}
       <section style={T.card}>
@@ -401,6 +428,7 @@ export default function AnaliseOlhoPombo() {
           🔗 Fontes: <a href="http://www.albertaclassic.com/eyes/barkel.php" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Alberta Classic — Jack Barkel</a> • <a href="http://www.albertaclassic.com/eyes/hofmann.php" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Alberta Classic — Josef Hofmann</a> • <a href="https://pigeonweb.co.uk/pigeon-racing-explained/pigeon-racing-science-and-theory/eye-sign-and-navigation-right-question-wrong-evidence" target="_blank" rel="noreferrer" style={{ color: T.blue }}>PigeonWeb — ciência e navegação</a> • <a href="http://forum.pigeonbasics.com/topic/20687-jack-barkel-eyesign/" target="_blank" rel="noreferrer" style={{ color: T.blue }}>Fórum PigeonBasics</a>
         </div>
               </section>
+        </>)}
       </div>
     </main>
   );

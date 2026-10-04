@@ -89,6 +89,11 @@ export default function RecuperacaoPosProva() {
 
   return (
     <main style={{ minHeight: "100vh", background: T.bg, color: T.white, padding: "20px 16px 60px" }}>
+    <section style={{...T.card, borderColor:"#f9731644", marginBottom:14}}>
+      <p style={{...T.small, fontSize:11.5, lineHeight:1.6}}>
+        ⚕️ Protocolos de recuperação pós-prova são manejo esportivo. Se a ave chegar muito debilitada, com ferimento, sangue nas fezes ou não comer em 24h — <b>procure um médico veterinário de aves</b>.
+      </p>
+    </section>
       <div style={{ maxWidth: 880, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
           <div>

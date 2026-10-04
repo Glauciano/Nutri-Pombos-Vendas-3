@@ -61,4 +61,10 @@ function Info({label,value,color}:{label:string;value:string;color:string}){retu
 function MiniBox({label,value}:{label:string;value:string}){return <div style={{padding:5,borderRadius:6,background:"#ffffff05"}}><div style={{fontSize:9,color:T.dim}}>{label}</div><div style={{fontSize:11,fontWeight:700}}>{value}</div></div>}
 function Title({children}:{children:React.ReactNode}){return <div style={{fontSize:13,fontWeight:800,color:T.gold,marginBottom:10}}>{children}</div>}
 function Empty(){return <div style={{textAlign:"center",padding:32,color:T.dim}}><div style={{fontSize:32}}>🔍</div><p>Digite um sintoma, doença ou princípio ativo.</p></div>}
-function Shell({children}:{children:React.ReactNode}){return <main style={{minHeight:"100vh",background:T.bg,color:T.white,padding:"18px 12px 50px"}}><div style={{maxWidth:760,margin:"0 auto"}}>{children}</div><style jsx global>{`button,input{font-family:inherit}@media(max-width:520px){.dose-grid{grid-template-columns:1fr!important}.urg-grid{grid-template-columns:1fr 1fr!important}}`}</style></main>}
+function Shell({children}:{children:React.ReactNode}){return <main style={{minHeight:"100vh",background:T.bg,color:T.white,padding:"18px 12px 50px"}}>
+    <section style={{...T.card, borderColor:"#f9731655", background:"#f973160d", marginBottom:14}}>
+      <b style={{color:"#f97316", fontSize:13}}>⚕️ GUIA ORIENTATIVO — NÃO É RECEITA</b>
+      <p style={{...T.small, fontSize:11.5, lineHeight:1.6, marginTop:6}}>
+        As doses citadas são <b>referências da literatura columófila</b> — o uso correto depende do peso da ave, estágio da doença, interações e período de carência. <b>Medicação só com orientação de médico veterinário</b>, principalmente antibióticos e antiparasitários. Erro de dose pode matar a ave e antibiótico errado cria superbactérias.
+      </p>
+    </section><div style={{maxWidth:760,margin:"0 auto"}}>{children}</div><style jsx global>{`button,input{font-family:inherit}@media(max-width:520px){.dose-grid{grid-template-columns:1fr!important}.urg-grid{grid-template-columns:1fr 1fr!important}}`}</style></main>}

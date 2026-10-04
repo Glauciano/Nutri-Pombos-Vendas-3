@@ -43,6 +43,9 @@ export default function NutriBot() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, paddingTop: 12, marginBottom: 12, borderTop: `1px solid ${T.border}` }}>{SUGESTOES.map(s => <button key={s} onClick={() => send(s)} style={{ padding: "6px 9px", borderRadius: 20, cursor: "pointer", fontSize: 11, color: T.dim, background: T.bgInput, border: `1px solid ${T.border}` }}>{s}</button>)}</div>
       <form onSubmit={e => { e.preventDefault(); send(input); setInput(""); }} style={{ display: "flex", gap: 8 }}><input value={input} onChange={e => setInput(e.target.value)} placeholder="Pergunte ao NutriBot..." style={{ ...T.input, flex: 1 }}/><button type="submit" style={T.btnSm}>Enviar</button></form>
     </section>
-  </div><style jsx global>{`button,input{font-family:inherit}`}</style></main>;
+  </div><style jsx global>{`button,input{font-family:inherit}`}</style><div style={{textAlign:"center", padding:12, fontSize:10, color:"#9aa8bc", lineHeight:1.5}}>
+        ⚠️ Orientação geral de manejo — não substitui diagnóstico e tratamento de médico veterinário.
+      </div>
+    </main>;
 }
 function render(text: string) { return text.split(/(\*\*[^*]+\*\*)/).map((part, i) => part.startsWith("**") && part.endsWith("**") ? <b key={i} style={{ color: T.gold }}>{part.slice(2, -2)}</b> : <span key={i}>{part}</span>); }

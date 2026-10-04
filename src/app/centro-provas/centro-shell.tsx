@@ -71,6 +71,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         { href: "/centro-provas/acasalamento", label: "Assistente de acasalamento", icon: HeartPulse },
         { href: "/centro-provas/comparador", label: "Comparador de pombos", icon: Activity },
         { href: "/centro-provas/ficha-pombo", label: "Ficha de avaliação", icon: ShieldCheck },
+      { href: "/centro-provas/genetica75", label: "Genética dos 75%", icon: Dna },
       ],
     },
     {

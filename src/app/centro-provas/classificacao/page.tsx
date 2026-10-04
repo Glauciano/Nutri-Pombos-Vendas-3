@@ -179,6 +179,12 @@ export default function ClassificacaoPombos() {
 
   return (
     <main style={{ minHeight: "100vh", background: T.bg, color: T.white, padding: "20px 16px 60px" }}>
+    <section style={{...T.card, borderColor:"#55a3ff55", background:"#55a3ff0d", marginBottom:14}}>
+      <b style={{color:"#55a3ff", fontSize:13}}>🎬 Plantel de demonstração</b>
+      <p style={{...T.small, fontSize:11.5, lineHeight:1.6, marginTop:6}}>
+        Os pombos listados são <b>dados fictícios de exemplo</b> pra você entender o funcionamento. Apague (🗑️) e cadastre os seus próprios para o ranking real do seu plantel.
+      </p>
+    </section>
       <div style={{ maxWidth: 940, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
           <div>

@@ -56,57 +56,6 @@ function parentesco(a: Pombo, b: Pombo, mapa: Map<number, Pombo>): number {
    ILUSTRAÇÃO 75% — árvore SVG clássica do 3/4
    ══════════════════════════════════════════════════════════════ */
 
-function Arvore75() {
-  const No = ({ x, y, w, txt, pct, cor, sub }: { x: number; y: number; w: number; txt: string; pct?: number; cor: string; sub?: string }) => (
-    <g>
-      <rect x={x} y={y} width={w} height={46} rx={9} fill="#1b283c" stroke={cor} strokeWidth={2} />
-      {pct !== undefined && (
-        <rect x={x} y={y - 16} width={Math.round(w * Math.min(1, pct / 100))} height={8} rx={4} fill={cor} />
-      )}
-      <text x={x + w / 2} y={y + 20} textAnchor="middle" fill="#f8fafc" fontSize={10.5} fontWeight="800">{txt}</text>
-      {sub && <text x={x + w / 2} y={y + 35} textAnchor="middle" fill="#9aa8bc" fontSize={8.5}>{sub}</text>}
-      {pct !== undefined && <text x={x + w / 2} y={y - 22} textAnchor="middle" fill={cor} fontSize={13} fontWeight="900">{pct}%</text>}
-    </g>
-  );
-  const Linha = ({ x1, y1, x2, y2, cor = "#f7bd0088" }: { x1: number; y1: number; x2: number; y2: number; cor?: string }) => (
-    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={cor} strokeWidth={2} />
-  );
-
-  return (
-    <svg viewBox="0 0 760 430" style={{ width: "100%", display: "block" }}>
-      <text x={380} y={22} textAnchor="middle" fill="#f7bd00" fontSize={13} fontWeight={900}>GENERAÇÃO 1 — nasce a filha do campeão</text>
-
-      <No x={140} y={45} w={160} txt="🏆 CAMPEÃO" pct={100} cor="#f7bd00" sub="o doador de sangue" />
-      <No x={450} y={45} w={160} txt="Parceira" pct={0} cor="#55a3ff" sub="sangue de fora" />
-
-      <Linha x1={300} y1={91} x2={360} y2={161} />
-      <Linha x1={450} y1={91} x2={390} y2={161} />
-      <No x={290} y={161} w={170} txt="Filha" pct={50} cor="#39e58c" sub="50% do campeão" />
-
-      <text x={380} y={232} textAnchor="middle" fill="#f7bd00" fontSize={13} fontWeight={900}>GENERAÇÃO 2 — o MESMO campeão cruza com a própria filha</text>
-
-      <No x={140} y={255} w={160} txt="🏆 CAMPEÃO" pct={100} cor="#f7bd00" sub="ele mesmo, de novo!" />
-      <Linha x1={300} y1={301} x2={360} y2={325} />
-      <Linha x1={375} y1={207} x2={375} y2={325} />
-      <No x={270} y={325} w={210} txt="🐣 POMBO 75%" pct={75} cor="#ff5d62" sub="3/4 do sangue do campeão" />
-
-      <text x={620} y={285} textAnchor="middle" fill="#9aa8bc" fontSize={9.5}>50% vem do pai<br />(o campeão inteiro)</text>
-      <text x={620} y={345} textAnchor="middle" fill="#9aa8bc" fontSize={9.5}>25% vem da mãe<br />(a filha, metade dele)</text>
-
-      <text x={380} y={398} textAnchor="middle" fill="#f8fafc" fontSize={11} fontWeight={700}>
-        100% do campeão ÷ 2 (lado do pai) + 50% da filha ÷ 2 (lado da mãe) = 75%
-      </text>
-      <text x={380} y={420} textAnchor="middle" fill="#f97316" fontSize={10}>
-        ⚠️ Consanguinidade real (F): 25% — concentram-se virtudes E defeitos: selecione com rigor
-      </text>
-    </svg>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════
-   CALCULADORA — % de sangue de um pombo num produto
-   ══════════════════════════════════════════════════════════════ */
-
 function Calculadora75({ pombos, mapa }: { pombos: Pombo[]; mapa: Map<number, Pombo> }) {
   const [doadorId, setDoadorId] = useState("");
   const [paiId, setPaiId] = useState("");
@@ -229,85 +178,104 @@ function PomboSilhueta({ x, y, cor, sexo, pequeno }: { x: number; y: number; cor
   );
 }
 
-function SanguePie({ x, y, r, pct, cor, label }: { x: number; y: number; r: number; pct: number; cor: string; label?: string }) {
+/* ══════════════════════════════════════════════════════════════
+   🩸 ESCALADA DO SANGUE — a ilustração única e oficial da teoria:
+   silhueta realista de pombo-correio + círculos de % de sangue,
+   estilo dos manuais clássicos de criação. Texto em HTML (não SVG).
+   ══════════════════════════════════════════════════════════════ */
+
+/** Silhueta realista de pombo-correio em perfil (path único, ~cuidado anatômico) */
+function PomboPerfil({ cor, sexo, tamanho = 1 }: { cor: string; sexo: "m" | "f"; tamanho?: number }) {
+  return (
+    <svg viewBox="0 0 140 120" width={110 * tamanho} height={94 * tamanho} style={{ display: "block" }}>
+      {/* cauda longa */}
+      <path d="M88 66 C104 64 122 60 134 54 C132 62 124 72 112 78 C102 82 92 80 86 74 Z" fill={cor} opacity="0.9" />
+      {/* corpo em gota: peito alto, dorso descendente */}
+      <path d="M22 52 C20 34 34 20 56 18 C64 17 70 18 74 22 C82 28 86 38 88 48 C90 58 88 68 80 74 C70 82 52 84 38 78 C27 73 23 63 22 52 Z" fill={cor} />
+      {/* asa dobrada no dorso */}
+      <path d="M44 32 C58 26 74 30 82 42 C76 54 64 60 52 58 C44 56 40 44 44 32 Z" fill="#00000033" />
+      <path d="M48 36 C60 32 72 36 78 45" stroke="#00000044" strokeWidth="1.5" fill="none" />
+      {/* cabeça pequena e redonda */}
+      <circle cx="30" cy="26" r="13" fill={cor} />
+      {/* pescoço curto e grosso */}
+      <path d="M36 34 C44 30 48 28 50 24 L58 30 C54 38 48 42 42 44 Z" fill={cor} />
+      {/* bico curto com cera */}
+      <path d="M18 24 L4 20 L18 16 Z" fill="#e0a020" />
+      <circle cx="19" cy="19" r="3" fill="#ffffff33" />
+      {/* olho */}
+      <circle cx="27" cy="23" r="2.6" fill="#0b1426" />
+      <circle cx="26.3" cy="22.3" r="0.9" fill="#fff" />
+      {/* pernas */}
+      <path d="M46 80 L44 96 M58 80 L60 96" stroke="#e0a020" strokeWidth="3" strokeLinecap="round" />
+      {/* símbolo do sexo */}
+      <text x="70" y="112" textAnchor="middle" fontSize="17" fontWeight="900" fill={sexo === "m" ? "#55a3ff" : "#ec4899"}>{sexo === "m" ? "♂" : "♀"}</text>
+    </svg>
+  );
+}
+
+/** Círculo de sangue (pizza) */
+function PizzaSangue({ pct, cor, tamanho = 74 }: { pct: number; cor: string; tamanho?: number }) {
+  const r = tamanho / 2 - 3;
+  const cx = tamanho / 2;
   const ang = (pct / 100) * Math.PI * 2 - Math.PI / 2;
-  const fx = x + r * Math.cos(ang);
-  const fy = y + r * Math.sin(ang);
+  const fx = cx + r * Math.cos(ang);
+  const fy = cx + r * Math.sin(ang);
   const grande = pct > 50 ? 1 : 0;
   return (
-    <g>
-      <circle cx={x} cy={y} r={r} fill="#1b283c" stroke="#31415a" strokeWidth="2" />
-      {pct > 0 && (
-        <path d={`M${x} ${y} L${x} ${y - r} A${r} ${r} 0 ${grande} 1 ${fx.toFixed(2)} ${fy.toFixed(2)} Z`} fill={cor} />
-      )}
-      <circle cx={x} cy={y} r={r} fill="none" stroke="#31415a" strokeWidth="2" />
-      <text x={x} y={y + 5} textAnchor="middle" fontSize={r > 26 ? 16 : 13} fontWeight="900" fill={pct > 45 ? "#0b1426" : "#f8fafc"}>{pct}%</text>
-      {label && <text x={x} y={y + r + 16} textAnchor="middle" fontSize="10" fontWeight="700" fill="#9aa8bc">{label}</text>}
-    </g>
+    <svg width={tamanho} height={tamanho} viewBox={`0 0 ${tamanho} ${tamanho}`} style={{ display: "block" }}>
+      <circle cx={cx} cy={cx} r={r} fill="#1b283c" stroke="#31415a" strokeWidth="2" />
+      {pct > 0 && <path d={`M${cx} ${cx} L${cx} ${cx - r} A${r} ${r} 0 ${grande} 1 ${fx.toFixed(2)} ${fy.toFixed(2)} Z`} fill={cor} />}
+      <circle cx={cx} cy={cx} r={r} fill="none" stroke="#31415a" strokeWidth="2" />
+    </svg>
   );
 }
 
 function EscaladaSangue() {
+  const Nivel = ({ pct, cor, titulo, sub, pombo, pizzaPct, destaque }: { pct: string; cor: string; titulo: string; sub: string; pombo: React.ReactNode; pizzaPct: number; destaque?: boolean }) => (
+    <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 14px", borderRadius: 12, background: destaque ? `${cor}14` : "#ffffff08", border: `1.5px solid ${destaque ? cor : "#31415a"}`, flexWrap: "wrap" }}>
+      <div style={{ position: "relative", width: 84, height: 84, display: "grid", placeItems: "center" }}>
+        <PizzaSangue pct={pizzaPct} cor={cor} tamanho={84} />
+        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
+          <b style={{ fontSize: 17, color: pizzaPct > 45 ? "#0b1426" : "#f8fafc", textShadow: pizzaPct > 45 ? "0 0 3px #ffffff55" : "0 1px 3px #000" }}>{pct}</b>
+        </div>
+      </div>
+      <div style={{ flex: 1, minWidth: 150 }}>{pombo}</div>
+      <div style={{ flex: 2, minWidth: 190 }}>
+        <b style={{ color: cor, fontSize: 13.5 }}>{titulo}</b>
+        <div style={{ ...T.small, fontSize: 11.5, lineHeight: 1.6, marginTop: 3 }}>{sub}</div>
+      </div>
+    </div>
+  );
+
   return (
-    <svg viewBox="0 0 760 560" style={{ width: "100%", display: "block" }}>
-      <text x={380} y={20} textAnchor="middle" fill="#f7bd00" fontSize={13} fontWeight={900}>A ESCALADA DO SANGUE — o esquema clássico, em pombos</text>
-      <text x={380} y={36} textAnchor="middle" fill="#9aa8bc" fontSize={9.5}>o campeão (♂ no topo) é cruzado com suas próprias filhas, geração após geração — cada círculo mostra o % do sangue dele</text>
-
-      {/* ====== GER 1: campeão × fêmea de fora ====== */}
-      <PomboSilhueta x={150} y={78} cor="#f7bd00" sexo="m" />
-      <text x={150} y={118} textAnchor="middle" fontSize="10.5" fontWeight="800" fill="#f7bd00">CAMPEÃO</text>
-      <PomboSilhueta x={400} y={78} cor="#7d8aa5" sexo="f" />
-      <text x={400} y={118} textAnchor="middle" fontSize="10" fill="#9aa8bc">fêmea de fora</text>
-
-      {/* cruzamento 1 */}
-      <line x1={185} y1={78} x2={360} y2={78} stroke="#f7bd0088" strokeWidth={2} strokeDasharray="5 4" />
-      <text x={272} y={72} textAnchor="middle" fontSize="10" fill="#f7bd00">✕ acasalamento</text>
-      <line x1={272} y1={86} x2={272} y2={150} stroke="#f7bd0055" strokeWidth={2} />
-
-      {/* ====== GER 2: filha 50% ====== */}
-      <PomboSilhueta x={272} y={172} cor="#39e58c66" sexo="f" pequeno />
-      <SanguePie x={376} y={168} r={26} pct={50} cor="#f7bd00" label="filha" />
-
-      {/* campeão de novo × a filha */}
-      <PomboSilhueta x={150} y={172} cor="#f7bd00" sexo="m" pequeno />
-      <text x={150} y={210} textAnchor="middle" fontSize="9" fill="#f7bd00">o MESMO campeão</text>
-      <line x1={176} y1={172} x2={340} y2={172} stroke="#f7bd0088" strokeWidth={2} strokeDasharray="5 4" />
-      <line x1={272} y1={182} x2={272} y2={250} stroke="#f7bd0055" strokeWidth={2} />
-
-      {/* ====== GER 3: 75% ====== */}
-      <PomboSilhueta x={272} y={272} cor="#f7bd0066" sexo="f" pequeno />
-      <SanguePie x={376} y={268} r={30} pct={75} cor="#f7bd00" label="filha 75%" />
-      <text x={272} y={312} textAnchor="middle" fontSize="10.5" fontWeight="900" fill="#f7bd00">🏆 AQUI ESTÁ O 75%</text>
-      <text x={272} y={325} textAnchor="middle" fontSize="9" fill="#9aa8bc">100% do pai ÷ 2 + 50% da mãe ÷ 2</text>
-
-      {/* campeão × a neta (75%) */}
-      <PomboSilhueta x={150} y={272} cor="#f7bd00" sexo="m" pequeno />
-      <text x={150} y={310} textAnchor="middle" fontSize="9" fill="#f7bd00">e de novo…</text>
-      <line x1={176} y1={272} x2={340} y2={272} stroke="#f7bd0088" strokeWidth={2} strokeDasharray="5 4" />
-      <line x1={272} y1={330} x2={272} y2={390} stroke="#f7bd0055" strokeWidth={2} />
-
-      {/* ====== GER 4: 87,5% ====== */}
-      <PomboSilhueta x={272} y={412} cor="#f9731666" sexo="f" pequeno />
-      <SanguePie x={376} y={408} r={32} pct={88} cor="#f97316" label="87,5% de fato" />
-
-      {/* ====== painel lateral direito: o que a tradição diz ====== */}
-      <g>
-        <rect x={470} y={330} width={272} height={190} rx={12} fill="#1b283c" stroke="#31415a" />
-        <text x={606} y={352} textAnchor="middle" fontSize="11" fontWeight="900" fill="#f7bd00">O QUE A TRADIÇÃO DIZ</text>
-        <text x={486} y={372} fontSize="9.5" fill="#f8fafc">• Cada retrocruzamento sobe metade da</text>
-        <text x={486} y={386} fontSize="9.5" fill="#f8fafc">  distância restante: 50 → 75 → 87,5 → 93,75%</text>
-        <text x={486} y={406} fontSize="9.5" fill="#f8fafc">• Os grandes criadores raramente passam</text>
-        <text x={486} y={420} fontSize="9.5" fill="#f8fafc">  do 75%: acima disso, vigor e fertilidade</text>
-        <text x={486} y={434} fontSize="9.5" fill="#f8fafc">  costumam cair (deleção genética)</text>
-        <text x={486} y={454} fontSize="9.5" fill="#f8fafc">• Sempre intercale com outcross:</text>
-        <text x={486} y={468} fontSize="9.5" fill="#f8fafc">  sangue novo devolve o vigor</text>
-        <text x={486} y={488} fontSize="9.5" fill="#f97316">• "A consanguinidade não é crime —</text>
-        <text x={486} y={501} fontSize="9.5" fill="#f97316">  ela descobre o crime" (aforismo de Lush)</text>
-      </g>
-
-      {/* escala de percentuais */}
-      <text x={380} y={548} textAnchor="middle" fontSize="9" fill="#64748b">ilustração original do app • inspirada nos esquemas clássicos dos manuais de criação brasileiros • % = fração de sangue do campeão</text>
-    </svg>
+    <div style={{ display: "grid", gap: 10 }}>
+      {/* Geração 1 */}
+      <Nivel
+        pct="50%" cor="#3b82f6" pizzaPct={50}
+        titulo="1ª GERAÇÃO — o campeão entra"
+        sub="O campeão é acasalado com fêmeas de fora da família. Cada filho direto carrega metade do sangue dele."
+        pombo={<div style={{ display: "flex", gap: 4, alignItems: "flex-end" }}><PomboPerfil cor="#f7bd00" sexo="m" /><PomboPerfil cor="#8b97ad" sexo="f" tamanho={0.85} /></div>}
+      />
+      {/* Geração 2 */}
+      <Nivel
+        pct="75%" cor="#f7bd00" pizzaPct={75} destaque
+        titulo="2ª GERAÇÃO — o cruzamento 75% 🏆"
+        sub="O MESMO campeão cobre a própria filha. O produto recebe 50% do pai (ele inteiro) + metade dos 50% da mãe = 3/4 do sangue do craque. É o clássico dos manuais."
+        pombo={<div style={{ display: "flex", gap: 4, alignItems: "flex-end" }}><PomboPerfil cor="#f7bd00" sexo="m" /><PomboPerfil cor="#39e58c" sexo="f" tamanho={0.85} /></div>}
+      />
+      {/* Geração 3 */}
+      <Nivel
+        pct="87,5%" cor="#f97316" pizzaPct={87}
+        titulo="3ª GERAÇÃO — o limite dos mestres"
+        sub="Campeão × a filha de 75%: sobe pra 7/8 de sangue. Os grandes criadores raramente passam daqui — vigor e fertilidade começam a cair. Depois disso: outcross (sangue novo)."
+        pombo={<div style={{ display: "flex", gap: 4, alignItems: "flex-end" }}><PomboPerfil cor="#f7bd00" sexo="m" /><PomboPerfil cor="#fb923c" sexo="f" tamanho={0.85} /></div>}
+      />
+      {/* nota */}
+      <div style={{ padding: "10px 13px", borderRadius: 10, background: "#ffffff08", border: "1px solid #31415a", fontSize: 11.5, color: "#9aa8bc", lineHeight: 1.7 }}>
+        💡 <b style={{ color: "#f8fafc" }}>Lendo a pizza:</b> a parte dourada é a fração de sangue do campeão em cada geração — 50 → 75 → 87,5%. Cada retrocruzamento sobe <b>metade da distância restante</b>. ⚠️ Consanguinidade real (F): 25% no cruzamento 75% — virtudes e defeitos se concentram juntos: selecione com rigor.
+        <br /><span style={{ fontSize: 10 }}>Ilustração original do app • estilo dos esquemas clássicos de manuais de criação</span>
+      </div>
+    </div>
   );
 }
 
@@ -387,12 +355,7 @@ export default function Genetica75() {
             </section>
 
             <section style={{ ...T.card, borderColor: "#f7bd0055", background: "#f7bd000d" }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🌳 O cruzamento 75% clássico, desenhado</div>
-              <Arvore75 />
-            </section>
-
-            <section style={{ ...T.card, borderColor: "#f9731655", background: "#f973160d" }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#f97316", marginBottom: 10 }}>🩸 A Escalada do Sangue — o esquema clássico, em pombos</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🩸 A Escalada do Sangue — o esquema clássico, em pombos</div>
               <EscaladaSangue />
             </section>
 

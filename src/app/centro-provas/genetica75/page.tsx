@@ -184,96 +184,21 @@ function PomboSilhueta({ x, y, cor, sexo, pequeno }: { x: number; y: number; cor
    estilo dos manuais clássicos de criação. Texto em HTML (não SVG).
    ══════════════════════════════════════════════════════════════ */
 
-/** Silhueta realista de pombo-correio em perfil (path único, ~cuidado anatômico) */
-function PomboPerfil({ cor, sexo, tamanho = 1 }: { cor: string; sexo: "m" | "f"; tamanho?: number }) {
-  return (
-    <svg viewBox="0 0 140 120" width={110 * tamanho} height={94 * tamanho} style={{ display: "block" }}>
-      {/* cauda longa */}
-      <path d="M88 66 C104 64 122 60 134 54 C132 62 124 72 112 78 C102 82 92 80 86 74 Z" fill={cor} opacity="0.9" />
-      {/* corpo em gota: peito alto, dorso descendente */}
-      <path d="M22 52 C20 34 34 20 56 18 C64 17 70 18 74 22 C82 28 86 38 88 48 C90 58 88 68 80 74 C70 82 52 84 38 78 C27 73 23 63 22 52 Z" fill={cor} />
-      {/* asa dobrada no dorso */}
-      <path d="M44 32 C58 26 74 30 82 42 C76 54 64 60 52 58 C44 56 40 44 44 32 Z" fill="#00000033" />
-      <path d="M48 36 C60 32 72 36 78 45" stroke="#00000044" strokeWidth="1.5" fill="none" />
-      {/* cabeça pequena e redonda */}
-      <circle cx="30" cy="26" r="13" fill={cor} />
-      {/* pescoço curto e grosso */}
-      <path d="M36 34 C44 30 48 28 50 24 L58 30 C54 38 48 42 42 44 Z" fill={cor} />
-      {/* bico curto com cera */}
-      <path d="M18 24 L4 20 L18 16 Z" fill="#e0a020" />
-      <circle cx="19" cy="19" r="3" fill="#ffffff33" />
-      {/* olho */}
-      <circle cx="27" cy="23" r="2.6" fill="#0b1426" />
-      <circle cx="26.3" cy="22.3" r="0.9" fill="#fff" />
-      {/* pernas */}
-      <path d="M46 80 L44 96 M58 80 L60 96" stroke="#e0a020" strokeWidth="3" strokeLinecap="round" />
-      {/* símbolo do sexo */}
-      <text x="70" y="112" textAnchor="middle" fontSize="17" fontWeight="900" fill={sexo === "m" ? "#55a3ff" : "#ec4899"}>{sexo === "m" ? "♂" : "♀"}</text>
-    </svg>
-  );
-}
-
-/** Círculo de sangue (pizza) */
-function PizzaSangue({ pct, cor, tamanho = 74 }: { pct: number; cor: string; tamanho?: number }) {
-  const r = tamanho / 2 - 3;
-  const cx = tamanho / 2;
-  const ang = (pct / 100) * Math.PI * 2 - Math.PI / 2;
-  const fx = cx + r * Math.cos(ang);
-  const fy = cx + r * Math.sin(ang);
-  const grande = pct > 50 ? 1 : 0;
-  return (
-    <svg width={tamanho} height={tamanho} viewBox={`0 0 ${tamanho} ${tamanho}`} style={{ display: "block" }}>
-      <circle cx={cx} cy={cx} r={r} fill="#1b283c" stroke="#31415a" strokeWidth="2" />
-      {pct > 0 && <path d={`M${cx} ${cx} L${cx} ${cx - r} A${r} ${r} 0 ${grande} 1 ${fx.toFixed(2)} ${fy.toFixed(2)} Z`} fill={cor} />}
-      <circle cx={cx} cy={cx} r={r} fill="none" stroke="#31415a" strokeWidth="2" />
-    </svg>
-  );
-}
-
 function EscaladaSangue() {
-  const Nivel = ({ pct, cor, titulo, sub, pombo, pizzaPct, destaque }: { pct: string; cor: string; titulo: string; sub: string; pombo: React.ReactNode; pizzaPct: number; destaque?: boolean }) => (
-    <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 14px", borderRadius: 12, background: destaque ? `${cor}14` : "#ffffff08", border: `1.5px solid ${destaque ? cor : "#31415a"}`, flexWrap: "wrap" }}>
-      <div style={{ position: "relative", width: 84, height: 84, display: "grid", placeItems: "center" }}>
-        <PizzaSangue pct={pizzaPct} cor={cor} tamanho={84} />
-        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-          <b style={{ fontSize: 17, color: pizzaPct > 45 ? "#0b1426" : "#f8fafc", textShadow: pizzaPct > 45 ? "0 0 3px #ffffff55" : "0 1px 3px #000" }}>{pct}</b>
-        </div>
-      </div>
-      <div style={{ flex: 1, minWidth: 150 }}>{pombo}</div>
-      <div style={{ flex: 2, minWidth: 190 }}>
-        <b style={{ color: cor, fontSize: 13.5 }}>{titulo}</b>
-        <div style={{ ...T.small, fontSize: 11.5, lineHeight: 1.6, marginTop: 3 }}>{sub}</div>
-      </div>
-    </div>
-  );
-
+  const [zoom, setZoom] = useState(false);
   return (
-    <div style={{ display: "grid", gap: 10 }}>
-      {/* Geração 1 */}
-      <Nivel
-        pct="50%" cor="#3b82f6" pizzaPct={50}
-        titulo="1ª GERAÇÃO — o campeão entra"
-        sub="O campeão é acasalado com fêmeas de fora da família. Cada filho direto carrega metade do sangue dele."
-        pombo={<div style={{ display: "flex", gap: 4, alignItems: "flex-end" }}><PomboPerfil cor="#f7bd00" sexo="m" /><PomboPerfil cor="#8b97ad" sexo="f" tamanho={0.85} /></div>}
-      />
-      {/* Geração 2 */}
-      <Nivel
-        pct="75%" cor="#f7bd00" pizzaPct={75} destaque
-        titulo="2ª GERAÇÃO — o cruzamento 75% 🏆"
-        sub="O MESMO campeão cobre a própria filha. O produto recebe 50% do pai (ele inteiro) + metade dos 50% da mãe = 3/4 do sangue do craque. É o clássico dos manuais."
-        pombo={<div style={{ display: "flex", gap: 4, alignItems: "flex-end" }}><PomboPerfil cor="#f7bd00" sexo="m" /><PomboPerfil cor="#39e58c" sexo="f" tamanho={0.85} /></div>}
-      />
-      {/* Geração 3 */}
-      <Nivel
-        pct="87,5%" cor="#f97316" pizzaPct={87}
-        titulo="3ª GERAÇÃO — o limite dos mestres"
-        sub="Campeão × a filha de 75%: sobe pra 7/8 de sangue. Os grandes criadores raramente passam daqui — vigor e fertilidade começam a cair. Depois disso: outcross (sangue novo)."
-        pombo={<div style={{ display: "flex", gap: 4, alignItems: "flex-end" }}><PomboPerfil cor="#f7bd00" sexo="m" /><PomboPerfil cor="#fb923c" sexo="f" tamanho={0.85} /></div>}
-      />
-      {/* nota */}
-      <div style={{ padding: "10px 13px", borderRadius: 10, background: "#ffffff08", border: "1px solid #31415a", fontSize: 11.5, color: "#9aa8bc", lineHeight: 1.7 }}>
-        💡 <b style={{ color: "#f8fafc" }}>Lendo a pizza:</b> a parte dourada é a fração de sangue do campeão em cada geração — 50 → 75 → 87,5%. Cada retrocruzamento sobe <b>metade da distância restante</b>. ⚠️ Consanguinidade real (F): 25% no cruzamento 75% — virtudes e defeitos se concentram juntos: selecione com rigor.
-        <br /><span style={{ fontSize: 10 }}>Ilustração original do app • estilo dos esquemas clássicos de manuais de criação</span>
+    <div>
+      <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: "1.5px solid #f7bd0055", cursor: zoom ? "zoom-out" : "zoom-in" }} onClick={() => setZoom((z) => !z)} title={zoom ? "clique para reduzir" : "clique para ampliar"}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/img/escalada-sangue.jpg"
+          alt="Escalada do Sangue — o esquema clássico da consanguinidade em pombos-correio: 50%, 75% e 87,5% do sangue do campeão"
+          style={{ width: "100%", display: "block", transform: zoom ? "scale(1.6)" : "scale(1)", transformOrigin: "center center", transition: "transform .25s ease" }}
+        />
+      </div>
+      <div style={{ ...T.small, fontSize: 10.5, color: "#9aa8bc", textAlign: "center", marginTop: 8, lineHeight: 1.6 }}>
+        🩸 A parte dourada de cada círculo = fração de sangue do campeão na geração (50 → 75 → 87,5%)<br />
+        Cada retrocruzamento sobe <b>metade da distância restante</b> · toque na imagem para ampliar · ilustração original do app
       </div>
     </div>
   );

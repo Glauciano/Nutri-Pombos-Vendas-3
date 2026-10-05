@@ -2,6 +2,7 @@ import { db, isDbConfigured } from "@/db";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { exijaPago } from "@/lib/seguranca";
+import { vapidPublica, vapidPrivada } from "@/lib/vapid";
 
 /**
  * 🔔 Envia uma notificação de TESTE para UM aparelho logado (ou todos os do usuário).
@@ -19,9 +20,9 @@ export async function POST() {
   const { user, erro } = await exijaPago();
   if (erro) return erro;
 
-  const pub = process.env.VAPID_PUBLIC_KEY;
-  const priv = process.env.VAPID_PRIVATE_KEY;
-  if (!pub || !priv) return NextResponse.json({ ok: false, erro: "chaves VAPID ausentes na Vercel" }, { status: 500 });
+  const pub = vapidPublica();
+  const priv = vapidPrivada();
+  if (!pub || !priv) return NextResponse.json({ ok: false, erro: "chaves VAPID ausentes ou inválidas na Vercel (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY)" }, { status: 500 });
 
   try {
     // import dinâmico + interop CJS (web-push é CommonJS)

@@ -2,6 +2,7 @@ import { db, isDbConfigured } from "@/db";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { cronAutorizado } from "@/lib/seguranca";
+import { vapidPublica, vapidPrivada } from "@/lib/vapid";
 import type webpushType from "web-push";
 
 /**
@@ -22,9 +23,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, erro: "não autorizado" }, { status: 403 });
   }
 
-  const pub = process.env.VAPID_PUBLIC_KEY;
-  const priv = process.env.VAPID_PRIVATE_KEY;
-  if (!pub || !priv) return NextResponse.json({ ok: false, motivo: "VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY não configuradas na Vercel" });
+  const pub = vapidPublica();
+  const priv = vapidPrivada();
+  if (!pub || !priv) return NextResponse.json({ ok: false, motivo: "VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY não configuradas (ou com formato inválido) na Vercel" });
   if (!isDbConfigured()) return NextResponse.json({ ok: false, motivo: "sem banco" });
 
   try {

@@ -199,6 +199,118 @@ function Calculadora75({ pombos, mapa }: { pombos: Pombo[]; mapa: Map<number, Po
    PÁGINA
    ══════════════════════════════════════════════════════════════ */
 
+
+/* ══════════════════════════════════════════════════════════════
+   🩸 ESCALADA DO SANGUE — o esquema clássico dos manuais de
+   criação (recriado em versão POMBOS, ilustração original):
+   o reprodutor no topo cruzando com suas filhas, geração após
+   geração, concentrando o sangue: 50 → 75 → 87,5 → 93,75%
+   ══════════════════════════════════════════════════════════════ */
+
+function PomboSilhueta({ x, y, cor, sexo, pequeno }: { x: number; y: number; cor: string; sexo: "m" | "f"; pequeno?: boolean }) {
+  const e = pequeno ? 0.62 : 1;
+  return (
+    <g transform={`translate(${x} ${y}) scale(${e})`}>
+      {/* corpo */}
+      <path d="M-26 8 Q-30 -6 -14 -12 Q-2 -18 10 -12 Q22 -8 24 2 Q26 12 14 16 L-16 16 Q-28 14 -26 8 Z" fill={cor} />
+      {/* cabeça */}
+      <circle cx="-16" cy="-14" r="9" fill={cor} />
+      {/* bico */}
+      <path d="M-24 -16 L-34 -13 L-24 -10 Z" fill="#ca8a04" />
+      {/* olho */}
+      <circle cx="-18" cy="-15" r="2" fill="#0b1426" />
+      {/* asa */}
+      <path d="M-8 -10 Q8 -16 18 -6 Q8 8 -6 6 Z" fill="#0b142633" stroke="#0b142666" strokeWidth="0.8" />
+      {/* cauda */}
+      <path d="M22 6 L40 10 L40 16 L22 14 Z" fill={cor} opacity="0.85" />
+      {/* símbolo do sexo */}
+      <text x="0" y="30" textAnchor="middle" fontSize="11" fontWeight="900" fill={sexo === "m" ? "#55a3ff" : "#ec4899"}>{sexo === "m" ? "♂" : "♀"}</text>
+    </g>
+  );
+}
+
+function SanguePie({ x, y, r, pct, cor, label }: { x: number; y: number; r: number; pct: number; cor: string; label?: string }) {
+  const ang = (pct / 100) * Math.PI * 2 - Math.PI / 2;
+  const fx = x + r * Math.cos(ang);
+  const fy = y + r * Math.sin(ang);
+  const grande = pct > 50 ? 1 : 0;
+  return (
+    <g>
+      <circle cx={x} cy={y} r={r} fill="#1b283c" stroke="#31415a" strokeWidth="2" />
+      {pct > 0 && (
+        <path d={`M${x} ${y} L${x} ${y - r} A${r} ${r} 0 ${grande} 1 ${fx.toFixed(2)} ${fy.toFixed(2)} Z`} fill={cor} />
+      )}
+      <circle cx={x} cy={y} r={r} fill="none" stroke="#31415a" strokeWidth="2" />
+      <text x={x} y={y + 5} textAnchor="middle" fontSize={r > 26 ? 16 : 13} fontWeight="900" fill={pct > 45 ? "#0b1426" : "#f8fafc"}>{pct}%</text>
+      {label && <text x={x} y={y + r + 16} textAnchor="middle" fontSize="10" fontWeight="700" fill="#9aa8bc">{label}</text>}
+    </g>
+  );
+}
+
+function EscaladaSangue() {
+  return (
+    <svg viewBox="0 0 760 560" style={{ width: "100%", display: "block" }}>
+      <text x={380} y={20} textAnchor="middle" fill="#f7bd00" fontSize={13} fontWeight={900}>A ESCALADA DO SANGUE — o esquema clássico, em pombos</text>
+      <text x={380} y={36} textAnchor="middle" fill="#9aa8bc" fontSize={9.5}>o campeão (♂ no topo) é cruzado com suas próprias filhas, geração após geração — cada círculo mostra o % do sangue dele</text>
+
+      {/* ====== GER 1: campeão × fêmea de fora ====== */}
+      <PomboSilhueta x={150} y={78} cor="#f7bd00" sexo="m" />
+      <text x={150} y={118} textAnchor="middle" fontSize="10.5" fontWeight="800" fill="#f7bd00">CAMPEÃO</text>
+      <PomboSilhueta x={400} y={78} cor="#7d8aa5" sexo="f" />
+      <text x={400} y={118} textAnchor="middle" fontSize="10" fill="#9aa8bc">fêmea de fora</text>
+
+      {/* cruzamento 1 */}
+      <line x1={185} y1={78} x2={360} y2={78} stroke="#f7bd0088" strokeWidth={2} strokeDasharray="5 4" />
+      <text x={272} y={72} textAnchor="middle" fontSize="10" fill="#f7bd00">✕ acasalamento</text>
+      <line x1={272} y1={86} x2={272} y2={150} stroke="#f7bd0055" strokeWidth={2} />
+
+      {/* ====== GER 2: filha 50% ====== */}
+      <PomboSilhueta x={272} y={172} cor="#39e58c66" sexo="f" pequeno />
+      <SanguePie x={376} y={168} r={26} pct={50} cor="#f7bd00" label="filha" />
+
+      {/* campeão de novo × a filha */}
+      <PomboSilhueta x={150} y={172} cor="#f7bd00" sexo="m" pequeno />
+      <text x={150} y={210} textAnchor="middle" fontSize="9" fill="#f7bd00">o MESMO campeão</text>
+      <line x1={176} y1={172} x2={340} y2={172} stroke="#f7bd0088" strokeWidth={2} strokeDasharray="5 4" />
+      <line x1={272} y1={182} x2={272} y2={250} stroke="#f7bd0055" strokeWidth={2} />
+
+      {/* ====== GER 3: 75% ====== */}
+      <PomboSilhueta x={272} y={272} cor="#f7bd0066" sexo="f" pequeno />
+      <SanguePie x={376} y={268} r={30} pct={75} cor="#f7bd00" label="filha 75%" />
+      <text x={272} y={312} textAnchor="middle" fontSize="10.5" fontWeight="900" fill="#f7bd00">🏆 AQUI ESTÁ O 75%</text>
+      <text x={272} y={325} textAnchor="middle" fontSize="9" fill="#9aa8bc">100% do pai ÷ 2 + 50% da mãe ÷ 2</text>
+
+      {/* campeão × a neta (75%) */}
+      <PomboSilhueta x={150} y={272} cor="#f7bd00" sexo="m" pequeno />
+      <text x={150} y={310} textAnchor="middle" fontSize="9" fill="#f7bd00">e de novo…</text>
+      <line x1={176} y1={272} x2={340} y2={272} stroke="#f7bd0088" strokeWidth={2} strokeDasharray="5 4" />
+      <line x1={272} y1={330} x2={272} y2={390} stroke="#f7bd0055" strokeWidth={2} />
+
+      {/* ====== GER 4: 87,5% ====== */}
+      <PomboSilhueta x={272} y={412} cor="#f9731666" sexo="f" pequeno />
+      <SanguePie x={376} y={408} r={32} pct={88} cor="#f97316" label="87,5% de fato" />
+
+      {/* ====== painel lateral direito: o que a tradição diz ====== */}
+      <g>
+        <rect x={470} y={330} width={272} height={190} rx={12} fill="#1b283c" stroke="#31415a" />
+        <text x={606} y={352} textAnchor="middle" fontSize="11" fontWeight="900" fill="#f7bd00">O QUE A TRADIÇÃO DIZ</text>
+        <text x={486} y={372} fontSize="9.5" fill="#f8fafc">• Cada retrocruzamento sobe metade da</text>
+        <text x={486} y={386} fontSize="9.5" fill="#f8fafc">  distância restante: 50 → 75 → 87,5 → 93,75%</text>
+        <text x={486} y={406} fontSize="9.5" fill="#f8fafc">• Os grandes criadores raramente passam</text>
+        <text x={486} y={420} fontSize="9.5" fill="#f8fafc">  do 75%: acima disso, vigor e fertilidade</text>
+        <text x={486} y={434} fontSize="9.5" fill="#f8fafc">  costumam cair (deleção genética)</text>
+        <text x={486} y={454} fontSize="9.5" fill="#f8fafc">• Sempre intercale com outcross:</text>
+        <text x={486} y={468} fontSize="9.5" fill="#f8fafc">  sangue novo devolve o vigor</text>
+        <text x={486} y={488} fontSize="9.5" fill="#f97316">• "A consanguinidade não é crime —</text>
+        <text x={486} y={501} fontSize="9.5" fill="#f97316">  ela descobre o crime" (aforismo de Lush)</text>
+      </g>
+
+      {/* escala de percentuais */}
+      <text x={380} y={548} textAnchor="middle" fontSize="9" fill="#64748b">ilustração original do app • inspirada nos esquemas clássicos dos manuais de criação brasileiros • % = fração de sangue do campeão</text>
+    </svg>
+  );
+}
+
 export default function Genetica75() {
   const [modo, setModo] = useState<Modo>("explicar");
   const [pombos, setPombos] = useState<Pombo[]>([]);
@@ -277,6 +389,11 @@ export default function Genetica75() {
             <section style={{ ...T.card, borderColor: "#f7bd0055", background: "#f7bd000d" }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🌳 O cruzamento 75% clássico, desenhado</div>
               <Arvore75 />
+            </section>
+
+            <section style={{ ...T.card, borderColor: "#f9731655", background: "#f973160d" }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#f97316", marginBottom: 10 }}>🩸 A Escalada do Sangue — o esquema clássico, em pombos</div>
+              <EscaladaSangue />
             </section>
 
             <section style={T.card}>

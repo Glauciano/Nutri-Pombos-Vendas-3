@@ -103,7 +103,7 @@ export default function AnatomiaTrianguloOuro() {
           </Link>
         </div>
 
-        <IlustracaoAnatomia comprimento={comprimento} profundidade={profundidade} forquilha={forquilha} baricentro={baricentro} />
+        <IlustracaoAnatomia comprimento={comprimento} profundidade={profundidade} forquilha={forquilha} baricentro={baricentro} asaSecundaria={asaSecundaria} />
 
         <section style={T.card}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 14 }}>

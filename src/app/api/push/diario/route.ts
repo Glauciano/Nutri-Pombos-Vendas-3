@@ -92,6 +92,24 @@ export async function GET(request: Request) {
           } catch { /* config inválida */ }
         }
 
+        // 3) lembretes de manejo (gaveta nutripombos-manejo-v1 — criada na página Lembretes de Manejo)
+        const manRows = linhas<{ valor: string | null }>(await db.execute(sql`SELECT valor FROM dados_usuario WHERE usuario_id = ${usuario_id} AND chave = 'nutripombos-manejo-v1'`));
+        if (manRows[0]?.valor) {
+          try {
+            type ItemManejo = { nome?: string; proximaData?: string; ativo?: boolean };
+            const itens = JSON.parse(manRows[0].valor) as ItemManejo[];
+            let avisos = 0;
+            (Array.isArray(itens) ? itens : []).forEach((i) => {
+              if (avisos >= 3) return; // no máximo 3 avisos de manejo por dia
+              if (!i || i.ativo === false || !i.nome || !i.proximaData) return;
+              const dias = Math.round((new Date(i.proximaData + "T12:00:00").getTime() - new Date(hojeBR + "T12:00:00").getTime()) / 86_400_000);
+              if (dias === 0) { msgs.push({ title: `📅 Manejo HOJE: ${i.nome}`, body: "Dia marcado no seu calendário de manejo — confira o app.", tag: "manejo-hoje" }); avisos++; }
+              else if (dias === 1) { msgs.push({ title: `📅 Amanhã: ${i.nome}`, body: "Manejo do plantel amanhã — separe o material hoje.", tag: "manejo-amanha" }); avisos++; }
+              else if (dias < 0) { msgs.push({ title: `⚠️ Manejo atrasado: ${i.nome}`, body: `Atrasado há ${Math.abs(dias)} dia(s) — regularize no app.`, tag: "manejo-atrasado" }); avisos++; }
+            });
+          } catch { /* manejo inválido */ }
+        }
+
         if (!msgs.length) continue;
 
         for (const sub of subs) {

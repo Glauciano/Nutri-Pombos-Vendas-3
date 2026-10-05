@@ -6,10 +6,10 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { alternarTema, temaAtual, EVENTO_TEMA } from "./theme";
 import { EXIGE_PAGO } from "../../lib/permissoes";
 import {
-  Activity, Bell, Bird, Bot, Calculator, CalendarDays, ChevronDown, Tv,
-  CloudSun, Dna, HeartPulse, LayoutDashboard, Map, Menu, PackageOpen,
+  Activity, Bell, Bird, Bot, BookOpen, Calculator, CalendarClock, CalendarDays, ChevronDown, Tv,
+  CloudSun, Dna, HeartHandshake, HeartPulse, LayoutDashboard, Map, Menu, PackageOpen,
   Radio, Search, Settings, ShieldCheck, Sparkles, Target, TrendingUp, Trophy,
-  UtensilsCrossed, X, LogOut,
+  UtensilsCrossed, Wallet, X, LogOut,
 } from "lucide-react";
 
 type NavItem = { href: string; label: string; icon: typeof Activity };
@@ -53,6 +53,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         { href: "/centro-provas/gps-chip", label: "GPS e chip", icon: Radio },
         { href: "/centro-provas/historico", label: "Histórico", icon: Trophy },
         { href: "/centro-provas/treinamentos", label: "Treinamentos", icon: Activity },
+        { href: "/centro-provas/diario", label: "Diário do Pombal", icon: BookOpen },
         { href: "/centro-provas/treinamento-orientacao", label: "Orientação", icon: Map },
       ],
     },
@@ -63,12 +64,14 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         { href: "/centro-provas/mistura-semanal", label: "Mistura semanal (16 sementes)", icon: UtensilsCrossed },
         { href: "/centro-provas/mix-energetico", label: "Mix energético (lote)", icon: Sparkles },
         { href: "/centro-provas/planejamento-anual", label: "Planejamento anual", icon: CalendarDays },
+      { href: "/centro-provas/manejo", label: "Lembretes de Manejo", icon: CalendarClock },
         { href: "/centro-provas/calendario-anual", label: "Calendário nutricional", icon: CalendarDays },
         { href: "/centro-provas/configuracao", label: "Configuração", icon: Settings },
         { href: "/centro-provas/simulador-vento", label: "Simulador de Vento", icon: CloudSun },
         { href: "/centro-provas/geodesica", label: "Geodésica e Relevo", icon: Map },
         { href: "/centro-provas/fotoperiodo", label: "Fotoperíodo (Darkness)", icon: CloudSun },
         { href: "/centro-provas/custos", label: "Custos e ROI", icon: Calculator },
+      { href: "/centro-provas/caixa", label: "💰 Caixa do Pombal", icon: Wallet },
         { href: "/centro-provas/vendas", label: "Vendas de pombos", icon: PackageOpen },
         { href: "/centro-provas/acasalamento", label: "Assistente de acasalamento", icon: HeartPulse },
         { href: "/centro-provas/comparador", label: "Comparador de pombos", icon: Activity },
@@ -93,6 +96,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         { href: "/centro-provas/pombos", label: "Pombos e Pedigree", icon: Bird },
         { href: "/centro-provas/classificacao", label: "Classificação por Km", icon: Trophy },
         { href: "/centro-provas/simulador-cruzamento", label: "Simulador Genético", icon: Dna },
+        { href: "/centro-provas/casamenteiro", label: "Casamenteiro (parentesco)", icon: HeartHandshake },
         { href: "/centro-provas/olho", label: "Análise de Olho (Eye-Sign)", icon: Search },
         { href: "/centro-provas/anatomia", label: "Triângulo de Ouro Anatômico", icon: Activity },
         { href: "/centro-provas/asa", label: "Índice da Asa e Muda", icon: Activity },

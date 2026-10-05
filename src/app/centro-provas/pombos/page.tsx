@@ -67,6 +67,16 @@ export default function PombosPage(){
   const[filtroStatus,setFiltroStatus]=useState("");
   const[pedigreeData,setPedigreeData]=useState<Pombo|null>(null);
   const[editPombo,setEditPombo]=useState<Pombo|null>(null);
+  // 💬 WhatsApp do criador pro QR de venda (fica salvo no aparelho e sincroniza)
+  const[zap,setZap]=useState("");
+  useEffect(()=>{
+    try{setZap(localStorage.getItem("nutripombos-whatsapp-v1")||"")}catch{}
+  },[]);
+  const salvarZap=(v:string)=>{
+    const limpo=v.replace(/\D/g,"");
+    setZap(limpo);
+    try{localStorage.setItem("nutripombos-whatsapp-v1",limpo)}catch{}
+  };
 
   const loadPombos=useCallback(async()=>{
     setLoading(true);
@@ -144,12 +154,17 @@ export default function PombosPage(){
       </section>
 
       <section style={T.card}><Title>🏷️ QR de Venda</Title>
-        <div style={{ ...T.small, marginBottom: 10, fontSize: 11.5, lineHeight: 1.5 }}>Gere o QR Code da ficha pública deste pombo (anilha + linhagem) — cole no box/cesto ou mande pro comprador no WhatsApp. Quem escanear vê a ficha no celular, sem precisar do app.</div>
+        <div style={{ ...T.small, marginBottom: 10, fontSize: 11.5, lineHeight: 1.5 }}>Gere o QR Code da ficha pública premium deste pombo (cartão + pedigree de 2 gerações + seu WhatsApp) — cole no box/cesto ou mande pro comprador. Quem escanear vê a ficha no celular, sem precisar do app.</div>
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ ...T.small, fontSize: 10, marginBottom: 4 }}>💬 Seu WhatsApp (com DDI+DDD, só números — ex: 5519999999999)</div>
+          <input value={zap} onChange={(e)=>salvarZap(e.target.value)} placeholder="5519999999999" inputMode="numeric" style={{...T.btnGhost,padding:"9px 12px",fontWeight:600,fontSize:12.5,width:"100%",textAlign:"left"}}/>
+          {zap && <div style={{...T.small,fontSize:10,marginTop:4,color:T.green}}>✓ Botão "Falar com o criador" vai aparecer na ficha</div>}
+        </div>
         <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=6&data=${encodeURIComponent(`${window.location.origin}/ficha?anilha=${encodeURIComponent(sel.anilha)}`)}`} alt={`QR ${sel.anilha}`} style={{ borderRadius: 10, background: "#fff", padding: 5, width: 150, height: 150 }} />
+          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=6&data=${encodeURIComponent(`${window.location.origin}/ficha?anilha=${encodeURIComponent(sel.anilha)}${zap?`&tel=${zap}`:""}`)}`} alt={`QR ${sel.anilha}`} style={{ borderRadius: 10, background: "#fff", padding: 5, width: 150, height: 150 }} />
           <div>
-            <a href={`/ficha?anilha=${encodeURIComponent(sel.anilha)}`} target="_blank" rel="noreferrer" style={{ ...T.btnGhost, textDecoration: "none", display: "inline-block" }}>📄 Abrir ficha pública ↗</a>
-            <div style={{ ...T.small, fontSize: 10, marginTop: 8, fontFamily: "monospace", wordBreak: "break-all" }}>{`${typeof window !== "undefined" ? window.location.origin : ""}/ficha?anilha=${encodeURIComponent(sel.anilha)}`}</div>
+            <a href={`/ficha?anilha=${encodeURIComponent(sel.anilha)}${zap?`&tel=${zap}`:""}`} target="_blank" rel="noreferrer" style={{ ...T.btnGhost, textDecoration: "none", display: "inline-block" }}>📄 Abrir ficha pública ↗</a>
+            <div style={{ ...T.small, fontSize: 10, marginTop: 8, fontFamily: "monospace", wordBreak: "break-all" }}>{`${typeof window !== "undefined" ? window.location.origin : ""}/ficha?anilha=${encodeURIComponent(sel.anilha)}${zap?`&tel=${zap}`:""}`}</div>
           </div>
         </div>
       </section>

@@ -28,6 +28,25 @@ export async function GET(request: Request) {
       if (r) mae = { anilha: r.anilha, nome: r.nome };
     }
 
+    // 🧬 avós (2ª geração do pedigree resumido da ficha de venda)
+    const avosDe = async (id: number | null) => {
+      if (!id) return { paterno: null as { anilha: string; nome: string | null } | null, materno: null as { anilha: string; nome: string | null } | null };
+      const [avo] = await db.select().from(pombos).where(eq(pombos.id, id)).limit(1);
+      let pa: { anilha: string; nome: string | null } | null = null;
+      let ma: { anilha: string; nome: string | null } | null = null;
+      if (avo?.paiId) {
+        const [r] = await db.select().from(pombos).where(eq(pombos.id, avo.paiId)).limit(1);
+        if (r) pa = { anilha: r.anilha, nome: r.nome };
+      }
+      if (avo?.maeId) {
+        const [r] = await db.select().from(pombos).where(eq(pombos.id, avo.maeId)).limit(1);
+        if (r) ma = { anilha: r.anilha, nome: r.nome };
+      }
+      return { paterno: pa, materno: ma };
+    };
+    const avosPai = await avosDe(p.paiId);
+    const avosMae = await avosDe(p.maeId);
+
     // somente dados não-sensíveis (sem observações internas, sem status, sem contato)
     return NextResponse.json({
       anilha: p.anilha,
@@ -37,6 +56,8 @@ export async function GET(request: Request) {
       dataNascimento: p.dataNascimento,
       pai,
       mae,
+      avosPai,
+      avosMae,
     });
   } catch (e) {
     console.error(e);

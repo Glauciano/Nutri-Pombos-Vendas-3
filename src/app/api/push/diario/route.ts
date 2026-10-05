@@ -110,6 +110,25 @@ export async function GET(request: Request) {
           } catch { /* manejo inválido */ }
         }
 
+        // 4) estoque acabando (gaveta nutripombos-estoque-v1 — página Estoque do Pombal)
+        const estRows = linhas<{ valor: string | null }>(await db.execute(sql`SELECT valor FROM dados_usuario WHERE usuario_id = ${usuario_id} AND chave = 'nutripombos-estoque-v1'`));
+        if (estRows[0]?.valor) {
+          try {
+            type ItemEstoque = { nome?: string; qtd?: number; consumoSemana?: number };
+            const itensEst = JSON.parse(estRows[0].valor) as ItemEstoque[];
+            let avisados = 0;
+            (Array.isArray(itensEst) ? itensEst : []).forEach((i) => {
+              if (avisados >= 2) return; // no máximo 2 avisos de estoque por dia
+              if (!i || !i.nome || typeof i.qtd !== "number" || typeof i.consumoSemana !== "number" || i.consumoSemana <= 0) return;
+              const dias = Math.floor(i.qtd / (i.consumoSemana / 7));
+              if (dias <= 7) {
+                msgs.push({ title: `📦 ${i.nome} acabando`, body: dias < 0 ? "Esgotado! Hora de comprar." : `Restam ~${dias} dia(s) pelo seu consumo. Compre com antecedência.`, tag: "estoque" });
+                avisados++;
+              }
+            });
+          } catch { /* estoque inválido */ }
+        }
+
         if (!msgs.length) continue;
 
         for (const sub of subs) {

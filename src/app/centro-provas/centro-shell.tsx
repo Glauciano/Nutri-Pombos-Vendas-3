@@ -7,9 +7,9 @@ import { alternarTema, temaAtual, EVENTO_TEMA } from "./theme";
 import { EXIGE_PAGO } from "../../lib/permissoes";
 import {
   Activity, Bell, Bird, Bot, BookOpen, Calculator, CalendarClock, CalendarDays, ChevronDown, Tv,
-  CloudSun, Dna, HeartHandshake, HeartPulse, LayoutDashboard, Map, Menu, PackageOpen,
-  Radio, Search, Settings, ShieldCheck, Sparkles, Target, TrendingUp, Trophy,
-  UtensilsCrossed, Wallet, X, LogOut,
+  CloudSun, Dna, HeartHandshake, HeartPulse, LayoutDashboard, Map, Menu, Package, PackageOpen,
+  Palette, Radio, Search, Settings, ShieldCheck, Sparkles, Target, TrendingUp, Trophy,
+  Users, UtensilsCrossed, Wallet, X, LogOut,
 } from "lucide-react";
 
 type NavItem = { href: string; label: string; icon: typeof Activity };
@@ -62,6 +62,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
       items: [
         { href: "/centro-provas/calculadora", label: "Calculadora do plantel", icon: Calculator },
         { href: "/centro-provas/mistura-semanal", label: "Mistura semanal (16 sementes)", icon: UtensilsCrossed },
+      { href: "/centro-provas/estoque", label: "📦 Estoque do Pombal", icon: Package },
         { href: "/centro-provas/mix-energetico", label: "Mix energético (lote)", icon: Sparkles },
         { href: "/centro-provas/planejamento-anual", label: "Planejamento anual", icon: CalendarDays },
       { href: "/centro-provas/manejo", label: "Lembretes de Manejo", icon: CalendarClock },
@@ -73,6 +74,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         { href: "/centro-provas/custos", label: "Custos e ROI", icon: Calculator },
       { href: "/centro-provas/caixa", label: "💰 Caixa do Pombal", icon: Wallet },
         { href: "/centro-provas/vendas", label: "Vendas de pombos", icon: PackageOpen },
+      { href: "/centro-provas/compradores", label: "Compradores (CRM)", icon: Users },
         { href: "/centro-provas/acasalamento", label: "Assistente de acasalamento", icon: HeartPulse },
         { href: "/centro-provas/comparador", label: "Comparador de pombos", icon: Activity },
         { href: "/centro-provas/ficha-pombo", label: "Ficha de avaliação", icon: ShieldCheck },
@@ -97,6 +99,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         { href: "/centro-provas/classificacao", label: "Classificação por Km", icon: Trophy },
         { href: "/centro-provas/simulador-cruzamento", label: "Simulador Genético", icon: Dna },
         { href: "/centro-provas/casamenteiro", label: "Casamenteiro (parentesco)", icon: HeartHandshake },
+        { href: "/centro-provas/cores", label: "Cores dos Filhotes", icon: Palette },
         { href: "/centro-provas/olho", label: "Análise de Olho (Eye-Sign)", icon: Search },
         { href: "/centro-provas/anatomia", label: "Triângulo de Ouro Anatômico", icon: Activity },
         { href: "/centro-provas/asa", label: "Índice da Asa e Muda", icon: Activity },

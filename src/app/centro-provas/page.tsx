@@ -75,6 +75,41 @@ function CalcVelocidade({ onBack }: { onBack: () => void }) {
   </div>;
 }
 
+
+const CURIOSIDADES: [string, string][] = [
+  ["🧭", "Pombos sentem o campo magnético da Terra através de proteínas nos OLHOS (criptocromos) — enxergam 'bússola' que nós não vemos."],
+  ["👃", "Estudos da Universidade de Oxford mostram que pombos também navegam pelo OLFATO: memorizam o 'cheiro' da região do pombal."],
+  ["🛣️", "Pesquisas com GPS revelaram que pombos preferem seguir RODOVIAS — voam 'colados' em estradas e até fazem curvas nos trevos, como se seguissem um mapa."],
+  ["🏆", "O recorde mundial de venda de um pombo: €1.25 milhão (New Kim, belga, em 2020) — comprador chinês."],
+  ["🎖️", "Cerca de 32 pombos receberam a medalha Dickin (a 'VC' animal britânica) por heroísmo na 2ª Guerra — o mais famoso: Paddy, que atravessou a Mancha sob fogo."],
+  ["🧠", "Um pombo é um dos poucos animais que se reconhece no ESPELHO — teste de autoconsciência que até a maioria dos cães não passa."],
+  ["💙", "O pombo macho 'leite' os filhotes: produz leite de papo (pigeon milk) no bico — rico em proteína e gordura, tão completo quanto o leite de mamíferos."],
+  ["⚡", "Em prova de velocidade, um pombo bate as asas de 6 a 10 vezes por SEGUNDO — o peito deles é ~30% do peso do corpo por isso."],
+  ["🌡️", "A temperatura normal de um pombo é ~40,5°C — 'febre' pra gente é rotina pra ele."],
+  ["🕰️", "Pombos têm noção de tempo: experimentos mostram que aprendem a 'saber' quantas horas passaram desde a soltura — usam o sol como relógio."],
+  ["🌙", "O famoso 'bull eye' (olho de boi) escuro não é defeito: Barkel criou campeões com eles — só não dá pra ler os círculos do eye-sign."],
+  ["🇧🇷", "As primeiras sociedades columófilas do Brasil surgiram no século XIX, e o Correio Aéreo usou pombos até meados do século XX!"],
+];
+
+function VoceSabia() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setIdx((i) => (i + 1) % CURIOSIDADES.length), 12000);
+    return () => window.clearInterval(t);
+  }, []);
+  const [emoji, txt] = CURIOSIDADES[idx];
+  return (
+    <div style={{ ...T.card, display: "flex", gap: 12, alignItems: "center", borderColor: "#a78bfa44", background: "#a78bfa0d", cursor: "pointer" }} onClick={() => setIdx((i) => (i + 1) % CURIOSIDADES.length)} title="toque pra trocar">
+      <div style={{ fontSize: 26 }}>{emoji}</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 10, fontWeight: 900, color: "#a78bfa", letterSpacing: 1 }}>VOCÊ SABIA?</div>
+        <div style={{ ...T.small, fontSize: 12, lineHeight: 1.6, marginTop: 2 }}>{txt}</div>
+      </div>
+      <small style={{ color: "#64748b", fontSize: 10 }}>{idx + 1}/{CURIOSIDADES.length} ↻</small>
+    </div>
+  );
+}
+
 function ResumoDia({ provas }: { provas: ProvaCalendario[] }) {
   const [clima, setClima] = useState<ClimaPonto | null>(null);
   useEffect(() => {
@@ -141,6 +176,7 @@ export default function CentroProvas() {
       <Link href="/" style={{ ...T.btnGhost, textDecoration: "none", whiteSpace: "nowrap" }}>← Nutri Pombos</Link>
     </div>
     <ResumoDia provas={provas} />
+    <VoceSabia />
     {proxima && <Proxima prova={proxima} onOpen={() => { setProvaNum(proxima.num); setAba("detalhe"); }} />}
     <div className="two-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}><Stat label="📅 Provas 2026" value={provas.length} info={`${passadas} realizadas`} color={T.gold} /><Stat label="✅ Realizadas" value={passadas} info={`${provas.length - passadas} restantes`} color={T.green} /></div>
     <div style={{ ...T.card, background: "#eab3080f", borderColor: "#eab30855" }}><div style={{ display: "flex", justifyContent: "space-between", color: T.gold, fontWeight: 800, fontSize: 13 }}><span>📊 Temporada 2026</span><span>{passadas}/{provas.length}</span></div><div style={{ height: 9, borderRadius: 6, background: "#ffffff14", marginTop: 10 }}><div style={{ height: "100%", width: `${passadas / provas.length * 100}%`, background: T.gold, borderRadius: 6 }} /></div></div>

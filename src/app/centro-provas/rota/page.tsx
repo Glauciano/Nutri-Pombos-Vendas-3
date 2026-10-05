@@ -641,6 +641,38 @@ export default function RotaDaProva() {
     win.document.close();
   };
 
+
+  // 📴 Modo Campo: pré-baixa a página e tiles p/ funcionar sem sinal na soltura
+  const [modoCampoMsg, setModoCampoMsg] = useState("");
+  const ativarModoCampo = async () => {
+    setModoCampoMsg("⏳ Baixando tudo pra hoje…");
+    try {
+      // 1) registra o SW e pré-cacheia a rota atual
+      if ("serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        const cache = await caches.open("nutri-pombos-campo");
+        await cache.addAll([location.pathname, "/", "/centro-provas", "/icon-192.png"]).catch(() => {});
+        // tiles base + chuva da região da rota (z6 em volta do pombal)
+        const Z = 6;
+        const { x, y } = tileXY(pombal.lat, pombal.lon, Z);
+        const tiles: string[] = [];
+        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+          tiles.push(`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${Z}/${y + dy}/${x + dx}`);
+        }
+        const radarFrames = radar?.frames.slice(-4) || [];
+        if (radar) for (const f of radarFrames) for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+          tiles.push(urlTileRadar(radar.host, f.path, Z, x + dx, y + dy));
+        }
+        await Promise.allSettled(tiles.map((t) => cache.add(t).catch(() => {})));
+        void reg;
+      }
+      setModoCampoMsg("✅ Modo Campo pronto! Esta página, o mapa e a chuva ficam salvos — funcione sem sinal na soltura (dados novos só quando voltar a internet).");
+    } catch {
+      setModoCampoMsg("⚠️ Não deu pra baixar tudo — abra com internet e tente de novo.");
+    }
+    window.setTimeout(() => setModoCampoMsg(""), 6000);
+  };
+
   return (
     <main style={{ minHeight: "100vh", background: T.bg, color: T.white, padding: "20px 16px 60px" }}>
       <div style={{ maxWidth: 880, margin: "0 auto" }}>
@@ -877,6 +909,7 @@ export default function RotaDaProva() {
           <section style={T.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: T.gold }}>🛰️ Radar de Chuva & Satélite da Rota</div>
+              <button type="button" onClick={ativarModoCampo} title="Baixar mapa e chuva para usar sem internet na soltura" style={{ ...T.btnGhost, padding: "5px 10px", fontSize: 10, fontWeight: 800 }}>📴 Modo Campo</button>
               <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                 <button onClick={() => setModoMapa("radar")} style={{ ...T.btnGhost, color: modoMapa === "radar" ? T.bg : T.white, background: modoMapa === "radar" ? T.gold : "#1b283c" }}>🌧️ Radar</button>
                 <button onClick={() => setModoMapa("satelite")} style={{ ...T.btnGhost, color: modoMapa === "satelite" ? T.bg : T.white, background: modoMapa === "satelite" ? T.gold : "#1b283c" }}>🗺️ Satélite</button>
@@ -1024,6 +1057,7 @@ export default function RotaDaProva() {
                 ⚠️ {rota.length - rotaGeo.length} cidade(s) desta prova não aparecem no mapa por falta de localização — edite a prova no 📅 Calendário, apague o nome da cidade, digite de novo e <b>escolha na lista 📍 que aparece</b> (aparece "localização confirmada ✓").
               </div>
             )}
+            {modoCampoMsg && <div style={{ ...T.small, fontSize: 11, marginTop: 8, padding: "8px 11px", borderRadius: 8, background: "#a78bfa12", border: "1px solid #a78bfa44", color: "#c4b4ff" }}>{modoCampoMsg}</div>}
             {modoMapa === "radar" && !radar && (
               <div style={{ ...T.small, textAlign: "center", padding: 16 }}>
                 ⏳ Carregando radar de chuva... Se demorar, pode ser o serviço RainViewer fora do ar — use o modo AO VIVO (nuvens NASA), que cobre o Brasil todo.

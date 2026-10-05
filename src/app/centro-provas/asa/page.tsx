@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
+import IlustracaoAsa from "./ilustracao";
 
 export default function ControleMudaAsa() {
   const [penasMuda, setPenasMuda] = useState<number[]>([]); // primárias 1 a 10 que caíram
@@ -74,6 +75,8 @@ export default function ControleMudaAsa() {
             ← Centro
           </Link>
         </div>
+
+        <IlustracaoAsa penasMuda={penasMuda} onToggle={togglePena} />
 
         <section style={T.card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>

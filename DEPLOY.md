@@ -145,3 +145,4 @@ node -e "const bcrypt = require('bcryptjs'); console.log(bcrypt.hashSync('sua_se
 | **Neon PostgreSQL** | 0.5GB storage, 100k compute hours |
 
 Total: **R$ 0/mês** para começar 🎉
+deploy 05/10/2026 noite

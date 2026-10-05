@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
+import IlustracaoAnatomia from "./ilustracao";
 
 type QuilhaComprimento = "longa_curva" | "media_padrao" | "curta";
 type QuilhaProfundidade = "rasa_aerodinamica" | "media" | "profunda_quilha_alta";
@@ -101,6 +102,8 @@ export default function AnatomiaTrianguloOuro() {
             ← Centro
           </Link>
         </div>
+
+        <IlustracaoAnatomia comprimento={comprimento} profundidade={profundidade} forquilha={forquilha} baricentro={baricentro} />
 
         <section style={T.card}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 14 }}>

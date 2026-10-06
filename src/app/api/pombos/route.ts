@@ -1,22 +1,30 @@
 import { db, isDbConfigured } from "@/db";
 import { pombos } from "@/db/schema";
-import { eq, desc, asc } from "drizzle-orm";
+import { eq, and, asc, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { exijaUsuario, resposta401 } from "@/lib/seguranca";
 import { LIMITE_POMBOS, nivelDoPlano } from "@/lib/permissoes";
+import { garantirPlantelPrivado } from "@/lib/plantel";
 
+/**
+ * 🔐 POMBOS — PLANEL PRIVADO: cada usuário só vê e mexe nos SEUS pombos.
+ * A migração (coluna usuario_id + dono padrão) roda sozinha no primeiro acesso.
+ */
 export async function GET(request: Request) {
   const user = await exijaUsuario();
   if (!user) return resposta401();
 
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   try {
+    await garantirPlantelPrivado();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const pedigree = searchParams.get("pedigree");
 
     if (id) {
-      const pombo = await db.select().from(pombos).where(eq(pombos.id, Number(id))).limit(1);
+      const pombo = await db.select().from(pombos)
+        .where(and(eq(pombos.id, Number(id)), eq(pombos.usuarioId, user.id)))
+        .limit(1);
       if (!pombo.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
       if (pedigree === "1") {
@@ -26,8 +34,10 @@ export async function GET(request: Request) {
       return NextResponse.json(pombo[0]);
     }
 
-    const allPombos = await db.select().from(pombos).orderBy(asc(pombos.anilha));
-    return NextResponse.json(allPombos);
+    const meusPombos = await db.select().from(pombos)
+      .where(eq(pombos.usuarioId, user.id))
+      .orderBy(asc(pombos.anilha));
+    return NextResponse.json(meusPombos);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Failed to fetch pombos" }, { status: 500 });
@@ -55,7 +65,7 @@ function formatDbError(error: any, defaultMsg: string) {
     return "As tabelas do banco de dados ainda não foram criadas. Rode no seu projeto: npx drizzle-kit push";
   }
   if (code === "23505" || msg.includes("unique constraint") || msg.includes("duplicate key")) {
-    return "Já existe um pombo cadastrado com esta mesma anilha.";
+    return "Já existe um pombo com esta mesma anilha no SEU plantel.";
   }
   if (code === "23503" || msg.includes("foreign key constraint")) {
     return "O pai ou a mãe selecionados não existem no sistema.";
@@ -66,11 +76,12 @@ function formatDbError(error: any, defaultMsg: string) {
 export async function POST(request: Request) {
   const user = await exijaUsuario();
   if (!user) return resposta401();
-  // 🎫 limite de pombos por plano (teste = 8)
+  // 🎫 limite de pombos por plano (teste = 8) — conta só os SEUS
   const nivel = nivelDoPlano(user.plano);
   try {
-    const { sql } = await import("drizzle-orm");
-    const [cont] = await db.select({ n: sql<number>`count(*)` }).from(pombos);
+    if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+    await garantirPlantelPrivado();
+    const [cont] = await db.select({ n: sql<number>`count(*)` }).from(pombos).where(eq(pombos.usuarioId, user.id));
     if (Number(cont?.n || 0) >= LIMITE_POMBOS[nivel]) {
       return NextResponse.json({ error: `Limite do plano atingido (${LIMITE_POMBOS[nivel]} pombos no teste grátis). Assine para cadastrar mais.` }, { status: 402 });
     }
@@ -84,6 +95,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Anilha inválida. Informe pelo menos 4 caracteres (ex: 1234567/26 ou BR-24-12345)." }, { status: 400 });
     }
     const newPombo = await db.insert(pombos).values({
+      usuarioId: user.id, // 🔐 nasce já com dono
       anilha: anilhaStr,
       nome: body.nome || null,
       sexo: body.sexo,
@@ -107,6 +119,7 @@ export async function PUT(request: Request) {
 
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   try {
+    await garantirPlantelPrivado();
     const body = await request.json();
     if (!body.id) return NextResponse.json({ error: "ID required" }, { status: 400 });
     const anilhaStr = body.anilha ? String(body.anilha).trim() : "";
@@ -124,7 +137,8 @@ export async function PUT(request: Request) {
       status: body.status || "ativo",
       observacoes: body.observacoes || null,
       updatedAt: new Date(),
-    }).where(eq(pombos.id, Number(body.id))).returning();
+    }).where(and(eq(pombos.id, Number(body.id)), eq(pombos.usuarioId, user.id))).returning(); // 🔐 só o SEU
+    if (!updated.length) return NextResponse.json({ error: "Pombo não encontrado no seu plantel" }, { status: 404 });
     return NextResponse.json(updated[0]);
   } catch (error: any) {
     console.error(error);
@@ -138,11 +152,14 @@ export async function DELETE(request: Request) {
 
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   try {
+    await garantirPlantelPrivado();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-    const deleted = await db.delete(pombos).where(eq(pombos.id, Number(id))).returning();
-    if (!deleted.length) return NextResponse.json({ error: "Pombo não encontrado" }, { status: 404 });
+    const deleted = await db.delete(pombos)
+      .where(and(eq(pombos.id, Number(id)), eq(pombos.usuarioId, user.id))) // 🔐 só o SEU
+      .returning();
+    if (!deleted.length) return NextResponse.json({ error: "Pombo não encontrado no seu plantel" }, { status: 404 });
     return NextResponse.json({ success: true, deleted: deleted[0] });
   } catch (error: any) {
     console.error(error);

@@ -43,6 +43,7 @@ export async function GET(request: Request) {
     await sql`
       CREATE TABLE IF NOT EXISTS pombos (
         id SERIAL PRIMARY KEY,
+        usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
         anilha TEXT NOT NULL UNIQUE,
         nome TEXT,
         sexo TEXT NOT NULL,
@@ -104,6 +105,15 @@ export async function GET(request: Request) {
       )
       ON CONFLICT (email) DO NOTHING;
     `;
+
+    // 🔐 Plantel Privado: garante colunas de dono + dono padrão + anilha única por usuário
+    //    (idempotente — seguro rodar em banco novo ou antigo)
+    try {
+      const { garantirPlantelPrivado } = await import("@/lib/plantel");
+      await garantirPlantelPrivado();
+    } catch (e) {
+      console.error("plantel privado (não crítico):", e);
+    }
 
     return NextResponse.json({
       success: true,

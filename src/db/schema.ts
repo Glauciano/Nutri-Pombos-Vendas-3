@@ -23,6 +23,7 @@ export const sessoes = pgTable("sessoes", {
 
 export const pombos = pgTable("pombos", {
   id: serial("id").primaryKey(),
+  usuarioId: integer("usuario_id"), // 🔐 dono do plantel (nullable na migração; preenchido pelas APIs)
   anilha: text("anilha").notNull().unique(),
   nome: text("nome"),
   sexo: text("sexo", { enum: ["macho", "femea"] }).notNull(),
@@ -38,6 +39,7 @@ export const pombos = pgTable("pombos", {
 
 export const racoes = pgTable("racoes", {
   id: serial("id").primaryKey(),
+  usuarioId: integer("usuario_id"), // 🔐 dono do plantel
   nome: text("nome").notNull(),
   tipo: text("tipo", { enum: ["manutencao", "reproducao", "competicao", "muda", "depurativa"] }).notNull(),
   descricao: text("descricao"),
@@ -48,6 +50,7 @@ export const racoes = pgTable("racoes", {
 
 export const alimentacoes = pgTable("alimentacoes", {
   id: serial("id").primaryKey(),
+  usuarioId: integer("usuario_id"), // 🔐 dono do plantel
   pomboId: integer("pombo_id").references(() => pombos.id).notNull(),
   racaoId: integer("racao_id").references(() => racoes.id).notNull(),
   data: timestamp("data").defaultNow().notNull(),

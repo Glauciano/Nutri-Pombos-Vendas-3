@@ -6,9 +6,9 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { alternarTema, temaAtual, EVENTO_TEMA } from "./theme";
 import { EXIGE_PAGO } from "../../lib/permissoes";
 import {
-  Activity, Bell, Bird, Bot, BookOpen, Calculator, CalendarClock, CalendarDays, ChevronDown, Tv,
-  CloudSun, Dna, HeartHandshake, HeartPulse, LayoutDashboard, Map, Menu, Package, PackageOpen,
-  Palette, Radio, Search, Settings, ShieldCheck, Sparkles, Target, TrendingUp, Trophy,
+  Activity, Bell, Bird, Bot, BookOpen, Brain, Calculator, CalendarClock, CalendarDays, ChevronDown, Tv,
+  CloudSun, Dna, FileText, HeartHandshake, HeartPulse, LayoutDashboard, Map, Menu, Network, Package, PackageOpen,
+  Palette, Radio, Scale, Search, Settings, ShieldCheck, Sparkles, Target, TrendingUp, Trophy,
   Users, UtensilsCrossed, Wallet, X, LogOut,
 } from "lucide-react";
 
@@ -36,6 +36,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
       { href: "/centro-provas/guia-iniciante", label: "Guia do iniciante", icon: Sparkles },
       { href: "/centro-provas/admin", label: "👑 Painel Admin", icon: ShieldCheck },
         { href: "/centro-provas/ranking", label: "Ranking do plantel", icon: Trophy },
+        { href: "/centro-provas/linhagens", label: "Desempenho por Linhagem", icon: Network },
         { href: "/centro-provas/cartao-campeao", label: "Cartão do campeão", icon: Sparkles },
         { href: "/centro-provas/relatorio-temporada", label: "Relatório da temporada", icon: Activity },
         { href: "/centro-provas/pombo-as", label: "Pombo Ás Oficial (FCI)", icon: Trophy },
@@ -75,6 +76,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
       { href: "/centro-provas/caixa", label: "💰 Caixa do Pombal", icon: Wallet },
         { href: "/centro-provas/vendas", label: "Vendas de pombos", icon: PackageOpen },
       { href: "/centro-provas/compradores", label: "Compradores (CRM)", icon: Users },
+      { href: "/centro-provas/contrato", label: "Contrato de Venda", icon: FileText },
         { href: "/centro-provas/acasalamento", label: "Assistente de acasalamento", icon: HeartPulse },
         { href: "/centro-provas/comparador", label: "Comparador de pombos", icon: Activity },
         { href: "/centro-provas/ficha-pombo", label: "Ficha de avaliação", icon: ShieldCheck },
@@ -86,6 +88,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
       label: "Protocolos",
       items: [
         { href: "/centro-provas/protocolos", label: "Protocolos gerais", icon: Trophy },
+        { href: "/centro-provas/peso", label: "⚖️ Peso e Forma", icon: Scale },
         { href: "/centro-provas/velocidade-extrema", label: "Velocidade", icon: Sparkles },
         { href: "/centro-provas/meio-fundo", label: "Meio fundo", icon: Target },
         { href: "/centro-provas/fundo-extremo", label: "Fundo extremo", icon: Bird },
@@ -101,6 +104,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         { href: "/centro-provas/casamenteiro", label: "Casamenteiro (parentesco)", icon: HeartHandshake },
         { href: "/centro-provas/cores", label: "Cores dos Filhotes", icon: Palette },
         { href: "/centro-provas/olho", label: "Análise de Olho (Eye-Sign)", icon: Search },
+        { href: "/centro-provas/quiz-eyesign", label: "Quiz do Eye-Sign", icon: Brain },
         { href: "/centro-provas/anatomia", label: "Triângulo de Ouro Anatômico", icon: Activity },
         { href: "/centro-provas/asa", label: "Índice da Asa e Muda", icon: Activity },
         { href: "/centro-provas/certificado", label: "Certificado de Leilão", icon: Trophy },

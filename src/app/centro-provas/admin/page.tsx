@@ -5,7 +5,7 @@ import Link from "next/link";
 import { T } from "../theme";
 
 type Usuario = { id: number; nome: string; email: string; plano: string; acessoAtivo: boolean; acessoAte: string | null; createdAt: string };
-
+type PlantelUser = { id: number; nome: string; email: string; plano: string; acesso_ativo: boolean; pombos: number };
 const PLANOS: [string, string][] = [
   ["teste", "🆓 Teste"],
   ["mensal", "💰 Mensal"],
@@ -19,6 +19,29 @@ export default function PainelAdmin() {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [busca, setBusca] = useState("");
+  const [planteis, setPlanteis] = useState<PlantelUser[] | null>(null);
+  const [meuId, setMeuId] = useState<number>(0);
+
+  const carregarPlanteis = useCallback(async () => {
+    try {
+      const r = await fetch("/api/admin/planteis");
+      if (!r.ok) { setPlanteis(null); return; }
+      const j = (await r.json()) as { meuId?: number; usuarios?: PlantelUser[] };
+      setMeuId(Number(j.meuId || 0));
+      setPlanteis(Array.isArray(j.usuarios) ? j.usuarios : []);
+    } catch { setPlanteis(null); }
+  }, []);
+
+  const transferir = async (de: PlantelUser, paraId: number) => {
+    try {
+      const r = await fetch("/api/admin/planteis", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ de: de.id, para: paraId }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setMsg("⚠️ " + (j.error || "falhou")); return; }
+      setMsg(`✅ Plantel de ${de.nome || de.email} transferido!`);
+      window.setTimeout(() => setMsg(""), 3000);
+      void carregarPlanteis();
+    } catch { setMsg("⚠️ Falha na transferência."); }
+  };
 
   const carregar = useCallback(async () => {
     setErro(""); setMsg("");
@@ -31,6 +54,7 @@ export default function PainelAdmin() {
   }, []);
 
   useEffect(() => { void carregar(); }, [carregar]);
+  useEffect(() => { void carregarPlanteis(); }, [carregarPlanteis]);
 
   const atualizar = async (u: Usuario, patch: Record<string, unknown>, texto: string) => {
     try {
@@ -120,6 +144,40 @@ export default function PainelAdmin() {
             </section>
 
             {msg && <div style={{ ...T.card, color: msg.startsWith("✅") ? T.green : T.red, fontSize: 13 }}>{msg}</div>}
+
+            {/* 🐦 PLANTÉIS — quem tem quantos pombos + transferir pra você */}
+            <section style={T.card}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: T.gold }}>🐦 Plantéis por usuário</div>
+                <button type="button" onClick={() => void carregarPlanteis()} style={{ ...T.btnGhost, padding: "5px 12px", fontSize: 11, fontWeight: 700 }}>🔄 atualizar</button>
+              </div>
+              {planteis === null && <div style={{ ...T.small, fontSize: 12 }}>⏳ Carregando plantéis...</div>}
+              {planteis !== null && (
+                <div style={{ display: "grid", gap: 6 }}>
+                  {planteis.map((p) => (
+                    <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10, background: "#ffffff08", flexWrap: "wrap" }}>
+                      <div style={{ fontSize: 12.5 }}>
+                        <b>{p.nome}</b> <span style={{ color: T.dim, fontSize: 11 }}>({p.email})</span>
+                        {p.plano === "admin" && <span style={{ marginLeft: 6 }}>👑</span>}
+                        {!p.acesso_ativo && <span style={{ marginLeft: 6, fontSize: 10, color: T.red, fontWeight: 800 }}>suspenso</span>}
+                        {p.id === meuId && <span style={{ marginLeft: 6, fontSize: 10, color: T.green, fontWeight: 800 }}>você</span>}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <b style={{ fontSize: 14, color: p.pombos > 0 ? T.gold : T.dim }}>{p.pombos} 🐦</b>
+                        {p.pombos > 0 && p.id !== meuId && (
+                          <button type="button" onClick={() => transferir(p, meuId)} style={{ padding: "5px 10px", borderRadius: 8, fontSize: 10.5, fontWeight: 700, cursor: "pointer", color: T.gold, background: "#0b1529", border: `1px solid ${T.gold}55` }}>
+                            ↔️ trazer pra mim
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ ...T.small, fontSize: 10.5, marginTop: 10, color: T.dim2, lineHeight: 1.6 }}>
+                ℹ️ Cada usuário enxerga somente o próprio plantel. O botão "trazer pra mim" move o plantel inteiro daquela conta pra você — útil pra resgatar dados de conta antiga.
+              </div>
+            </section>
 
             <section style={{ ...T.card, borderColor: "#55a3ff55", background: "#55a3ff0d" }}>
               <div style={{ ...T.small, fontSize: 11.5, lineHeight: 1.7 }}>

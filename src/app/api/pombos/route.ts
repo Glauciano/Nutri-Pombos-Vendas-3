@@ -4,11 +4,13 @@ import { eq, and, asc, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { exijaUsuario, resposta401 } from "@/lib/seguranca";
 import { LIMITE_POMBOS, nivelDoPlano } from "@/lib/permissoes";
-import { garantirPlantelPrivado } from "@/lib/plantel";
+import { garantirPlantelPrivado, resgatarDoFantasma } from "@/lib/plantel";
 
 /**
  * 🔐 POMBOS — PLANEL PRIVADO: cada usuário só vê e mexe nos SEUS pombos.
  * A migração (coluna usuario_id + dono padrão) roda sozinha no primeiro acesso.
+ * 🕊️ Se o admin real abrir a lista, o plantel da conta fantasma (login antigo)
+ *    é resgatado automaticamente pra ele.
  */
 export async function GET(request: Request) {
   const user = await exijaUsuario();
@@ -17,6 +19,9 @@ export async function GET(request: Request) {
   if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   try {
     await garantirPlantelPrivado();
+    if (user.plano === "admin") {
+      try { await resgatarDoFantasma(user.id); } catch { /* resgate best-effort */ }
+    }
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const pedigree = searchParams.get("pedigree");

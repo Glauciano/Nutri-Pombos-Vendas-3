@@ -14,7 +14,34 @@ type Pombo = {
 type Tab = "lista" | "pedigree" | "novo" | "editar";
 
 const KEY_CUSTOM = "nutripombos-pombos-custom-v1";
-import { getFoto, salvarFoto } from "../lib/fotos";
+import { getFoto, salvarFoto, getFotoOlho, salvarFotoOlho, removerFoto, removerFotoOlho } from "../lib/fotos";
+
+/** 📸 Foto grande (corpo ou olho) na ficha do pombo — adicionar / trocar / remover */
+function FotoGrande({ anilha, tipo }: { anilha: string; tipo: "corpo" | "olho" }) {
+  const ler = () => (tipo === "olho" ? getFotoOlho(anilha) : getFoto(anilha));
+  const [src, setSrc] = useState<string | null>(ler());
+  const inputRef = useRef<HTMLInputElement>(null);
+  const olho = tipo === "olho";
+  return (
+    <div style={{ textAlign: "center", padding: 12, borderRadius: 12, background: "#ffffff08", border: `1px solid ${T.border}`, flex: 1, minWidth: 150 }}>
+      <div style={{ fontSize: 11.5, fontWeight: 800, color: olho ? T.blue : T.gold, marginBottom: 8 }}>
+        {olho ? "👁️ Olho (eye-sign)" : "🐦 Corpo"}
+      </div>
+      {src ? (
+        <img src={src} alt={`${anilha} — ${olho ? "olho" : "corpo"}`} style={{ width: 150, height: 150, borderRadius: olho ? "50%" : 12, objectFit: "cover", border: `2.5px solid ${olho ? "#55a3ff66" : "#f7bd0066"}`, cursor: "pointer" }} onClick={() => inputRef.current?.click()} title="clique para trocar" />
+      ) : (
+        <button type="button" onClick={() => inputRef.current?.click()} style={{ width: 150, height: 150, borderRadius: olho ? "50%" : 12, border: `1.5px dashed ${olho ? "#55a3ff66" : "#31415a"}`, background: "#0b1529", color: T.dim, fontSize: 30, cursor: "pointer", display: "grid", placeItems: "center", margin: "0 auto" }} title="adicionar foto">
+          {olho ? "👁️" : "📷"}
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const r = olho ? await salvarFotoOlho(anilha, f) : await salvarFoto(anilha, f); if (r) setSrc(r); e.target.value = ""; }} />
+      <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 8 }}>
+        <button type="button" onClick={() => inputRef.current?.click()} style={{ ...T.btnGhost, padding: "4px 10px", fontSize: 10.5, fontWeight: 700 }}>{src ? "🔄 trocar" : "➕ adicionar"}</button>
+        {src && <button type="button" onClick={() => { olho ? removerFotoOlho(anilha) : removerFoto(anilha); setSrc(null); }} style={{ ...T.btnGhost, padding: "4px 10px", fontSize: 10.5, fontWeight: 700, color: T.red, borderColor: "#ff5d6244" }}>🗑️</button>}
+      </div>
+    </div>
+  );
+}
 
 function FotoPombo({ anilha, tamanho = 34 }: { anilha: string; tamanho?: number }) {
   const [src, setSrc] = useState<string | null>(getFoto(anilha));
@@ -147,6 +174,15 @@ export default function PombosPage(){
           <button onClick={()=>{setEditPombo(sel);}} style={{...T.btn,flex:1,background:T.blue}}>✏️ Editar</button>
           <button onClick={()=>excluirPombo(sel.id)} style={{...T.btn,flex:1,background:"#EF4444"}}>🗑️ Excluir</button>
         </div>
+      </section>
+
+      {/* 📸 FOTOS — corpo e olho (eye-sign) */}
+      <section style={T.card}><Title>📸 Fotos do Pombo</Title>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+          <FotoGrande anilha={sel.anilha} tipo="corpo" />
+          <FotoGrande anilha={sel.anilha} tipo="olho" />
+        </div>
+        <div style={{...T.small,fontSize:10,marginTop:8,color:T.dim2}}>💡 Fotos salvas neste aparelho. A do olho sai em resolução maior — perfeita pra conferir os círculos do eye-sign. Troque clicando na imagem.</div>
       </section>
 
       <section style={T.card}><Title>🌳 Árvore Genealógica</Title>
@@ -352,6 +388,15 @@ function NovoPombo({pombos,onSaved}:{pombos:Pombo[];onSaved:()=>void}){
       <Field label="♀ Mãe (fêmea)"><select value={maeId} onChange={e=>setMaeId(e.target.value)} style={{...T.input,appearance:"auto"}}><option value="">— Sem mãe cadastrada —</option>{femeas.map(p=><option key={p.id} value={p.id}>{p.anilha}{p.nome?` — ${p.nome}`:""}</option>)}</select></Field>
     </div>
     <Field label="📝 Observações"><textarea value={obs} onChange={e=>setObs(e.target.value)} placeholder="Notas sobre o pombo..." rows={3} style={{...T.input,resize:"vertical"}}/></Field>
+    {/* 📸 FOTOS — habilita quando a anilha é válida */}
+    {anilhaOk ? (
+      <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+        <FotoGrande key={"c"+anilha} anilha={anilha} tipo="corpo" />
+        <FotoGrande key={"o"+anilha} anilha={anilha} tipo="olho" />
+      </div>
+    ) : (
+      <div style={{padding:12,borderRadius:9,color:T.dim,background:"#0b1529",border:"1px dashed #31415a",fontSize:11,textAlign:"center"}}>📷👁️ Digite a anilha acima pra habilitar as fotos do corpo e do olho</div>
+    )}
     <button onClick={salvar} disabled={saving} style={{...T.btn,width:"100%",opacity:saving?0.5:1}}>{saving?"Salvando...":"💾 Cadastrar Pombo"}</button>
   </section>;
 }

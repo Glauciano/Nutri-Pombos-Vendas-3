@@ -76,7 +76,10 @@ export default function GerenciarCalendario() {
     <div className="stats" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}><Stat label="Total" value={provas.length} color={T.gold}/><Stat label="Adiadas" value={provas.filter(p=>p.adiada).length} color="#FBBF24"/><Stat label="Canceladas" value={provas.filter(p=>p.cancelada).length} color={T.red}/></div>
     {ordenadas.map(p => <ProvaRow key={p.id} prova={p} onEdit={() => abrirEdit(p)} onView={() => {setSelId(p.id);setTela("detalhe");}} onDelete={() => excluir(p.id)}/>) }
     {!provas.length && <div style={{textAlign:"center",padding:40,color:T.dim}}>📅<h3>Nenhuma prova cadastrada</h3><p style={T.small}>Clique em “+ Nova prova” para adicionar.</p></div>}
-    <section style={{...T.card,marginTop:16}}><b style={{color:T.dim}}>⚙️ Gerenciamento</b>{!confirmReset ? <button onClick={()=>setConfirmReset(true)} style={{...T.btnGhost,width:"100%",marginTop:10}}>🔄 Restaurar calendário original (2026)</button> : <div style={{padding:13,marginTop:10,borderRadius:9,background:"#ef444414",border:`1px solid ${T.red}55`}}><b style={{color:T.red}}>Todas as edições serão perdidas.</b><div style={{display:"flex",gap:8,marginTop:10}}><button onClick={()=>setConfirmReset(false)} style={{...T.btnGhost,flex:1}}>Cancelar</button><button onClick={()=>{setProvas(resetCalendario());setConfirmReset(false);flash("✅ Calendário restaurado.");}} style={{...T.btnDanger,flex:2}}>🔄 Restaurar</button></div></div>}</section>
+    <section style={{...T.card,marginTop:16}}><b style={{color:T.dim}}>⚙️ Gerenciamento</b>
+      <button onClick={()=>exportarICS(provas)} disabled={!provas.length} style={{...T.btnGhost,width:"100%",marginTop:10,opacity:provas.length?1:0.5}}>📅 Exportar para o Google Agenda (.ics)</button>
+      <div style={{...T.small,fontSize:10,marginTop:6,color:T.dim2}}>Gera um arquivo com embarques e soltas (com lembrete no dia anterior) — abra no celular ou importe no Google Agenda.</div>
+    {!confirmReset ? <button onClick={()=>setConfirmReset(true)} style={{...T.btnGhost,width:"100%",marginTop:10}}>🔄 Restaurar calendário original (2026)</button> : <div style={{padding:13,marginTop:10,borderRadius:9,background:"#ef444414",border:`1px solid ${T.red}55`}}><b style={{color:T.red}}>Todas as edições serão perdidas.</b><div style={{display:"flex",gap:8,marginTop:10}}><button onClick={()=>setConfirmReset(false)} style={{...T.btnGhost,flex:1}}>Cancelar</button><button onClick={()=>{setProvas(resetCalendario());setConfirmReset(false);flash("✅ Calendário restaurado.");}} style={{...T.btnDanger,flex:2}}>🔄 Restaurar</button></div></div>}</section>
   </Shell>;
 }
 
@@ -107,6 +110,45 @@ function Detalhe({prova,onBack,onEdit,onStatus,onDelete}:{prova:ProvaCalendario;
 function ProvaRow({prova,onEdit,onView,onDelete}:{prova:ProvaCalendario;onEdit:()=>void;onView:()=>void;onDelete:()=>void}) { const dias=diasParaProva(prova.dataSolta),passou=dias<0,c=classificarProva(prova.km),cor=prova.cancelada?T.red:prova.adiada?"#FBBF24":passou?T.green:c.cor;return <div style={{padding:14,marginBottom:8,borderRadius:"0 11px 11px 0",background:T.bgCard,border:`1px solid ${cor}44`,borderLeft:`4px solid ${cor}`,opacity:prova.cancelada?.65:1}}><div style={{display:"flex",gap:9,justifyContent:"space-between"}}><div><b>#{prova.num} {prova.cidade} — {prova.estado}</b>{prova.adiada&&<Tag color="#FBBF24">ADIADA</Tag>}{prova.cancelada&&<Tag color={T.red}>CANCELADA</Tag>}<div style={{...T.small,marginTop:5,color:c.cor}}>{c.emoji} {c.tipo} • {prova.km}km <span style={{color:T.dim}}>• 🏁 {fmt(prova.dataSolta)} {!passou&&!prova.adiada&&!prova.cancelada?`• ${dias}d`:""}</span></div>{prova.obs&&<div style={{...T.small,color:"#FBBF24"}}>📝 {prova.obs}</div>}</div><div style={{display:"flex",gap:5}}><button onClick={onEdit} style={T.btnGhost}>✏️</button><button onClick={onView} style={T.btnGhost}>👁️</button><button onClick={onDelete} style={T.btnDanger}>🗑️</button></div></div></div>}
 function Shell({children}:{children:React.ReactNode}){return <main style={{minHeight:"100vh",background:T.bg,color:T.white,padding:"18px 12px 50px"}}><div style={{maxWidth:760,margin:"0 auto"}}>{children}</div><style jsx global>{`button,input,select,textarea{font-family:inherit}select option{background:${T.bgInput}}@media(max-width:540px){.form-grid,.dates{grid-template-columns:1fr!important}.stats{grid-template-columns:repeat(3,1fr)!important}}`}</style></main>}
 function Field({label,children}:{label:string;children:React.ReactNode}){return <label style={{display:"block",marginBottom:12}}><span style={{...T.label,display:"block",marginBottom:5}}>{label}</span>{children}</label>}
+
+/** 📅 Gera arquivo .ics (Google Agenda / iPhone) com embarques e soltas + lembrete no dia anterior */
+function exportarICS(provas: ProvaCalendario[]) {
+  if (!provas.length) return;
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const dt = (d: string, h: string) => d.replace(/-/g, "") + "T" + h + "00";
+  const L: string[] = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Nutri Pombos//Centro de Provas//PT-BR", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Nutri Pombos — Provas"];
+  provas.filter(p => !p.cancelada && p.dataSolta).forEach(p => {
+    const base = `Prova #${p.num} — ${p.cidade}/${p.estado} (${p.km}km)`;
+    if (p.dataEmbarque) L.push(
+      "BEGIN:VEVENT",
+      `UID:emb-${p.num}-${p.dataEmbarque}@nutripombos`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;TZID=America/Sao_Paulo:${dt(p.dataEmbarque, "1600")}`,
+      `DTEND;TZID=America/Sao_Paulo:${dt(p.dataEmbarque, "1800")}`,
+      `SUMMARY:📦 Embarque ${base}`,
+      "DESCRIPTION:Pombos no clube! Confira o checklist de encestamento no app Nutri Pombos.",
+      "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY", "DESCRIPTION:Amanhã tem embarque!", "END:VALARM",
+      "END:VEVENT"
+    );
+    L.push(
+      "BEGIN:VEVENT",
+      `UID:solta-${p.num}-${p.dataSolta}@nutripombos`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;TZID=America/Sao_Paulo:${dt(p.dataSolta, "0700")}`,
+      `DTEND;TZID=America/Sao_Paulo:${dt(p.dataSolta, "0900")}`,
+      `SUMMARY:🏁 Solta ${base}${p.adiada ? " (ADIADA)" : ""}`,
+      "DESCRIPTION:Bom voo e sempre na taça! Acompanhe o dia da prova no app Nutri Pombos.",
+      "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY", "DESCRIPTION:Amanhã é dia de prova!", "END:VALARM",
+      "END:VEVENT"
+    );
+  });
+  L.push("END:VCALENDAR");
+  const blob = new Blob([L.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "nutripombos-provas.ics";
+  a.click();
+}
 function Stat({label,value,color}:{label:string;value:number;color:string}){return <div style={{...T.card,margin:0,textAlign:"center",padding:11}}><div style={T.small}>{label}</div><b style={{display:"block",fontSize:24,color}}>{value}</b></div>}
 function DateCard({label,date,day}:{label:string;date:string;day:string}){return <section style={{...T.card,marginBottom:8}}><div style={T.small}>{label}</div><b>{fmt(date)}</b><div style={{color:T.gold,fontSize:12}}>{day}</div></section>}
 function Tag({children,color}:{children:React.ReactNode;color:string}){return <span style={{marginLeft:7,padding:"2px 7px",borderRadius:12,fontSize:9,color,background:`${color}22`}}>{children}</span>}

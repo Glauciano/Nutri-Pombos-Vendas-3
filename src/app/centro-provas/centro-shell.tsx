@@ -6,9 +6,9 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { alternarTema, temaAtual, EVENTO_TEMA } from "./theme";
 import { EXIGE_PAGO } from "../../lib/permissoes";
 import {
-  Activity, Bell, Bird, Bot, BookOpen, Brain, Calculator, CalendarClock, CalendarDays, ChevronDown, Tv,
+  Activity, Bell, Bird, Bot, BookOpen, Brain, Calculator, CalendarClock, CalendarDays, ChevronDown, Printer, Tv,
   CloudSun, Dna, FileText, HeartHandshake, HeartPulse, LayoutDashboard, Map, Menu, Network, Package, PackageOpen,
-  Palette, Radio, Scale, Search, Settings, ShieldCheck, Sparkles, Target, TrendingUp, Trophy,
+  Palette, Radio, Scale, Search, Settings, ShieldCheck, Sparkles, Store, Tag, Target, TrendingUp, Trophy,
   Users, UtensilsCrossed, Wallet, X, LogOut,
 } from "lucide-react";
 
@@ -77,6 +77,8 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
         { href: "/centro-provas/vendas", label: "Vendas de pombos", icon: PackageOpen },
       { href: "/centro-provas/compradores", label: "Compradores (CRM)", icon: Users },
       { href: "/centro-provas/contrato", label: "Contrato de Venda", icon: FileText },
+      { href: "/centro-provas/etiquetas", label: "Etiquetas com QR", icon: Tag },
+      { href: "/centro-provas/vitrine", label: "🛒 Vitrine de criadores", icon: Store },
         { href: "/centro-provas/acasalamento", label: "Assistente de acasalamento", icon: HeartPulse },
         { href: "/centro-provas/comparador", label: "Comparador de pombos", icon: Activity },
         { href: "/centro-provas/ficha-pombo", label: "Ficha de avaliação", icon: ShieldCheck },
@@ -99,6 +101,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
       label: "Plantel",
       items: [
         { href: "/centro-provas/pombos", label: "Pombos e Pedigree", icon: Bird },
+        { href: "/centro-provas/pedigree", label: "Pedigree imprimível", icon: Printer },
         { href: "/centro-provas/classificacao", label: "Classificação por Km", icon: Trophy },
         { href: "/centro-provas/simulador-cruzamento", label: "Simulador Genético", icon: Dna },
         { href: "/centro-provas/casamenteiro", label: "Casamenteiro (parentesco)", icon: HeartHandshake },

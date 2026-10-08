@@ -16,6 +16,7 @@ type Tab = "lista" | "pedigree" | "novo" | "editar";
 const KEY_CUSTOM = "nutripombos-pombos-custom-v1";
 import { getFoto, salvarFoto, getFotoOlho, salvarFotoOlho, removerFoto, removerFotoOlho } from "../lib/fotos";
 
+
 /** 📸 Foto grande (corpo ou olho) na ficha do pombo — adicionar / trocar / remover */
 function FotoGrande({ anilha, tipo }: { anilha: string; tipo: "corpo" | "olho" }) {
   const ler = () => (tipo === "olho" ? getFotoOlho(anilha) : getFoto(anilha));

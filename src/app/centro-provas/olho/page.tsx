@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
 import { GuiaCampo, TiposOlhos, SinaisEyeSign } from "./extras";
+import { getFotoOlho } from "../lib/fotos";
 
 type Pupila = "puntiforme" | "media" | "larga";
 type Circulo = "serrilhado_largo" | "completo_fino" | "incompleto" | "ausente";
@@ -75,6 +76,113 @@ function OlhoInterativo() {
           )}
         </div>
       </div>
+    </section>
+  );
+}
+
+/* ═══════ 📸 SEU POMBO NA MIRA — foto do olho real + guia ajustável dos círculos ═══════ */
+function FotoOlhoMira() {
+  const [pombos, setPombos] = useState<{ id: number; anilha: string; nome: string | null; sexo: string }[]>([]);
+  const [anilha, setAnilha] = useState("");
+  const [mira, setMira] = useState(true);
+  const [zoom, setZoom] = useState(false);
+  const [cx, setCx] = useState(50);
+  const [cy, setCy] = useState(50);
+  const [raio, setRaio] = useState(32);
+
+  useEffect(() => {
+    fetch("/api/pombos")
+      .then(async (r) => (r.ok ? r.json() : []))
+      .then((d) => setPombos(Array.isArray(d) ? d : []))
+      .catch(() => setPombos([]));
+  }, []);
+
+  const foto = anilha ? getFotoOlho(anilha) : null;
+
+  // anéis-guia com as MESMAS cores dos círculos no diagrama do app (de dentro pra fora)
+  const aneis: { nome: string; cor: string; prop: number }[] = [
+    { nome: "1️⃣ Pupila", cor: "#f8fafc", prop: 0.26 },
+    { nome: "2️⃣ Adaptação (amarelo)", cor: "#eab308", prop: 0.46 },
+    { nome: "3️⃣ Correlação (azul)", cor: "#55a3ff", prop: 0.73 },
+    { nome: "5️⃣ Saúde/Perímetro (verde)", cor: "#39e58c", prop: 1 },
+  ];
+
+  const slider = { width: "100%", accentColor: "#f7bd00", cursor: "pointer" } as const;
+
+  return (
+    <section style={{ ...T.card, borderColor: "#55a3ff55" }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: T.blue, marginBottom: 4 }}>
+        📸 Seu pombo na mira — estude o olho DE VERDADE
+      </div>
+      <div style={{ ...T.small, fontSize: 11, marginBottom: 10, lineHeight: 1.5 }}>
+        Escolha o pombo, ajuste a mira com os controles e compare a foto com o diagrama abaixo. A foto é a cadastrada em <b>Pombos → 📸 Fotos do Pombo → 👁️ Olho</b>.
+      </div>
+
+      <select value={anilha} onChange={(e) => setAnilha(e.target.value)} style={{ ...T.btnGhost, padding: "9px 12px", fontWeight: 700, fontSize: 12.5, width: "100%", textAlign: "left", marginBottom: 10 }}>
+        <option value="">— escolha o pombo —</option>
+        {pombos.map((p) => <option key={p.id} value={p.anilha}>{p.sexo === "macho" ? "♂" : "♀"} {p.nome || p.anilha} — {p.anilha}</option>)}
+      </select>
+
+      {!anilha && <div style={{ ...T.small, fontSize: 11.5, color: T.dim }}>☝️ Selecione um pombo pra ver a foto do olho dele aqui.</div>}
+
+      {anilha && !foto && (
+        <div style={{ padding: 16, borderRadius: 10, border: "1.5px dashed #31415a", background: "#0b1529", textAlign: "center", ...T.small, fontSize: 11.5, lineHeight: 1.6 }}>
+          👁️ Este pombo ainda não tem foto do olho.<br />Adicione em <b>Pombos → toque no pombo → 📸 Fotos do Pombo</b> — e volte pra analisar aqui!
+        </div>
+      )}
+
+      {foto && (
+        <>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {/* FOTO + MIRA */}
+            <div
+              style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 340, aspectRatio: "1/1", borderRadius: 14, overflow: "hidden", border: `1.5px solid ${mira ? "#55a3ff66" : "#31415a"}`, cursor: zoom ? "zoom-out" : "zoom-in", background: "#0b1529" }}
+              onClick={() => setZoom((z) => !z)}
+              title={zoom ? "clique para reduzir" : "clique para ampliar"}
+            >
+              <img src={foto} alt={`Olho de ${anilha}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: zoom ? "scale(1.7)" : "scale(1)", transformOrigin: `${cx}% ${cy}%`, transition: "transform .25s ease" }} />
+              {mira && (
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+                  {aneis.map((a) => (
+                    <circle key={a.nome} cx={cx} cy={cy} r={raio * a.prop} fill="none" stroke={a.cor} strokeWidth={a.prop === 1 ? 1.4 : 1} strokeDasharray={a.prop === 1 ? "3 2" : "2.5 2"} opacity="0.9" />
+                  ))}
+                  <line x1={cx - 3} y1={cy} x2={cx + 3} y2={cy} stroke="#ffffff" strokeWidth="0.7" />
+                  <line x1={cx} y1={cy - 3} x2={cx} y2={cy + 3} stroke="#ffffff" strokeWidth="0.7" />
+                </svg>
+              )}
+            </div>
+
+            {/* CONTROLES */}
+            <div style={{ flex: 1, minWidth: 180, display: "grid", gap: 10, alignContent: "start" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                <input type="checkbox" checked={mira} onChange={(e) => setMira(e.target.checked)} />
+                🧭 Mira dos círculos
+              </label>
+              <div>
+                <div style={{ ...T.small, fontSize: 10, marginBottom: 3 }}>📏 Tamanho da mira</div>
+                <input type="range" min={8} max={48} value={raio} onChange={(e) => setRaio(Number(e.target.value))} style={slider} />
+              </div>
+              <div>
+                <div style={{ ...T.small, fontSize: 10, marginBottom: 3 }}>↔️ Posição horizontal</div>
+                <input type="range" min={0} max={100} value={cx} onChange={(e) => setCx(Number(e.target.value))} style={slider} />
+              </div>
+              <div>
+                <div style={{ ...T.small, fontSize: 10, marginBottom: 3 }}>↕️ Posição vertical</div>
+                <input type="range" min={0} max={100} value={cy} onChange={(e) => setCy(Number(e.target.value))} style={slider} />
+              </div>
+              <div style={{ display: "grid", gap: 4, marginTop: 4 }}>
+                {aneis.map((a) => (
+                  <div key={a.nome} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: T.dim }}>
+                    <span style={{ width: 11, height: 11, borderRadius: "50%", border: `2px dashed ${a.cor}`, display: "inline-block" }} />
+                    {a.nome}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div style={{ ...T.small, fontSize: 10, marginTop: 8, color: T.dim2 }}>💡 Dica: encaixe o anel VERDE na borda externa do olho — os outros caem aproximadamente nos círculos de correlação, adaptação e pupila. O zoom amplia justamente no centro da mira.</div>
+        </>
+      )}
     </section>
   );
 }
@@ -185,6 +293,7 @@ export default function AnaliseOlhoPombo() {
         </div>
 
         {aba === "interativo" && (<>
+        <FotoOlhoMira />
         <section style={T.card}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 14 }}>
             🔍 Características Visuais do Olho do Pombo

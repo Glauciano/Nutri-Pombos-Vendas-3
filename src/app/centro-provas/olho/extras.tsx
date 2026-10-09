@@ -519,3 +519,222 @@ export function AnatomiaOlho() {
     </>
   );
 }
+
+/* ══════════════════════════════════════════════════════════════
+   🇨🇳 ESCOLA CHINESA — 眼志 (yǎn zhì), o eye-sign do Oriente
+   A maior potência da columofilia mundial lê o olho com vocabulário
+   próprio: 黄眼 (amarelo), 桃花眼 (flor de pêssego), 牛眼 (boi),
+   areias de superfície e fundo, Yin-Yang e olho × clima.
+   ══════════════════════════════════════════════════════════════ */
+
+const DICIONARIO_CN: [string, string, string, string][] = [
+  ["眼志", "yǎn zhì", "sinal do olho", "o eye-sign inteiro"],
+  ["眼砂", "yǎn shā", "areia do olho", "granulação da íris"],
+  ["面砂", "miàn shā", "areia da superfície", "camada de CIMA da íris"],
+  ["底砂", "dǐ shā", "areia do fundo", "camada de BAIXO da íris"],
+  ["黄眼", "huáng yǎn", "olho amarelo", "íris amarelo-ouro"],
+  ["砂眼 / 桃花眼", "shā / táo huā yǎn", "olho areia / flor de pêssego", "íris pérola"],
+  ["牛眼", "niú yǎn", "olho de boi", "olho preto"],
+  ["内线口", "nèi xiàn kǒu", "linha interna", "círculo de adaptação"],
+  ["锯齿型眼志", "jù chǐ xíng", "eye-sign serrilhado", "sinal de corrida"],
+  ["紫罗兰眼志", "zǐ luó lán", "eye-sign violeta", "olho violeta"],
+  ["种鸽", "zhǒng gē", "pombo reprodutor", "score 🏆"],
+  ["赛鸽", "sài gē", "pombo de prova", "score ⚡"],
+  ["阴阳调和", "yīn yáng tiáo hé", "harmonia Yin-Yang", "acasalamento equilibrado"],
+];
+
+const AREIAS_CLIMA: { cn: string; py: string; clima: string; icon: string }[] = [
+  { cn: "云砂", py: "yún shā", clima: "voo em dia NUBLADO", icon: "☁️" },
+  { cn: "桃红砂", py: "táo hóng shā", clima: "dia nublado", icon: "☁️" },
+  { cn: "云桃红砂", py: "yún táo hóng", clima: "meio-termo", icon: "🌥️" },
+  { cn: "蓝水桃花", py: "lán shuǐ táo huā", clima: "SOL FORTE", icon: "☀️" },
+  { cn: "土红砂", py: "tǔ hóng shā", clima: "dia nublado", icon: "☁️" },
+  { cn: "黄底红砂", py: "huáng dǐ hóng", clima: "sol forte", icon: "☀️" },
+  { cn: "黄底飘红砂", py: "huáng dǐ piāo hóng", clima: "sol forte", icon: "☀️" },
+  { cn: "红砂", py: "hóng shā", clima: "sol forte", icon: "☀️" },
+  { cn: "紫砂", py: "zǐ shā", clima: "alto voo (高翔)", icon: "⛰️" },
+  { cn: "粗红砂", py: "cū hóng shā", clima: "clima tropical", icon: "🌴" },
+  { cn: "油眼砂", py: "yóu yǎn shā", clima: "voo NOTURNO", icon: "🌙" },
+];
+
+const CHAVES_MESTRE: { hanzi: string; pinyin: string; nome: string; texto: string }[] = [
+  { hanzi: "干", pinyin: "gān", nome: "SECA", texto: "A areia do olho deve estar seca e firme — sinal de pombo maduro, que vê longe e define a rota. Areia aguada, úmida, embaçada: visão turva, pombo que se perde." },
+  { hanzi: "紧", pinyin: "jǐn", nome: "FIRME", texto: "Pálpebra colada no globo (nunca frouxa!), areia compacta disposta em raios a partir da pupila, anéis bem presos: vigor físico e reação rápida — o perfil do velocista." },
+  { hanzi: "油", pinyin: "yóu", nome: "OLEOSA", texto: "A areia com brilho de óleo: profundo sem ser escuro, vivo sem flutuar — a lenda diz que a grande maioria dos vencedores tem essa camada de 'óleo'. (Não confundir com olho lacrimejando!)" },
+  { hanzi: "活", pinyin: "huó", nome: "VIVA", texto: "A pupila gira e treme sem parar, o olho vigia tudo — até um gavião no alto. A areia 'dança' com o tremor. O sinal do pombo inteligente, pronto pra competir E reproduzir." },
+  { hanzi: "鲜", pinyin: "xiān", nome: "BRILHANTE", texto: "Cor viva mas sóbria: profunda sem sujeira, clara sem ser pálida. Cor pálida = pombo novo demais ou fraco; cor turva = sem fôlego pra longe." },
+];
+
+export function EscolaChinesa() {
+  const [zoom, setZoom] = useState<string | null>(null);
+
+  const CartaoTipo = ({ src, cn, py, nome, yinYang, cor, itens }: { src: string; cn: string; py: string; nome: string; yinYang: string; cor: string; itens: string[] }) => (
+    <div style={{ flex: 1, minWidth: 250, padding: 12, borderRadius: 12, background: "#ffffff08", border: `1px solid ${cor}44` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 800, color: cor }}>{cn} <span style={{ fontSize: 12, fontWeight: 600 }}>{py}</span></div>
+        <span style={{ padding: "2px 9px", borderRadius: 8, fontSize: 10, fontWeight: 900, color: cor, background: `${cor}18` }}>{yinYang}</span>
+      </div>
+      <div style={{ ...T.small, fontSize: 11.5, fontWeight: 700, color: T.white, marginBottom: 8 }}>{nome}</div>
+      <img src={src} alt={`${nome} (${cn})`} onClick={() => setZoom(src)} style={{ width: "100%", borderRadius: 12, cursor: "zoom-in", border: `1.5px solid ${cor}55`, display: "block" }} />
+      <div style={{ display: "grid", gap: 5, marginTop: 9 }}>
+        {itens.map((t, i) => (
+          <div key={i} style={{ ...T.small, fontSize: 11.5, lineHeight: 1.6 }}>• {t}</div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* INTRODUÇÃO */}
+      <section style={T.card}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🇨🇳 A Escola Chinesa — 眼志 (yǎn zhì), o eye-sign do Oriente</div>
+        <div style={{ ...T.small, fontSize: 12, lineHeight: 1.85, color: T.dim }}>
+          A China é hoje a <b style={{ color: T.white }}>maior potência da columofilia mundial</b>: cerca de <b style={{ color: T.white }}>400 mil criadores registrados</b>, mais de <b style={{ color: T.white }}>25 milhões de anilhas por ano</b> (mais da metade do planeta) e prêmios que passam de <b style={{ color: T.white }}>28 bilhões de yuan</b> por temporada — um campeão já foi leidado por 22 milhões de yuan (cerca de R$ 17 milhões!). E nas leiloeiras chinesas, <b style={{ color: T.white }}>metade da página do pombo é a FOTO DO OLHO</b>: pupila pequena = "mentalidade de luta" para o fundo.
+          <br /><br />
+          O sistema deles é <b style={{ color: T.white }}>paralelo ao ocidental</b> — mesmos círculos, outra língua: chamam o eye-sign de <b style={{ color: T.white }}>眼志 (yǎn zhì)</b>, dividem a íris em duas camadas (areia de superfície 面砂 e de fundo 底砂) e classificam tudo pelos <b style={{ color: T.white }}>três grandes tipos de olho</b>, regidos pela harmonia Yin-Yang. E a regra deles é a mesma do Barkel: olho sem círculo <i>"pode competir, mas não deve reproduzir"</i>.
+        </div>
+      </section>
+
+      {/* OS 3 TIPOS */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>☯️ Os Três Grandes Tipos de Olho</div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <CartaoTipo
+            src="/img/olho-huang.jpg"
+            cn="黄眼" py="huáng yǎn"
+            nome="Olho Amarelo"
+            yinYang="☯️ YIN — 阴 (estável)"
+            cor="#f7bd00"
+            itens={[
+              "O 'guerreiro todo-tempo': estável, resistente, volta mesmo com chuva, neblina e vento contra",
+              "Rei das provas de fundo e dos campeonatos de várias etapas",
+              "Na tradição: filtra bem o sol forte e passa herança forte (dominante)",
+            ]}
+          />
+          <CartaoTipo
+            src="/img/olho-tao.jpg"
+            cn="桃花眼" py="táo huā yǎn"
+            nome="Olho Flor de Pêssego (areia)"
+            yinYang="☯️ YANG — 阳 (veloz)"
+            cor="#ff8fa3"
+            itens={[
+              "O velocista: explosão e ponta em dia de SOL e vento a favor (300–500km)",
+              "Areia clara, translúcida e espirituosa — enxerga contraste fino",
+              "Tradição: em adversidade pode 'flutuar' (rápido mas volúvel)",
+            ]}
+          />
+          <CartaoTipo
+            src="/img/olho-niu.jpg"
+            cn="牛眼" py="niú yǎn"
+            nome="Olho de Boi (preto)"
+            yinYang="🌑 o misterioso"
+            cor="#9aa8bc"
+            itens={[
+              "O todo-preto, imponente — na China é dito 'para o criadouro não erre' (育种不可怪)",
+              "Curiosidade científica: é falta de pigmento — os vasos é que aparecem escuros",
+              "Cuidado do mestre: olho de pombo DOENTE é escuro e sem brilho — não confundir!",
+            ]}
+          />
+        </div>
+      </section>
+
+      {/* O DITADO + YIN YANG */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>📜 O ditado millionário & o acasalamento Yin-Yang</div>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+          {/* taijitu dos olhos */}
+          <svg viewBox="0 0 120 120" style={{ width: 130, height: 130, flexShrink: 0 }} role="img" aria-label="Símbolo Yin-Yang com olho amarelo e olho flor de pêssego">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#31415a" strokeWidth="2" />
+            <path d="M 60 8 A 52 52 0 0 1 60 112 A 26 26 0 0 1 60 60 A 26 26 0 0 0 60 8 Z" fill="#f7bd00" opacity="0.92" />
+            <path d="M 60 8 A 52 52 0 0 0 60 112 A 26 26 0 0 0 60 60 A 26 26 0 0 1 60 8 Z" fill="#ff8fa3" opacity="0.88" />
+            <circle cx="60" cy="34" r="10" fill="#f8fafc" stroke="#31415a" strokeWidth="1.5" />
+            <circle cx="60" cy="34" r="4" fill="#14161a" />
+            <circle cx="60" cy="86" r="10" fill="#14161a" stroke="#31415a" strokeWidth="1.5" />
+            <circle cx="60" cy="86" r="3.5" fill="#f8fafc" />
+          </svg>
+          <div style={{ flex: 1, minWidth: 230 }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: T.gold, lineHeight: 1.5, letterSpacing: 0.5 }}>黄眼稳、砂眼快、牛眼育种不可怪</div>
+            <div style={{ ...T.small, fontSize: 12, marginTop: 6, lineHeight: 1.7 }}>
+              <b style={{ color: T.white }}>"Amarelo é estável, areia é veloz, olho de boi é pro criadouro — e não erre."</b>
+              <br />E a recomendação clássica: cruzar <b style={{ color: "#f7bd00" }}>黄 (amarelo/Yin)</b> com <b style={{ color: "#ff8fa3" }}>砂 (areia/Yang)</b> é a <b style={{ color: T.white }}>阴阳调和 (harmonia Yin-Yang)</b> — junta a estabilidade de um com a velocidade do outro, buscando o atleta completo. Soa familiar? É o nosso <b>amarelo × pérola</b> de Barkel — independente inventado, do outro lado do mundo!
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8, marginTop: 12 }}>
+          <div style={{ padding: 11, borderRadius: 10, background: "#f7bd0010", border: "1px solid #f7bd0044", fontSize: 11.5, lineHeight: 1.6 }}>
+            <b style={{ color: "#f7bd00" }}>黄 × 黄 (Yin + Yin)</b><br />Máxima estabilidade — mas risco de plantel "sem faísca": tudo estima, nada acelera.
+          </div>
+          <div style={{ padding: 11, borderRadius: 10, background: "#ff8fa310", border: "1px solid #ff8fa344", fontSize: 11.5, lineHeight: 1.6 }}>
+            <b style={{ color: "#ff8fa3" }}>砂 × 砂 (Yang + Yang)</b><br />Pura velocidade — mas tradição alerta: "rápido e volúvel", some na primeira adversidade.
+          </div>
+          <div style={{ padding: 11, borderRadius: 10, background: "#39e58c10", border: "1px solid #39e58c44", fontSize: 11.5, lineHeight: 1.6 }}>
+            <b style={{ color: "#39e58c" }}>黄 × 砂 (调和 — harmonia) ⭐</b><br />O cruzamento clássico chinês: estável NA medida e veloz NA medida — o equilíbrio que gera campeões completos.
+          </div>
+        </div>
+      </section>
+
+      {/* OLHO × CLIMA */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 6 }}>🌦️ As Areias e o Clima — o mapa olho × tempo</div>
+        <div style={{ ...T.small, fontSize: 11, color: T.dim, marginBottom: 10, lineHeight: 1.5 }}>
+          Exclusividade da escola chinesa: classificar a areia pelo TEMPO que o pombo prefere voar. Na hora de escalar a equipe, o mestre cruza a previsão do tempo com o mapa abaixo.
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(195px, 1fr))", gap: 6 }}>
+          {AREIAS_CLIMA.map((a) => (
+            <div key={a.cn} style={{ padding: "8px 11px", borderRadius: 9, background: "#ffffff08", fontSize: 11.5, lineHeight: 1.5 }}>
+              <b style={{ fontSize: 13 }}>{a.cn}</b> <span style={{ color: T.dim2, fontSize: 10 }}>{a.py}</span>
+              <div style={{ color: T.dim, fontSize: 10.5 }}>{a.icon} {a.clima}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ ...T.small, fontSize: 10, marginTop: 8, color: T.dim2 }}>💡 No app: combine com a Rota da Prova (clima real cidade a cidade) pra escalar a equipe pelo olho de cada pombo.</div>
+      </section>
+
+      {/* AS 5 CHAVES */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 6 }}>🔑 As chaves do mestre chinês — uma palavra, um critério</div>
+        <div style={{ ...T.small, fontSize: 11, color: T.dim, marginBottom: 10, lineHeight: 1.5 }}>
+          A tradição chinesa resume o olho campeão num rosário de palavras de UMA sílaba — cada ideograma é um teste completo. Estas são cinco das clássicas:
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(215px, 1fr))", gap: 8 }}>
+          {CHAVES_MESTRE.map((c) => (
+            <div key={c.hanzi} style={{ padding: 12, borderRadius: 12, background: "#ffffff08", border: "1px solid #f7bd0033", display: "flex", gap: 10 }}>
+              <div style={{ fontSize: 30, fontWeight: 900, color: T.gold, lineHeight: 1, minWidth: 34, textAlign: "center" }}>{c.hanzi}</div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800 }}>{c.nome} <span style={{ color: T.dim2, fontSize: 10, fontWeight: 600 }}>{c.pinyin}</span></div>
+                <div style={{ ...T.small, fontSize: 10.5, lineHeight: 1.6, marginTop: 3, color: T.dim }}>{c.texto}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* DICIONÁRIO */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>📖 Dicionário do criador chinês — 汉字 → português</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 6 }}>
+          {DICIONARIO_CN.map(([cn, py, pt, noApp]) => (
+            <div key={cn} style={{ padding: "8px 11px", borderRadius: 9, background: "#ffffff08", fontSize: 11.5, lineHeight: 1.55 }}>
+              <b style={{ color: "#ff8fa3", fontSize: 13 }}>{cn}</b> <span style={{ color: T.dim2, fontSize: 10 }}>{py}</span> <span style={{ color: T.dim }}>→ {pt}</span>
+              {noApp && <div style={{ fontSize: 10, color: T.dim2 }}>no app: {noApp}</div>}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* HONESTIDADE */}
+      <section style={{ ...T.card, marginTop: 14, ...T.small, fontSize: 11, lineHeight: 1.75, color: T.dim }}>
+        ⚠️ <b>Honestidade também existe na China:</b> nos comentários dos próprios sites chineses, criadores céticos lembram que <b>não há prova científica de que o pigmento do olho se relacione com desempenho</b>, e que o olho de boi é simplesmente falta de pigmento (os vasos aparecendo). É o mesmo debate do Ocidente — o eye-sign é <b>tradição de criador</b>: use junto com pedigree, anatomia e resultado de voo, nunca como veredito. As ilustrações são artísticas (baseadas em fotos reais), pra ensinar a enxergar cada tipo. 🀄👁️
+      </section>
+
+      {/* ZOOM */}
+      {zoom && (
+        <div onClick={() => setZoom(null)} style={{ position: "fixed", inset: 0, background: "rgba(4,10,20,0.9)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, cursor: "zoom-out", padding: 12 }}>
+          <img src={zoom} alt="ilustração ampliada" style={{ width: "min(94vw, 900px)", borderRadius: 12 }} onClick={(e) => e.stopPropagation()} />
+          <div style={{ position: "fixed", bottom: 18, color: "#9aa8bc", fontSize: 12 }}>toque fora da imagem para fechar ✕</div>
+        </div>
+      )}
+    </>
+  );
+}

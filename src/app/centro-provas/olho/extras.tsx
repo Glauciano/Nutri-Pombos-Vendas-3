@@ -219,26 +219,141 @@ export function SinaisEyeSign() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   🇬🇧 ESCOLA INGLESA — o eye-sign segundo S.W.E. Bishop
-   Tradição britânica (anos 1950-60): seleção de pombos de FUNDO,
-   a "Fórmula de Reconhecimento", olho voador × reprodutor e o violeta.
+   🇬🇧 ESCOLA INGLESA — o eye-sign segundo S.W.E. Bishop (V2 didática)
+   Aula em 3 passos: os círculos (fórmula), as FORMAS do anel desenhadas
+   uma a uma, e o esquema VOADOR × REPRODUTOR clicável.
    ══════════════════════════════════════════════════════════════ */
 
-const ANEIS_FORMULA: { chave: string; cor: string; r: number; nome: string }[] = [
-  { chave: "perimetro", cor: "#39e58c", r: 56, nome: "Anel da condição" },
-  { chave: "iris", cor: "#f97316", r: 49, nome: "Íris" },
-  { chave: "correlacao", cor: "#55a3ff", r: 37, nome: "Correlação" },
-  { chave: "adaptacao", cor: "#eab308", r: 25, nome: "Adaptação" },
-  { chave: "pupila", cor: "#f8fafc", r: 13, nome: "Pupila" },
+const ANEIS_EN: { chave: string; cor: string }[] = [
+  { chave: "pupila", cor: "#f8fafc" },
+  { chave: "adaptacao", cor: "#eab308" },
+  { chave: "correlacao", cor: "#55a3ff" },
+  { chave: "iris", cor: "#f97316" },
+  { chave: "condicao", cor: "#39e58c" },
 ];
 
-const PASSOS_FORMULA: { chave: string; titulo: string; texto: string }[] = [
-  { chave: "pupila", titulo: "1. A pupila", texto: "Pequena, firme e REATIVA: cubra a luz com a mão e solte — no candidato a pombo de fundo inglês, ela contrai e expande rápido. Grande e preguiçosa pede passagem pro fundo." },
-  { chave: "adaptacao", titulo: "2. O círculo de adaptação", texto: "Borda definida e SERRILHADA — o famoso 'sinal de corrida' (repare no relevo no olho do voador logo abaixo). Pra Bishop, sem adaptação visível falta motor ao atleta." },
-  { chave: "correlacao", titulo: "3. O círculo de correlação", texto: "O coração da fórmula: COMPLETE em toda a volta = aptidão ao fundo e ao reproduzir (é o anel escuro do 'olho de reprodutor'). Larga e vazada = pombo de provas curtas." },
-  { chave: "iris", titulo: "4. A profundidade da íris", texto: "Cor profunda, granulada, com 'montanhas e vales' — sinal de sangue rico e saúde. Íris rasa, esticada ou com falhas = pombo comum, sem brilho de campeão." },
-  { chave: "perimetro", titulo: "5. O anel da condição", texto: "O anel externo conta a CONDIÇÃO do momento: completo, uniforme e brilhante = pombo em forma, pronto pra encarar a prova. Pálido ou interrompido = manejo por cima." },
+const PASSOS_EN: { chave: string; titulo: string; oQueEO: string; oQueVer: string }[] = [
+  { chave: "pupila", titulo: "1. A pupila", oQueEO: "A janela central do olho — igual em todas as escolas.", oQueVer: "Pequena e REATIVA: cubra a luz com a mão e solte — no candidato a pombo de fundo inglês, ela contrai e expande rápido. Grande e preguiçosa pede passagem." },
+  { chave: "adaptacao", titulo: "2. O círculo de adaptação", oQueEO: "O anel grudado na pupila — o mesmo 内线口 chinês.", oQueVer: "Borda definida e SERRILHADA — o famoso 'sinal de corrida' (repare nos dentes no desenho quando este passo acende). Pra Bishop, sem adaptação visível falta motor ao atleta." },
+  { chave: "correlacao", titulo: "3. O círculo de correlação", oQueEO: "A faixa entre a adaptação e a íris — o 眼志 chinês, o coração da leitura.", oQueVer: "COMPLETE em toda a volta = aptidão ao fundo e ao reproduzir. Larga e vazada = pombo de provas curtas. É o anel que decide voador × reprodutor (Passo 3!)." },
+  { chave: "iris", titulo: "4. A profundidade da íris", oQueEO: "A 'carne' colorida — os ingleses chamam de DEPTH OF COLOUR, profundidade de cor.", oQueVer: "Cor profunda, granulada, com 'montanhas e vales' em relevo — sinal de sangue rico. Íris rasa, esticada ou plana como pintura = pombo comum." },
+  { chave: "condicao", titulo: "5. O anel da condição", oQueEO: "O anel externo junto à pálpebra — o 'termômetro' do momento.", oQueVer: "Completo, uniforme e brilhante = pombo EM FORMA, pronto pra prova. Pálido ou interrompido = manejo por cima, não encesta." },
 ];
+
+type FormaEN = { en: string; nome: string; veredito: string; cor: string; desenho: "full" | "broad" | "narrow" | "broken" | "white" | "green" | "violet" | "racing" };
+
+const FORMAS_EN: FormaEN[] = [
+  { en: "Yellow circle", nome: "Anel AMARELO completo", veredito: "O clássico 'breeder eye' inglês: correlação amarela, fechada em 360° — o reprodutor de livro.", cor: "#eab308", desenho: "full" },
+  { en: "Broad circle", nome: "Anel LARGO", veredito: "Correlação larga e completa: força de fundo — o maratonista que também serve de matriz.", cor: "#3b82f6", desenho: "broad" },
+  { en: "Racing sign", nome: "SINAL DE CORRIDA", veredito: "O segmento escuro serrilhado sobre a adaptação: A MARCA do velocista. Regra de Barkel: a soma dos sinais do casal não deve passar de 100%!", cor: "#f97316", desenho: "racing" },
+  { en: "White/grey circle", nome: "Anel BRANCO/CINZA", veredito: "Anel claro como névoa: leitura de VOADOR puro — velocidade antes de reprodução.", cor: "#cbd5e1", desenho: "white" },
+  { en: "Green circle", nome: "Anel VERDE", veredito: "O anel esverdeado: raridade inglesa associada aos grandes reprodutores de fundo.", cor: "#22c55e", desenho: "green" },
+  { en: "Narrow circle", nome: "Anel ESTREITO", veredito: "Correlação fina: velocidade pura, provas curtas — fundo não é pra ele.", cor: "#60a5fa", desenho: "narrow" },
+  { en: "Broken circle", nome: "Anel QUEBRADO", veredito: "Anel interrompido, em pedaços: 'serve pra voar, não pra criar' — a MESMA regra dos chineses, do outro lado do mundo!", cor: "#94a3b8", desenho: "broken" },
+  { en: "Violet circle", nome: "Anel VIOLETA", veredito: "A joia raríssima: reprodutor excepcional — a lenda se repete na Inglaterra, na Bélgica e na China.", cor: "#a78bfa", desenho: "violet" },
+];
+
+/** esquema de uma forma do anel inglês (desenho de livro) */
+function EsquemaEN({ f, ativo, onClick }: { f: FormaEN; ativo: boolean; onClick: () => void }) {
+  let anel: React.ReactNode;
+  if (f.desenho === "full") anel = <circle cx="50" cy="50" r="33" fill="none" stroke={f.cor} strokeWidth="7" />;
+  else if (f.desenho === "broad") anel = <circle cx="50" cy="50" r="33" fill="none" stroke={f.cor} strokeWidth="12" />;
+  else if (f.desenho === "narrow") anel = <circle cx="50" cy="50" r="33" fill="none" stroke={f.cor} strokeWidth="3.5" />;
+  else if (f.desenho === "white") anel = <circle cx="50" cy="50" r="33" fill="none" stroke={f.cor} strokeWidth="7" opacity="0.9" />;
+  else if (f.desenho === "green") anel = <circle cx="50" cy="50" r="33" fill="none" stroke={f.cor} strokeWidth="7" />;
+  else if (f.desenho === "broken") anel = (
+    <g>
+      <path d="M 50 17 A 33 33 0 0 1 68 26" fill="none" stroke={f.cor} strokeWidth="7" strokeLinecap="round" />
+      <path d="M 79 45 A 33 33 0 0 1 72 66" fill="none" stroke={f.cor} strokeWidth="7" strokeLinecap="round" />
+      <path d="M 28 76 A 33 33 0 0 1 18 55" fill="none" stroke={f.cor} strokeWidth="7" strokeLinecap="round" />
+    </g>
+  );
+  else if (f.desenho === "violet") anel = <circle cx="50" cy="50" r="33" fill="none" stroke={f.cor} strokeWidth="8" strokeDasharray="6 3" />;
+  else if (f.desenho === "racing") anel = (
+    <g>
+      <circle cx="50" cy="50" r="33" fill="none" stroke="#64748b" strokeWidth="4" opacity="0.5" />
+      <path d="M 24 65 A 33 33 0 0 0 76 65" fill="none" stroke="#1b283c" strokeWidth="11" strokeLinecap="round" />
+      {Array.from({ length: 7 }).map((_, i) => {
+        const a = Math.PI - (i / 6) * Math.PI;
+        const x1 = 50 + Math.cos(a) * 27, y1 = 50 + Math.sin(a) * 27;
+        const x2 = 50 + Math.cos(a) * 42, y2 = 50 + Math.sin(a) * 42;
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#f97316" strokeWidth="2.6" />;
+      })}
+    </g>
+  );
+  return (
+    <svg viewBox="0 0 100 100" style={{ width: "100%", maxWidth: 96, display: "block", margin: "0 auto", cursor: "pointer" }} onClick={onClick} role="img" aria-label={"Forma " + f.nome}>
+      <circle cx="50" cy="50" r="46" fill="#1b283c" stroke="#31415a" strokeWidth="2" />
+      <circle cx="50" cy="50" r="42" fill="#8a6a30" opacity="0.45" />
+      {Array.from({ length: 14 }).map((_, i) => {
+        const a = (i / 14) * Math.PI * 2 + 0.2;
+        const r = 39 + (i % 3) * 3;
+        return <circle key={i} cx={50 + Math.cos(a) * r} cy={50 + Math.sin(a) * r} r={2.6} fill="#c2410c" opacity="0.7" />;
+      })}
+      {anel}
+      <ellipse cx="50" cy="50" rx="10" ry="15" fill="#14161a" />
+      <circle cx="47" cy="45" r="2.2" fill="#f8fafc" opacity="0.8" />
+      {ativo && <circle cx="50" cy="50" r="46" fill="none" stroke={f.cor} strokeWidth="2.5" opacity="0.8" />}
+    </svg>
+  );
+}
+
+/** esquema grande do VOADOR ou do REPRODUTOR com legendas */
+function EsquemaPerfil({ tipo }: { tipo: "voador" | "reprodutor" }) {
+  const voador = tipo === "voador";
+  const cor = voador ? "#f97316" : "#55a3ff";
+  return (
+    <svg viewBox="0 0 200 200" style={{ width: "100%", maxWidth: 210, display: "block", margin: "0 auto" }} role="img" aria-label={voador ? "Esquema do olho do voador" : "Esquema do olho do reprodutor"}>
+      <circle cx="100" cy="92" r="66" fill="#0f1a2e" stroke="#31415a" strokeWidth="3" />
+      <circle cx="100" cy="92" r="61" fill="#8a6a30" opacity="0.4" />
+      {Array.from({ length: 20 }).map((_, i) => {
+        const a = (i / 20) * Math.PI * 2;
+        const r = 50 + (i % 3) * 5;
+        return <circle key={i} cx={100 + Math.cos(a) * r} cy={92 + Math.sin(a) * r * 0.94} r={3.4} fill="#c2410c" opacity="0.75" />;
+      })}
+      {/* correlação: completa (reprodutor) vs parcial tracejada (voador) */}
+      {voador ? (
+        <path d="M 100 52 A 40 40 0 0 1 133 105" fill="none" stroke="#55a3ff" strokeWidth="6" strokeDasharray="7 5" opacity="0.8" />
+      ) : (
+        <circle cx="100" cy="92" r="40" fill="none" stroke="#55a3ff" strokeWidth="8" />
+      )}
+      {/* adaptação */}
+      <circle cx="100" cy="92" r="27" fill="none" stroke="#eab308" strokeWidth="4.5" />
+      {/* sinal de corrida (só no voador): arco escuro serrilhado */}
+      {voador && (
+        <g>
+          <path d="M 76 106 A 27 27 0 0 0 124 106" fill="none" stroke="#1b283c" strokeWidth="9" strokeLinecap="round" />
+          {Array.from({ length: 6 }).map((_, i) => {
+            const a = Math.PI - (i / 5) * Math.PI;
+            const x1 = 100 + Math.cos(a) * 22, y1 = 92 + Math.sin(a) * 22;
+            const x2 = 100 + Math.cos(a) * 35, y2 = 92 + Math.sin(a) * 35;
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#f97316" strokeWidth="2.6" />;
+          })}
+        </g>
+      )}
+      <ellipse cx="100" cy="92" rx="11" ry="16" fill="#14161a" />
+      <circle cx="96" cy="86" r="2.6" fill="#f8fafc" opacity="0.85" />
+      {/* legendas com setas */}
+      <line x1="100" y1="26" x2="100" y2="48" stroke={cor} strokeWidth="1.6" strokeDasharray="3 2" />
+      <text x="100" y="18" textAnchor="middle" fontSize="9.5" fontWeight="800" fill={cor}>{voador ? "correlação PARCIAL" : "CORRELAÇÃO COMPLETA 360°"}</text>
+      {voador && (
+        <>
+          <line x1="160" y1="120" x2="132" y2="108" stroke="#f97316" strokeWidth="1.6" strokeDasharray="3 2" />
+          <text x="168" y="124" fontSize="9.5" fontWeight="800" fill="#f97316" textAnchor="end">sinal de corrida</text>
+          <text x="168" y="135" fontSize="8.5" fill="#9aa8bc" textAnchor="end">(serrilhado, em relevo)</text>
+        </>
+      )}
+      {!voador && (
+        <>
+          <line x1="160" y1="128" x2="136" y2="112" stroke="#55a3ff" strokeWidth="1.6" strokeDasharray="3 2" />
+          <text x="170" y="132" fontSize="9.5" fontWeight="800" fill="#55a3ff" textAnchor="end">o anel do criador</text>
+          <text x="170" y="143" fontSize="8.5" fill="#9aa8bc" textAnchor="end">(escuro, largo, sem frestas)</text>
+        </>
+      )}
+      <text x="100" y="188" textAnchor="middle" fontSize="10.5" fontWeight="900" fill={cor}>{voador ? "⚡ RACER — o atleta" : "🏆 BREEDER — a matriz"}</text>
+    </svg>
+  );
+}
 
 const GLOSSARIO_EN: [string, string][] = [
   ["Eye-sign", "sinal do olho"],
@@ -246,12 +361,12 @@ const GLOSSARIO_EN: [string, string][] = [
   ["Breeder eye", "olho de reprodutor"],
   ["Circle of adaptation", "círculo de adaptação"],
   ["Circle of correlation", "círculo de correlação"],
-  ["Iris granulation", "granulação da íris"],
-  ["Depth of colour", "profundidade de cor"],
+  ["Depth of colour", "profundidade de cor da íris"],
+  ["Racing sign", "sinal de corrida (serrilhado)"],
+  ["Condition", "condição (forma física)"],
   ["Violet eye", "olho violeta"],
   ["Pearl eye", "olho pérola"],
   ["Bull eye", "olho preto (de boi)"],
-  ["Condition", "condição (forma física)"],
   ["Long distance", "fundo / longa distância"],
   ["Mating by eye-sign", "acasalamento pelo olho"],
   ["Formula of Recognition", "Fórmula de Reconhecimento"],
@@ -259,13 +374,16 @@ const GLOSSARIO_EN: [string, string][] = [
 
 export function EscolaInglesa() {
   const [passo, setPasso] = useState(0);
+  const [forma, setForma] = useState(0);
   const [zoom, setZoom] = useState<string | null>(null);
-  const ativo = PASSOS_FORMULA[passo].chave;
+  const p = PASSOS_EN[passo];
+  const f = FORMAS_EN[forma];
+  const corDoPasso = ANEIS_EN.find((a) => a.chave === p.chave)!.cor;
 
   const CartaoOlho = ({ src, titulo, cor, itens }: { src: string; titulo: string; cor: string; itens: string[] }) => (
-    <div style={{ flex: 1, minWidth: 240, padding: 12, borderRadius: 12, background: "#ffffff08", border: `1px solid ${cor}44` }}>
+    <div style={{ flex: 1, minWidth: 240, padding: 12, borderRadius: 12, background: "#ffffff08", border: "1px solid " + cor + "44" }}>
       <div style={{ fontSize: 13.5, fontWeight: 800, color: cor, marginBottom: 8 }}>{titulo}</div>
-      <img src={src} alt={titulo} onClick={() => setZoom(src)} style={{ width: "100%", borderRadius: 12, cursor: "zoom-in", border: `1.5px solid ${cor}55`, display: "block" }} />
+      <img src={src} alt={titulo} onClick={() => setZoom(src)} style={{ width: "100%", borderRadius: 12, cursor: "zoom-in", border: "1.5px solid " + cor + "55", display: "block" }} />
       <div style={{ display: "grid", gap: 5, marginTop: 9 }}>
         {itens.map((t, i) => (
           <div key={i} style={{ ...T.small, fontSize: 11.5, lineHeight: 1.6 }}>• {t}</div>
@@ -276,90 +394,135 @@ export function EscolaInglesa() {
 
   return (
     <>
-      {/* INTRODUÇÃO */}
+      {/* INTRODUÇÃO — anuncia os passos */}
       <section style={T.card}>
         <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🇬🇧 A Escola Inglesa — o olho segundo S.W.E. Bishop</div>
         <div style={{ ...T.small, fontSize: 12, lineHeight: 1.85, color: T.dim }}>
-          <b style={{ color: T.white }}>S.W.E. Bishop</b> foi colunista da <i>Pigeon Racing News and Gazette</i>, a grande revista britânica da columofilia, e publicou nos anos 1950-60 o clássico raro <b style={{ color: T.white }}>"The Secret of Eye-Sign"</b> (All-British Pigeon Racing Publishing Co.). A escola inglesa nasceu com uma obsessão diferente da continental: <b style={{ color: T.white }}>Barkel e Hofmann</b> ensinavam a <b>combinar olhos</b> no acasalamento; <b style={{ color: T.white }}>Bishop ensinava a LER o olho pra achar o pombo de FUNDO</b> — o maratonista de longa distância. Sua <b style={{ color: T.white }}>"Fórmula de Reconhecimento"</b> era o roteiro prático dessa leitura, círculo por círculo — é ela que você percorre logo abaixo. E o livro abre com o <b style={{ color: T.white }}>"mecanismo maravilhoso do olho"</b>: a anatomia e a fisiologia que sustentam toda a leitura — reconstruída aqui em desenho interativo (🔬) e na seção do olho em voo (✈️), logo mais abaixo na aba.
-          <br /><br />
-          📚 Resumo honesto da tradição pública da escola inglesa (Bishop e C.J. Cranstoun) — não é tradução do livro, que é raro e protegido por direitos autorais.
+          <b style={{ color: T.white }}>S.W.E. Bishop</b>, colunista da <i>Pigeon Racing News and Gazette</i>, publicou nos anos 1950-60 o clássico raro <b style={{ color: T.white }}>"The Secret of Eye-Sign"</b>. Enquanto Barkel e Hofmann ensinavam a <b>combinar olhos</b> no acasalamento, Bishop ensinava a <b>LER o olho pra achar o pombo de FUNDO</b>. A aula vem em 3 passos: <b style={{ color: T.white }}>1. os 5 círculos</b> (a Fórmula de Reconhecimento, toque no desenho), <b style={{ color: T.white }}>2. as 8 formas do anel</b> (cada uma desenhada), <b style={{ color: T.white }}>3. voador × reprodutor</b> (esquemas com legenda). E logo abaixo, o capítulo 2 do livro: o 🔬 mecanismo maravilhoso (anatomia) e o ✈️ olho em voo.
         </div>
       </section>
 
-      {/* FÓRMULA DE RECONHECIMENTO — INTERATIVA */}
+      {/* PASSO 1 — FÓRMULA DE RECONHECIMENTO */}
       <section style={{ ...T.card, marginTop: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🧭 A Fórmula de Reconhecimento — toque nos passos</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 4 }}>🧭 Passo 1 — A Fórmula de Reconhecimento (toque nos números!)</div>
+        <div style={{ ...T.small, fontSize: 11, color: T.dim, marginBottom: 10, lineHeight: 1.5 }}>
+          O roteiro de Bishop, círculo por círculo, de dentro pra fora. Cada passo acende a peça certa no desenho.
+        </div>
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-          <svg viewBox="0 0 120 120" style={{ width: 185, height: 185, flexShrink: 0 }} role="img" aria-label="Diagrama dos círculos do olho com o passo ativo destacado">
-            {ANEIS_FORMULA.map((a) => {
-              const on = a.chave === ativo;
+          <svg viewBox="0 0 220 220" style={{ width: 250, height: "auto", flexShrink: 0 }} role="img" aria-label="Os cinco círculos do olho com passo destacado">
+            <circle cx="110" cy="110" r="102" fill="#0f1a2e" stroke="#31415a" strokeWidth="3" />
+            {/* 5. anel da condição */}
+            <circle cx="110" cy="110" r="97" fill="none" stroke={p.chave === "condicao" ? "#39e58c" : "#39e58c66"} strokeWidth={p.chave === "condicao" ? 7 : 4} />
+            {/* 4. íris com granulação */}
+            <circle cx="110" cy="110" r="90" fill="#8a6a30" opacity={p.chave === "iris" ? 0.75 : 0.4} />
+            {Array.from({ length: 26 }).map((_, i) => {
+              const a = (i / 26) * Math.PI * 2;
+              const r = 68 + (i % 4) * 5;
+              return <circle key={i} cx={110 + Math.cos(a) * r} cy={110 + Math.sin(a) * r} r={4 + (i % 3)} fill="#c2410c" opacity={p.chave === "iris" ? 1 : 0.7} stroke={p.chave === "iris" ? "#ffd9a8" : "none"} strokeWidth={p.chave === "iris" ? 1.2 : 0} />;
+            })}
+            {/* 3. correlação */}
+            <circle cx="110" cy="110" r="62" fill="none" stroke={p.chave === "correlacao" ? "#55a3ff" : "#3d5a80"} strokeWidth={p.chave === "correlacao" ? 10 : 6} opacity={p.chave === "correlacao" ? 1 : 0.7} />
+            {/* 2. adaptação + serrilhado */}
+            <circle cx="110" cy="110" r="46" fill="none" stroke={p.chave === "adaptacao" ? "#eab308" : "#8a6a1e"} strokeWidth={p.chave === "adaptacao" ? 8 : 5} />
+            {Array.from({ length: 18 }).map((_, i) => {
+              const a = (i / 18) * Math.PI * 2;
+              const x1 = 110 + Math.cos(a) * 42, y1 = 110 + Math.sin(a) * 42;
+              const x2 = 110 + Math.cos(a) * 52, y2 = 110 + Math.sin(a) * 52;
+              return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={p.chave === "adaptacao" ? "#ffd76a" : "#8a6a1e"} strokeWidth="2" />;
+            })}
+            {/* sinal de corrida (aparece no passo 2) */}
+            {p.chave === "adaptacao" && (
+              <path d="M 80 132 A 46 46 0 0 0 140 132" fill="none" stroke="#1b283c" strokeWidth="13" strokeLinecap="round" />
+            )}
+            {/* 1. pupila */}
+            <ellipse cx="110" cy="110" rx="20" ry="26" fill={p.chave === "pupila" ? "#f8fafc" : "#14161a"} stroke={p.chave === "pupila" ? "#f8fafc" : "none"} strokeWidth="2.5" />
+            {p.chave === "pupila" && <text x="110" y="116" textAnchor="middle" fontSize="16" fontWeight="900" fill="#14161a">1</text>}
+            {/* marcadores */}
+            {([[1, "pupila", 110, 74], [2, "adaptacao", 78, 152], [3, "correlacao", 110, 178], [4, "iris", 34, 52], [5, "condicao", 110, 10]] as [number, string, number, number][]).map(([n, chave, x, y]) => {
+              const on = p.chave === chave;
               return (
-                <circle key={a.chave} cx="60" cy="60" r={a.r} fill={a.chave === "pupila" ? "#14161a" : `${a.cor}${on ? "33" : "14"}`} stroke={a.cor} strokeWidth={on ? 3 : 1.2} opacity={on ? 1 : 0.4} />
+                <g key={n} onClick={() => setPasso(n - 1)} style={{ cursor: "pointer" }}>
+                  <circle cx={x} cy={y} r="11" fill={on ? "#f7bd00" : "#1b283c"} stroke={on ? "#f7bd00" : "#64748b"} strokeWidth="2" />
+                  <text x={x} y={y + 4} textAnchor="middle" fontSize="12" fontWeight="900" fill={on ? "#0b1426" : "#e2e8f0"}>{n}</text>
+                </g>
               );
             })}
           </svg>
           <div style={{ flex: 1, minWidth: 230 }}>
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-              {PASSOS_FORMULA.map((p, i) => (
-                <button key={p.chave} type="button" onClick={() => setPasso(i)} style={{ padding: "7px 11px", borderRadius: 999, cursor: "pointer", fontSize: 11, fontWeight: 800, border: `1.5px solid ${passo === i ? ANEIS_FORMULA.find((a) => a.chave === p.chave)!.cor : T.border}`, background: passo === i ? `${ANEIS_FORMULA.find((a) => a.chave === p.chave)!.cor}22` : T.bgInput, color: passo === i ? ANEIS_FORMULA.find((a) => a.chave === p.chave)!.cor : T.dim }}>
-                  {p.titulo.split(".")[0]}
+              {PASSOS_EN.map((x, i) => (
+                <button key={x.chave} type="button" onClick={() => setPasso(i)} style={{ padding: "6px 10px", borderRadius: 999, cursor: "pointer", fontSize: 11, fontWeight: 800, border: "1.5px solid " + (passo === i ? ANEIS_EN.find((a) => a.chave === x.chave)!.cor : T.border), background: passo === i ? ANEIS_EN.find((a) => a.chave === x.chave)!.cor + "22" : T.bgInput, color: passo === i ? ANEIS_EN.find((a) => a.chave === x.chave)!.cor : T.dim }}>
+                  {i + 1}. {x.titulo.split(". ")[1].split(" (")[0]}
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: ANEIS_FORMULA.find((a) => a.chave === ativo)!.cor }}>{PASSOS_FORMULA[passo].titulo}</div>
-            <div style={{ ...T.small, fontSize: 12, lineHeight: 1.75, marginTop: 5 }}>{PASSOS_FORMULA[passo].texto}</div>
+            <div style={{ fontSize: 14.5, fontWeight: 900, color: corDoPasso }}>{p.titulo}</div>
+            <div style={{ ...T.small, fontSize: 12, lineHeight: 1.75, marginTop: 6 }}>{p.oQueEO}</div>
+            <div style={{ ...T.small, fontSize: 11.5, lineHeight: 1.75, marginTop: 8, padding: "9px 11px", borderRadius: 10, background: "#ffffff08", border: "1px solid " + corDoPasso + "33" }}>
+              👁️ <b style={{ color: T.white }}>O que procurar:</b> {p.oQueVer}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* VOADOR × REPRODUTOR */}
+      {/* PASSO 2 — AS 8 FORMAS DO ANEL */}
       <section style={{ ...T.card, marginTop: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>⚡×🏆 O olho do VOADOR e o olho do REPRODUTOR</div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 4 }}>⭕ Passo 2 — As 8 formas do anel (cada uma desenhada)</div>
+        <div style={{ ...T.small, fontSize: 11, color: T.dim, marginBottom: 10, lineHeight: 1.5 }}>
+          A classificação inglesa do círculo de correlação por COR, LARGURA e COMPLETUDE — é ela que separa o voador do reprodutor. Toque nos desenhos.
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(128px, 1fr))", gap: 8 }}>
+          {FORMAS_EN.map((x, i) => (
+            <button key={x.en} type="button" onClick={() => setForma(i)} style={{ padding: 10, borderRadius: 12, cursor: "pointer", background: forma === i ? x.cor + "18" : "#ffffff08", border: "1.5px solid " + (forma === i ? x.cor : T.border), textAlign: "center" }}>
+              <EsquemaEN f={x} ativo={forma === i} onClick={() => setForma(i)} />
+              <div style={{ fontSize: 10.5, fontWeight: 800, color: T.dim2, marginTop: 6 }}>{x.en}</div>
+              <div style={{ fontSize: 11, fontWeight: 900, color: forma === i ? x.cor : T.white, marginTop: 1 }}>{x.nome}</div>
+            </button>
+          ))}
+        </div>
+        <div style={{ marginTop: 12, padding: 13, borderRadius: 12, background: "#ffffff08", border: "1px solid " + f.cor + "44" }}>
+          <div style={{ fontSize: 13.5, fontWeight: 900, color: f.cor }}>{f.en} — {f.nome}</div>
+          <div style={{ ...T.small, fontSize: 12, lineHeight: 1.75, marginTop: 5 }}>{f.veredito}</div>
+        </div>
+      </section>
+
+      {/* PASSO 3 — VOADOR × REPRODUTOR */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>⚡×🏆 Passo 3 — Voador × Reprodutor (o esquema de cada um)</div>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 200, padding: 12, borderRadius: 12, background: "#ffffff08", border: "1px solid #f9731644" }}>
+            <EsquemaPerfil tipo="voador" />
+            <div style={{ ...T.small, fontSize: 11, lineHeight: 1.65, marginTop: 8, textAlign: "center", color: T.dim }}>
+              Sinal de corrida serrilhado em relevo + correlação parcial: <b style={{ color: "#f97316" }}>o atleta das provas</b> — nem sempre transmite aos filhos.
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 200, padding: 12, borderRadius: 12, background: "#ffffff08", border: "1px solid #55a3ff44" }}>
+            <EsquemaPerfil tipo="reprodutor" />
+            <div style={{ ...T.small, fontSize: 11, lineHeight: 1.65, marginTop: 8, textAlign: "center", color: T.dim }}>
+              Correlação escura, larga e COMPLETA em 360°: <b style={{ color: "#55a3ff" }}>a matriz do criadouro</b> — a marca de quem gera campeões.
+            </div>
+          </div>
+        </div>
+        {/* as fotos reais ilustrando */}
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
           <CartaoOlho
-            src="/img/olho-voador.jpg"
-            titulo="⚡ O Voador (racer eye)"
-            cor="#f97316"
-            itens={[
-              "Sinal de corrida forte: adaptação serrilhada em RELEVO, agressiva",
-              "Íris profunda e vibrante — o olho que 'quer voar'",
-              "O atleta das provas — mas nem sempre o transmissor aos filhos",
-            ]}
+            src="/img/olho-voador.jpg" titulo="⚡ O Voador (racer eye)" cor="#f97316"
+            itens={["Sinal de corrida forte: adaptação serrilhada em RELEVO", "Íris profunda e vibrante — o olho que 'quer voar'"]}
           />
           <CartaoOlho
-            src="/img/olho-reprodutor.jpg"
-            titulo="🏆 O Reprodutor (breeder eye)"
-            cor="#55a3ff"
-            itens={[
-              "Círculo de correlação ESCURO, largo e COMPLETO em 360°",
-              "O 'anel do criador' — a marca de quem transmite qualidades",
-              "Bishop e Cranstoun liam nele a vocação de matriz do criadouro",
-            ]}
+            src="/img/olho-reprodutor.jpg" titulo="🏆 O Reprodutor (breeder eye)" cor="#55a3ff"
+            itens={["Círculo de correlação ESCURO e COMPLETO em 360°", "O 'anel do criador' que Bishop e Cranstoun liam"]}
           />
         </div>
+        {/* tabela comparativa */}
         <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1fr", gap: 6, marginTop: 12, fontSize: 11 }}>
-          {[["Sinal", "⚡ Voador", "🏆 Reprodutor"], ["Adaptação", "serrilhada agressiva, em relevo", "definida, mais discreta"], ["Correlação", "parcial ou estreita", "completa, 360°, escura"], ["Íris", "vibrante e profunda", "densa, rica, sem falhas"], ["Vocação", "ganhar a prova", "gerar campeões"], ["No app", "score ⚡ Voador alto (aba Analisar)", "score 🏆 Reprodutor alto (aba Analisar)"]].map((linha, i) => (
+          {[["Sinal", "⚡ Voador", "🏆 Reprodutor"], ["Adaptação", "serrilhada agressiva, em relevo", "definida, mais discreta"], ["Correlação", "parcial ou estreita", "completa, 360°, escura"], ["Íris", "vibrante e profunda", "densa, rica, sem falhas"], ["Vocação", "ganhar a prova", "gerar campeões"], ["No app", "score ⚡ alto (aba Analisar)", "score 🏆 alto (aba Analisar)"]].map((linha, i) => (
             <div key={i} style={{ display: "contents" }}>
               {linha.map((cel, j) => (
-                <div key={j} style={{ padding: "7px 9px", borderRadius: 8, background: i === 0 ? "#f7bd0022" : "#ffffff08", fontWeight: i === 0 ? 800 : 600, color: i === 0 ? T.gold : T.dim }}>
-                  {cel}
-                </div>
+                <div key={j} style={{ padding: "7px 9px", borderRadius: 8, background: i === 0 ? "#f7bd0022" : "#ffffff08", fontWeight: i === 0 ? 800 : 600, color: i === 0 ? T.gold : T.dim }}>{cel}</div>
               ))}
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* OLHO VIOLETA */}
-      <section style={{ ...T.card, marginTop: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>💜 O Olho Violeta — a joia rara da escola inglesa</div>
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-start" }}>
-          <img src="/img/olho-violeta.jpg" alt="Ilustração do olho violeta" onClick={() => setZoom("/img/olho-violeta.jpg")} style={{ width: 230, borderRadius: 12, cursor: "zoom-in", border: "1.5px solid #a78bfa66", flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 220, ...T.small, fontSize: 12, lineHeight: 1.85, color: T.dim }}>
-            O violeta é o olho <b style={{ color: T.white }}>mais raro</b> do eye-sign: íris de tom <b style={{ color: "#c4b5fd" }}>lilás/lavanda</b>, delicada e luminosa. Os mestres ingleses o tratavam como <b style={{ color: T.white }}>joia de criadouro</b> — a tradição credita ao violeta a condição de reprodutor excepcional, ainda mais difícil de encontrar que o próprio olho de reprodutor clássico.
-            <br /><br />
-            Na prática: raríssimo, valioso — e, como tudo no eye-sign, <b style={{ color: T.white }}>tradição, não lei</b>. Se um violeta nascer no seu plantel, tire a foto do olho na hora e guarde com carinho. 😄
-          </div>
         </div>
       </section>
 
@@ -377,7 +540,7 @@ export function EscolaInglesa() {
 
       {/* HONESTIDADE */}
       <section style={{ ...T.card, marginTop: 14, ...T.small, fontSize: 11, lineHeight: 1.75, color: T.dim }}>
-        ⚠️ <b>Honestidade de sempre:</b> eye-sign é tradição de criador, sem validação científica fechada — use como <b>mais uma</b> ferramenta de seleção, junto com pedigree, anatomia e, principalmente, resultados de voo. As ilustrações acima são artísticas (geradas a partir de fotos reais de olhos), feitas pra <b>ensinar a enxergar cada círculo</b> — o olho do seu pombo é o juiz final, e é ele que você analisa com a 📸 mira na aba Analisar.
+        ⚠️ <b>Honestidade de sempre:</b> eye-sign é tradição de criador, sem validação científica fechada — use como <b>mais uma</b> ferramenta, junto com pedigree, anatomia e resultados de voo. Resumo da tradição pública da escola inglesa (Bishop e Cranstoun) — não é tradução do livro, que é raro e protegido por direitos autorais.
       </section>
 
       {/* ZOOM */}

@@ -1063,3 +1063,196 @@ export function EscolaChinesa() {
     </>
   );
 }
+
+/* ══════════════════════════════════════════════════════════════
+   🇿🇦 ESCOLA SUL-AFRICANA — Jack Barkel, o pai do eye-sign moderno
+   Passo 1: o sinal de corrida medido em % (25/50/75/100)
+   Passo 2: a REGRA DOS 100% — calculadora de acasalamento
+   Passo 3: a matriz de cores (amarelo × pérola e companhia)
+   ══════════════════════════════════════════════════════════════ */
+
+const COBERTURAS: { pct: number; nome: string; leitura: string }[] = [
+  { pct: 25, nome: "¼ de volta", leitura: "Sinal discreto, um quarto do anel: na tradição, mais índole de FONDO — ritmo de maratonista, guarda energia. Casal somando pouco = filhos pros dias duros." },
+  { pct: 50, nome: "½ volta", leitura: "Meia volta de sinal: o EQUILIBRADO — corre com vontade e ainda tem chapa pra criar. O mais comum nos campeões, diz a escola." },
+  { pct: 75, nome: "¾ de volta", leitura: "Três quartos: VELOCISTA de verdade — entra forte, briga a ponta. Pra criar, Barkel pedia cuidado: excesso de corrida de ambos os lados desequilibra." },
+  { pct: 100, nome: "volta COMPLETA", leitura: "O sinal fecha o círculo inteiro: intensidade máxima de corrida. A regra clássica: quem tem 100% pede parceiro com sinal mínimo ou nulo — nunca outro 100%." },
+];
+
+const CORES_MATRIZ: { nome: string; chip: string; desc: string }[] = [
+  { nome: "Amarelo", chip: "#eab308", desc: "íris amarelo-ouro (Y)" },
+  { nome: "Pérola", chip: "#cbd5e1", desc: "íris prateada (P)" },
+  { nome: "Outra cor", chip: "#a78bfa", desc: "laranja, violeta, olho de boi..." },
+];
+
+function vereditoCorres(m: number, f: number): { txt: string; nota: string; cor: string } {
+  const amarelo = [m, f].filter((x) => x === 0).length;
+  const perola = [m, f].filter((x) => x === 1).length;
+  if (amarelo === 2) return { txt: "⚠️ Amarelo × Amarelo", nota: "Íris ESPRESSA demais na tradição: filhos com excesso de pigmento — perdem a fineza de leitura. Evitar, dizia Barkel.", cor: "#f97316" };
+  if (perola === 2) return { txt: "⚠️ Pérola × Pérola", nota: "Íris FINA demais: velocidade sem resistência — tradução de Barkel: 'ganham e se perdem' nas provas duras.", cor: "#94a3b8" };
+  if (amarelo === 1 && perola === 1) return { txt: "⭐ Amarelo × Pérola", nota: "O CASAMENTO CLÁSSICO: espessura de um + fineza do outro = o equilíbrio dos campeões. A combinação preferida de Barkel.", cor: "#39e58c" };
+  return { txt: "✓ Combinado com outra cor", nota: "Laranja, violeta e olho de boi seguem a mesma lógica: buscar o CONTRAPESE — o que um olho tem de menos, o outro completa.", cor: "#a78bfa" };
+}
+
+export function EscolaBarkel() {
+  const [cob, setCob] = useState(1); // 50% selecionado
+  const [machoPct, setMachoPct] = useState(50);
+  const [femeaPct, setFemeaPct] = useState(50);
+  const [corM, setCorM] = useState(0);
+  const [corF, setCorF] = useState(1);
+
+  const c = COBERTURAS[cob];
+  const soma = machoPct + femeaPct;
+  const aprovado = soma <= 100;
+  const vc = vereditoCorres(corM, corF);
+
+  /** arco do sinal de corrida cobrindo pct% da adaptação */
+  const arco = (pct: number, cor: string, ativo: boolean) => {
+    const fim = (-90 + (pct / 100) * 360) * (Math.PI / 180);
+    const x = 50 + 27 * Math.cos(fim), y = 50 + 27 * Math.sin(fim);
+    const grande = pct > 50 ? 1 : 0;
+    return <path d={`M 50 23 A 27 27 0 ${grande} 1 ${x.toFixed(1)} ${y.toFixed(1)}`} fill="none" stroke={cor} strokeWidth={ativo ? 10 : 7} strokeLinecap="round" opacity={ativo ? 1 : 0.75} />;
+  };
+
+  return (
+    <>
+      {/* INTRODUÇÃO */}
+      <section style={T.card}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🇿🇦 A Escola de Jack Barkel — o pai do eye-sign moderno</div>
+        <div style={{ ...T.small, fontSize: 12, lineHeight: 1.85, color: T.dim }}>
+          O sul-africano <b style={{ color: T.white }}>Jack Barkel</b> foi criador, colunista e autor do clássico <i>"Success with Eye-Sign"</i> — o livro que popularizou os <b style={{ color: T.white }}>5 círculos</b> que o app inteiro usa (pupila, adaptação, correlação, íris e o anel da saúde). A marca dele não foi só LER o olho: foi <b style={{ color: T.white }}>acasalar PELO olho</b> — com regras matemáticas. Esta aba ensina as três ferramentas exclusivas da casa: <b style={{ color: T.white }}>1. o sinal de corrida medido em %</b>, <b style={{ color: T.white }}>2. a Regra dos 100%</b> (com calculadora!) e <b style={{ color: T.white }}>3. a matriz de cores</b>.
+        </div>
+      </section>
+
+      {/* PASSO 1 — SINAL DE CORRIDA EM % */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 4 }}>📐 Passo 1 — O sinal de corrida MEDIDO (toque nas coberturas!)</div>
+        <div style={{ ...T.small, fontSize: 11, color: T.dim, marginBottom: 10, lineHeight: 1.5 }}>
+          A régua de Barkel: o segmento escuro serrilhado sobre o círculo de adaptação, medido por QUANTO DO ANEL ele cobre. O arco laranja no desenho é o sinal — toque nos tamanhos.
+        </div>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+          <svg viewBox="0 0 100 100" style={{ width: 190, height: 190, flexShrink: 0 }} role="img" aria-label="Sinal de corrida cobrindo parte do anel de adaptação">
+            <circle cx="50" cy="50" r="46" fill="#1b283c" stroke="#31415a" strokeWidth="2" />
+            <circle cx="50" cy="50" r="42" fill="#8a6a30" opacity="0.45" />
+            {/* círculo de adaptação (referência cinza) */}
+            <circle cx="50" cy="50" r="27" fill="none" stroke="#64748b" strokeWidth="5" opacity="0.5" />
+            {/* correlação de fundo */}
+            <circle cx="50" cy="50" r="36" fill="none" stroke="#3d5a80" strokeWidth="4" opacity="0.5" />
+            {/* sinal de corrida (arco laranja) */}
+            {arco(c.pct, "#f97316", true)}
+            {/* dentinhos de serra no arco */}
+            {Array.from({ length: Math.max(2, Math.round((c.pct / 100) * 10)) }).map((_, i) => {
+              const a = (-90 + (i + 0.5) * (c.pct / Math.max(1, Math.round((c.pct / 100) * 10))) * 3.6) * (Math.PI / 180);
+              const x1 = 50 + Math.cos(a) * 22, y1 = 50 + Math.sin(a) * 22;
+              const x2 = 50 + Math.cos(a) * 34, y2 = 50 + Math.sin(a) * 34;
+              return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#ffd76a" strokeWidth="1.6" />;
+            })}
+            <ellipse cx="50" cy="50" rx="11" ry="15" fill="#14161a" />
+            <circle cx="47" cy="45" r="2.2" fill="#f8fafc" opacity="0.85" />
+            <text x="50" y="95" textAnchor="middle" fontSize="10" fontWeight="900" fill="#f97316">{c.pct}% de cobertura</text>
+          </svg>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+              {COBERTURAS.map((x, i) => (
+                <button key={x.pct} type="button" onClick={() => setCob(i)} style={{ padding: "7px 12px", borderRadius: 999, cursor: "pointer", fontSize: 11.5, fontWeight: 900, border: "1.5px solid " + (cob === i ? "#f97316" : T.border), background: cob === i ? "#f9731622" : T.bgInput, color: cob === i ? "#f97316" : T.dim }}>
+                  {x.pct}%
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 14.5, fontWeight: 900, color: "#f97316" }}>Sinal de {c.nome} ({c.pct}%)</div>
+            <div style={{ ...T.small, fontSize: 12, lineHeight: 1.75, marginTop: 6 }}>{c.leitura}</div>
+          </div>
+        </div>
+      </section>
+
+      {/* PASSO 2 — REGRA DOS 100% (CALCULADORA) */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 4 }}>🧮 Passo 2 — A REGRA DOS 100% (a calculadora de Barkel)</div>
+        <div style={{ ...T.small, fontSize: 11, color: T.dim, marginBottom: 12, lineHeight: 1.5 }}>
+          A regra de ouro: <b>a soma dos sinais de corrida do casal NÃO deve passar de 100%</b>. Arraste os controles com a cobertura de cada um e veja o veredito na hora.
+        </div>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+          {/* medidor semicircular */}
+          <svg viewBox="0 0 200 115" style={{ width: 230, height: "auto", flexShrink: 0 }} role="img" aria-label="Medidor da soma dos sinais de corrida">
+            {/* trilha 0–200 */}
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#31415a" strokeWidth="13" strokeLinecap="round" />
+            {/* zona aprovada 0–100 (metade esquerda) */}
+            <path d="M 20 100 A 80 80 0 0 1 100 20" fill="none" stroke="#39e58c" strokeWidth="13" />
+            {/* ponteiro */}
+            {(() => {
+              const ang = (-180 + Math.min(200, soma) * 0.9) * (Math.PI / 180);
+              const x = 100 + 74 * Math.cos(ang), y = 100 + 74 * Math.sin(ang);
+              return <line x1="100" y1="100" x2={x.toFixed(1)} y2={y.toFixed(1)} stroke={aprovado ? "#39e58c" : "#ff5d62"} strokeWidth="5" strokeLinecap="round" />;
+            })()}
+            <circle cx="100" cy="100" r="8" fill="#1b283c" stroke={aprovado ? "#39e58c" : "#ff5d62"} strokeWidth="3" />
+            <text x="20" y="112" fontSize="10" fill="#64748b">0%</text>
+            <text x="100" y="12" textAnchor="middle" fontSize="10" fill="#64748b">100%</text>
+            <text x="180" y="112" textAnchor="end" fontSize="10" fill="#64748b">200%</text>
+            <text x="100" y="78" textAnchor="middle" fontSize="26" fontWeight="900" fill={aprovado ? "#39e58c" : "#ff5d62"}>{soma}%</text>
+          </svg>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ ...T.small, fontSize: 11, marginBottom: 3 }}>♂ Sinal de corrida do MACHO: <b style={{ color: "#f97316" }}>{machoPct}%</b></div>
+            <input type="range" min={0} max={100} step={5} value={machoPct} onChange={(e) => setMachoPct(Number(e.target.value))} style={{ width: "100%", accentColor: "#f97316", cursor: "pointer" }} />
+            <div style={{ ...T.small, fontSize: 11, margin: "10px 0 3px" }}>♀ Sinal de corrida da FÊMEA: <b style={{ color: "#ff8fa3" }}>{femeaPct}%</b></div>
+            <input type="range" min={0} max={100} step={5} value={femeaPct} onChange={(e) => setFemeaPct(Number(e.target.value))} style={{ width: "100%", accentColor: "#ff8fa3", cursor: "pointer" }} />
+            <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: aprovado ? "#39e58c12" : "#ff5d6212", border: "1px solid " + (aprovado ? "#39e58c55" : "#ff5d6255") }}>
+              <b style={{ fontSize: 13, color: aprovado ? "#39e58c" : "#ff5d62" }}>{aprovado ? "✅ APROVADO por Barkel" : "❌ REPROVADO: soma > 100%"}</b>
+              <div style={{ ...T.small, fontSize: 11.5, lineHeight: 1.65, marginTop: 5 }}>
+                {aprovado
+                  ? "O casal está dentro da regra: a 'vontade de correr' de um completa a do outro sem exagero — tradição diz que filhos nascem equilibrados, correndo com juízo."
+                  : "Excesso de sinal de corrida dos dois lados: na tradição de Barkel, o casal 'queima' — passa velocidade sem assentar, e a cria perde equilíbrio. Reduza a cobertura de um dos lados."}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PASSO 3 — MATRIZ DE CORES */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 4 }}>🎨 Passo 3 — A matriz de cores do acasalamento</div>
+        <div style={{ ...T.small, fontSize: 11, color: T.dim, marginBottom: 10, lineHeight: 1.5 }}>
+          A segunda regra famosa: cruzar olhos COMPLEMENTARES, nunca iguais demais. Escolha a cor do macho (linha) e da fêmea (coluna):
+        </div>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+          {/* matriz clicável */}
+          <div style={{ flexShrink: 0 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "70px repeat(3, 62px)", gap: 4, fontSize: 10.5 }}>
+              <div />
+              {CORES_MATRIZ.map((cf) => (
+                <div key={cf.nome} style={{ textAlign: "center", fontWeight: 800, color: T.dim, padding: "4px 0" }}>♀ {cf.nome}</div>
+              ))}
+              {CORES_MATRIZ.map((cm, i) => (
+                <div key={cm.nome} style={{ display: "contents" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 800, color: T.dim }}>♂ {cm.nome}</div>
+                  {CORES_MATRIZ.map((cf, j) => {
+                    const v = vereditoCorres(i, j);
+                    const on = corM === i && corF === j;
+                    return (
+                      <button key={j} type="button" onClick={() => { setCorM(i); setCorF(j); }} style={{ height: 44, borderRadius: 9, cursor: "pointer", border: "1.5px solid " + (on ? v.cor : T.border), background: on ? v.cor + "22" : "#ffffff08", display: "grid", placeItems: "center", fontSize: 17 }}>
+                        <span style={{ width: 20, height: 20, borderRadius: "50%", background: "linear-gradient(135deg, " + cm.chip + " 50%, " + cf.chip + " 50%)", border: "1.5px solid #0006", display: "inline-block" }} />
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 220, padding: 13, borderRadius: 12, background: "#ffffff08", border: "1px solid " + vc.cor + "44" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 900, color: vc.cor }}>{vc.txt}</div>
+            <div style={{ ...T.small, fontSize: 12, lineHeight: 1.75, marginTop: 5 }}>{vc.nota}</div>
+            <div style={{ ...T.small, fontSize: 10.5, marginTop: 8, color: T.dim2 }}>💡 Os chips da matriz são meio-a-meio: cada metade é a cor de um dos pais.</div>
+          </div>
+        </div>
+      </section>
+
+      {/* O OLHO COMPOSTO + BIO */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>💎 O olho composto — a joia dupla de Barkel</div>
+        <div style={{ ...T.small, fontSize: 12, lineHeight: 1.85, color: T.dim }}>
+          O sonho da escola: o pombo que reúne <b style={{ color: T.white }}>sinal de corrida forte</b> (vencedor de provas) <b style={{ color: T.white }}>E</b> anel de correlação completo (transmissor) no mesmo olho — o <b style={{ color: T.white }}>"composite eye"</b>. Raro como o violeta: quem tem um desses no pombal, guarda como relíquia. É por isso que os dois scores do app (⚡ Voador e 🏆 Reprodutor, na aba Analisar) existem separados: o mestre sul-africano buscava os dois mundos — e o equilíbrio entre eles é a arte do acasalamento pelo olho.
+          <br /><br />
+          ⚠️ <b>Honestidade de sempre:</b> Barkel é tradição columófila amada no mundo inteiro — não ciência de laboratório. As regras dos 100% e da matriz de cores são guias de criador, não garantias. Use junto com pedigree, anatomia e resultados de voo.
+        </div>
+      </section>
+    </>
+  );
+}

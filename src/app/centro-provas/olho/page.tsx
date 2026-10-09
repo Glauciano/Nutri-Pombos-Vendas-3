@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
-import { GuiaCampo, TiposOlhos, SinaisEyeSign, EscolaInglesa, AnatomiaOlho, EscolaChinesa } from "./extras";
+import { GuiaCampo, TiposOlhos, SinaisEyeSign, EscolaInglesa, AnatomiaOlho, EscolaChinesa, EscolaBarkel } from "./extras";
 import { getFotoOlho } from "../lib/fotos";
 
 type Pupila = "puntiforme" | "media" | "larga";
@@ -188,7 +188,7 @@ function FotoOlhoMira() {
 }
 
 export default function AnaliseOlhoPombo() {
-  const [aba, setAba] = useState<"interativo" | "guia" | "tipos" | "sinais" | "teoria" | "escola" | "escola-c">("interativo");
+  const [aba, setAba] = useState<"interativo" | "guia" | "tipos" | "sinais" | "teoria" | "escola" | "escola-c" | "barkel">("interativo");
   const [pupila, setPupila] = useState<Pupila>("puntiforme");
   const [circulo, setCirculo] = useState<Circulo>("serrilhado_largo");
   const [iris, setIris] = useState<IrisCor>("amarelo_ouro");
@@ -284,8 +284,8 @@ export default function AnaliseOlhoPombo() {
         </div>
 
         {/* abas do eye-sign */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 14 }}>
-          {([["interativo", "🔬 Analisar"], ["guia", "📖 Guia de Campo"], ["tipos", "🎨 Tipos"], ["sinais", "⚡ Sinais"], ["teoria", "📚 Teoria"], ["escola", "🇬🇧 Inglesa"], ["escola-c", "🇨🇳 Chinesa"]] as const).map(([k, lbl]) => (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 4, marginBottom: 14 }}>
+          {([["interativo", "🔬 Analisar"], ["guia", "📖 Guia de Campo"], ["tipos", "🎨 Tipos"], ["sinais", "⚡ Sinais"], ["teoria", "📚 Teoria"], ["escola", "🇬🇧 Inglesa"], ["escola-c", "🇨🇳 Chinesa"], ["barkel", "🇿🇦 Barkel"]] as const).map(([k, lbl]) => (
             <button key={k} type="button" onClick={() => setAba(k)} style={{ padding: "10px 2px", borderRadius: 10, cursor: "pointer", fontSize: 10.5, fontWeight: 800, color: aba === k ? "#0b1426" : "#9aa8bc", background: aba === k ? "#f7bd00" : "#1b283c", border: `1.5px solid ${aba === k ? "#f7bd00" : "#31415a"}`, textAlign: "center", lineHeight: 1.3 }}>
               {lbl}
             </button>
@@ -486,6 +486,8 @@ export default function AnaliseOlhoPombo() {
         </>)}
 
         {aba === "escola-c" && <EscolaChinesa />}
+
+        {aba === "barkel" && <EscolaBarkel />}
 
         {aba === "teoria" && (<>
 

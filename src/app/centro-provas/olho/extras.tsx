@@ -217,3 +217,176 @@ export function SinaisEyeSign() {
     </>
   );
 }
+
+/* ══════════════════════════════════════════════════════════════
+   🇬🇧 ESCOLA INGLESA — o eye-sign segundo S.W.E. Bishop
+   Tradição britânica (anos 1950-60): seleção de pombos de FUNDO,
+   a "Fórmula de Reconhecimento", olho voador × reprodutor e o violeta.
+   ══════════════════════════════════════════════════════════════ */
+
+const ANEIS_FORMULA: { chave: string; cor: string; r: number; nome: string }[] = [
+  { chave: "perimetro", cor: "#39e58c", r: 56, nome: "Anel da condição" },
+  { chave: "iris", cor: "#f97316", r: 49, nome: "Íris" },
+  { chave: "correlacao", cor: "#55a3ff", r: 37, nome: "Correlação" },
+  { chave: "adaptacao", cor: "#eab308", r: 25, nome: "Adaptação" },
+  { chave: "pupila", cor: "#f8fafc", r: 13, nome: "Pupila" },
+];
+
+const PASSOS_FORMULA: { chave: string; titulo: string; texto: string }[] = [
+  { chave: "pupila", titulo: "1. A pupila", texto: "Pequena, firme e REATIVA: cubra a luz com a mão e solte — no candidato a pombo de fundo inglês, ela contrai e expande rápido. Grande e preguiçosa pede passagem pro fundo." },
+  { chave: "adaptacao", titulo: "2. O círculo de adaptação", texto: "Borda definida e SERRILHADA — o famoso 'sinal de corrida' (repare no relevo no olho do voador logo abaixo). Pra Bishop, sem adaptação visível falta motor ao atleta." },
+  { chave: "correlacao", titulo: "3. O círculo de correlação", texto: "O coração da fórmula: COMPLETE em toda a volta = aptidão ao fundo e ao reproduzir (é o anel escuro do 'olho de reprodutor'). Larga e vazada = pombo de provas curtas." },
+  { chave: "iris", titulo: "4. A profundidade da íris", texto: "Cor profunda, granulada, com 'montanhas e vales' — sinal de sangue rico e saúde. Íris rasa, esticada ou com falhas = pombo comum, sem brilho de campeão." },
+  { chave: "perimetro", titulo: "5. O anel da condição", texto: "O anel externo conta a CONDIÇÃO do momento: completo, uniforme e brilhante = pombo em forma, pronto pra encarar a prova. Pálido ou interrompido = manejo por cima." },
+];
+
+const GLOSSARIO_EN: [string, string][] = [
+  ["Eye-sign", "sinal do olho"],
+  ["Racer eye", "olho de voador"],
+  ["Breeder eye", "olho de reprodutor"],
+  ["Circle of adaptation", "círculo de adaptação"],
+  ["Circle of correlation", "círculo de correlação"],
+  ["Iris granulation", "granulação da íris"],
+  ["Depth of colour", "profundidade de cor"],
+  ["Violet eye", "olho violeta"],
+  ["Pearl eye", "olho pérola"],
+  ["Bull eye", "olho preto (de boi)"],
+  ["Condition", "condição (forma física)"],
+  ["Long distance", "fundo / longa distância"],
+  ["Mating by eye-sign", "acasalamento pelo olho"],
+  ["Formula of Recognition", "Fórmula de Reconhecimento"],
+];
+
+export function EscolaInglesa() {
+  const [passo, setPasso] = useState(0);
+  const [zoom, setZoom] = useState<string | null>(null);
+  const ativo = PASSOS_FORMULA[passo].chave;
+
+  const CartaoOlho = ({ src, titulo, cor, itens }: { src: string; titulo: string; cor: string; itens: string[] }) => (
+    <div style={{ flex: 1, minWidth: 240, padding: 12, borderRadius: 12, background: "#ffffff08", border: `1px solid ${cor}44` }}>
+      <div style={{ fontSize: 13.5, fontWeight: 800, color: cor, marginBottom: 8 }}>{titulo}</div>
+      <img src={src} alt={titulo} onClick={() => setZoom(src)} style={{ width: "100%", borderRadius: 12, cursor: "zoom-in", border: `1.5px solid ${cor}55`, display: "block" }} />
+      <div style={{ display: "grid", gap: 5, marginTop: 9 }}>
+        {itens.map((t, i) => (
+          <div key={i} style={{ ...T.small, fontSize: 11.5, lineHeight: 1.6 }}>• {t}</div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* INTRODUÇÃO */}
+      <section style={T.card}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🇬🇧 A Escola Inglesa — o olho segundo S.W.E. Bishop</div>
+        <div style={{ ...T.small, fontSize: 12, lineHeight: 1.85, color: T.dim }}>
+          <b style={{ color: T.white }}>S.W.E. Bishop</b> foi colunista da <i>Pigeon Racing News and Gazette</i>, a grande revista britânica da columofilia, e publicou nos anos 1950-60 o clássico raro <b style={{ color: T.white }}>"The Secret of Eye-Sign"</b> (All-British Pigeon Racing Publishing Co.). A escola inglesa nasceu com uma obsessão diferente da continental: <b style={{ color: T.white }}>Barkel e Hofmann</b> ensinavam a <b>combinar olhos</b> no acasalamento; <b style={{ color: T.white }}>Bishop ensinava a LER o olho pra achar o pombo de FUNDO</b> — o maratonista de longa distância. Sua <b style={{ color: T.white }}>"Fórmula de Reconhecimento"</b> era o roteiro prático dessa leitura, círculo por círculo — é ela que você percorre logo abaixo.
+          <br /><br />
+          📚 Resumo honesto da tradição pública da escola inglesa (Bishop e C.J. Cranstoun) — não é tradução do livro, que é raro e protegido por direitos autorais.
+        </div>
+      </section>
+
+      {/* FÓRMULA DE RECONHECIMENTO — INTERATIVA */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🧭 A Fórmula de Reconhecimento — toque nos passos</div>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+          <svg viewBox="0 0 120 120" style={{ width: 185, height: 185, flexShrink: 0 }} role="img" aria-label="Diagrama dos círculos do olho com o passo ativo destacado">
+            {ANEIS_FORMULA.map((a) => {
+              const on = a.chave === ativo;
+              return (
+                <circle key={a.chave} cx="60" cy="60" r={a.r} fill={a.chave === "pupila" ? "#14161a" : `${a.cor}${on ? "33" : "14"}`} stroke={a.cor} strokeWidth={on ? 3 : 1.2} opacity={on ? 1 : 0.4} />
+              );
+            })}
+          </svg>
+          <div style={{ flex: 1, minWidth: 230 }}>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+              {PASSOS_FORMULA.map((p, i) => (
+                <button key={p.chave} type="button" onClick={() => setPasso(i)} style={{ padding: "7px 11px", borderRadius: 999, cursor: "pointer", fontSize: 11, fontWeight: 800, border: `1.5px solid ${passo === i ? ANEIS_FORMULA.find((a) => a.chave === p.chave)!.cor : T.border}`, background: passo === i ? `${ANEIS_FORMULA.find((a) => a.chave === p.chave)!.cor}22` : T.bgInput, color: passo === i ? ANEIS_FORMULA.find((a) => a.chave === p.chave)!.cor : T.dim }}>
+                  {p.titulo.split(".")[0]}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: ANEIS_FORMULA.find((a) => a.chave === ativo)!.cor }}>{PASSOS_FORMULA[passo].titulo}</div>
+            <div style={{ ...T.small, fontSize: 12, lineHeight: 1.75, marginTop: 5 }}>{PASSOS_FORMULA[passo].texto}</div>
+          </div>
+        </div>
+      </section>
+
+      {/* VOADOR × REPRODUTOR */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>⚡×🏆 O olho do VOADOR e o olho do REPRODUTOR</div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <CartaoOlho
+            src="/img/olho-voador.jpg"
+            titulo="⚡ O Voador (racer eye)"
+            cor="#f97316"
+            itens={[
+              "Sinal de corrida forte: adaptação serrilhada em RELEVO, agressiva",
+              "Íris profunda e vibrante — o olho que 'quer voar'",
+              "O atleta das provas — mas nem sempre o transmissor aos filhos",
+            ]}
+          />
+          <CartaoOlho
+            src="/img/olho-reprodutor.jpg"
+            titulo="🏆 O Reprodutor (breeder eye)"
+            cor="#55a3ff"
+            itens={[
+              "Círculo de correlação ESCURO, largo e COMPLETO em 360°",
+              "O 'anel do criador' — a marca de quem transmite qualidades",
+              "Bishop e Cranstoun liam nele a vocação de matriz do criadouro",
+            ]}
+          />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1fr", gap: 6, marginTop: 12, fontSize: 11 }}>
+          {[["Sinal", "⚡ Voador", "🏆 Reprodutor"], ["Adaptação", "serrilhada agressiva, em relevo", "definida, mais discreta"], ["Correlação", "parcial ou estreita", "completa, 360°, escura"], ["Íris", "vibrante e profunda", "densa, rica, sem falhas"], ["Vocação", "ganhar a prova", "gerar campeões"], ["No app", "score ⚡ Voador alto (aba Analisar)", "score 🏆 Reprodutor alto (aba Analisar)"]].map((linha, i) => (
+            <div key={i} style={{ display: "contents" }}>
+              {linha.map((cel, j) => (
+                <div key={j} style={{ padding: "7px 9px", borderRadius: 8, background: i === 0 ? "#f7bd0022" : "#ffffff08", fontWeight: i === 0 ? 800 : 600, color: i === 0 ? T.gold : T.dim }}>
+                  {cel}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* OLHO VIOLETA */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>💜 O Olho Violeta — a joia rara da escola inglesa</div>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <img src="/img/olho-violeta.jpg" alt="Ilustração do olho violeta" onClick={() => setZoom("/img/olho-violeta.jpg")} style={{ width: 230, borderRadius: 12, cursor: "zoom-in", border: "1.5px solid #a78bfa66", flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 220, ...T.small, fontSize: 12, lineHeight: 1.85, color: T.dim }}>
+            O violeta é o olho <b style={{ color: T.white }}>mais raro</b> do eye-sign: íris de tom <b style={{ color: "#c4b5fd" }}>lilás/lavanda</b>, delicada e luminosa. Os mestres ingleses o tratavam como <b style={{ color: T.white }}>joia de criadouro</b> — a tradição credita ao violeta a condição de reprodutor excepcional, ainda mais difícil de encontrar que o próprio olho de reprodutor clássico.
+            <br /><br />
+            Na prática: raríssimo, valioso — e, como tudo no eye-sign, <b style={{ color: T.white }}>tradição, não lei</b>. Se um violeta nascer no seu plantel, tire a foto do olho na hora e guarde com carinho. 😄
+          </div>
+        </div>
+      </section>
+
+      {/* GLOSSÁRIO */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>📖 Glossário do eye-sign — inglês → português</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 6 }}>
+          {GLOSSARIO_EN.map(([en, pt]) => (
+            <div key={en} style={{ padding: "8px 11px", borderRadius: 9, background: "#ffffff08", fontSize: 11.5 }}>
+              <b style={{ color: T.blue }}>{en}</b> <span style={{ color: T.dim }}>→ {pt}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* HONESTIDADE */}
+      <section style={{ ...T.card, marginTop: 14, ...T.small, fontSize: 11, lineHeight: 1.75, color: T.dim }}>
+        ⚠️ <b>Honestidade de sempre:</b> eye-sign é tradição de criador, sem validação científica fechada — use como <b>mais uma</b> ferramenta de seleção, junto com pedigree, anatomia e, principalmente, resultados de voo. As ilustrações acima são artísticas (geradas a partir de fotos reais de olhos), feitas pra <b>ensinar a enxergar cada círculo</b> — o olho do seu pombo é o juiz final, e é ele que você analisa com a 📸 mira na aba Analisar.
+      </section>
+
+      {/* ZOOM */}
+      {zoom && (
+        <div onClick={() => setZoom(null)} style={{ position: "fixed", inset: 0, background: "rgba(4,10,20,0.9)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, cursor: "zoom-out", padding: 12 }}>
+          <img src={zoom} alt="ilustração ampliada" style={{ width: "min(94vw, 900px)", borderRadius: 12 }} onClick={(e) => e.stopPropagation()} />
+          <div style={{ position: "fixed", bottom: 18, color: "#9aa8bc", fontSize: 12 }}>toque fora da imagem para fechar ✕</div>
+        </div>
+      )}
+    </>
+  );
+}

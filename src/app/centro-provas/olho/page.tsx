@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { T } from "../theme";
-import { GuiaCampo, TiposOlhos, SinaisEyeSign, EscolaInglesa } from "./extras";
+import { GuiaCampo, TiposOlhos, SinaisEyeSign, EscolaInglesa, AnatomiaOlho } from "./extras";
 import { getFotoOlho } from "../lib/fotos";
 
 type Pupila = "puntiforme" | "media" | "larga";
@@ -480,7 +480,10 @@ export default function AnaliseOlhoPombo() {
           <SinaisEyeSign />
         </>)}
 
-        {aba === "escola" && <EscolaInglesa />}
+        {aba === "escola" && (<>
+          <EscolaInglesa />
+          <AnatomiaOlho />
+        </>)}
 
         {aba === "teoria" && (<>
 

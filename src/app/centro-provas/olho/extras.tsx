@@ -280,7 +280,7 @@ export function EscolaInglesa() {
       <section style={T.card}>
         <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>🇬🇧 A Escola Inglesa — o olho segundo S.W.E. Bishop</div>
         <div style={{ ...T.small, fontSize: 12, lineHeight: 1.85, color: T.dim }}>
-          <b style={{ color: T.white }}>S.W.E. Bishop</b> foi colunista da <i>Pigeon Racing News and Gazette</i>, a grande revista britânica da columofilia, e publicou nos anos 1950-60 o clássico raro <b style={{ color: T.white }}>"The Secret of Eye-Sign"</b> (All-British Pigeon Racing Publishing Co.). A escola inglesa nasceu com uma obsessão diferente da continental: <b style={{ color: T.white }}>Barkel e Hofmann</b> ensinavam a <b>combinar olhos</b> no acasalamento; <b style={{ color: T.white }}>Bishop ensinava a LER o olho pra achar o pombo de FUNDO</b> — o maratonista de longa distância. Sua <b style={{ color: T.white }}>"Fórmula de Reconhecimento"</b> era o roteiro prático dessa leitura, círculo por círculo — é ela que você percorre logo abaixo.
+          <b style={{ color: T.white }}>S.W.E. Bishop</b> foi colunista da <i>Pigeon Racing News and Gazette</i>, a grande revista britânica da columofilia, e publicou nos anos 1950-60 o clássico raro <b style={{ color: T.white }}>"The Secret of Eye-Sign"</b> (All-British Pigeon Racing Publishing Co.). A escola inglesa nasceu com uma obsessão diferente da continental: <b style={{ color: T.white }}>Barkel e Hofmann</b> ensinavam a <b>combinar olhos</b> no acasalamento; <b style={{ color: T.white }}>Bishop ensinava a LER o olho pra achar o pombo de FUNDO</b> — o maratonista de longa distância. Sua <b style={{ color: T.white }}>"Fórmula de Reconhecimento"</b> era o roteiro prático dessa leitura, círculo por círculo — é ela que você percorre logo abaixo. E o livro abre com o <b style={{ color: T.white }}>"mecanismo maravilhoso do olho"</b>: a anatomia e a fisiologia que sustentam toda a leitura — reconstruída aqui em desenho interativo (🔬) e na seção do olho em voo (✈️), logo mais abaixo na aba.
           <br /><br />
           📚 Resumo honesto da tradição pública da escola inglesa (Bishop e C.J. Cranstoun) — não é tradução do livro, que é raro e protegido por direitos autorais.
         </div>
@@ -387,6 +387,135 @@ export function EscolaInglesa() {
           <div style={{ position: "fixed", bottom: 18, color: "#9aa8bc", fontSize: 12 }}>toque fora da imagem para fechar ✕</div>
         </div>
       )}
+    </>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   🔬 O MECANISMO MARAVILHOSO — anatomia do olho (capítulo 2 de Bishop)
+   Corte esquemático interativo: toque nos números e descubra cada peça.
+   + ✈️ O OLHO EM VOO — visão, foco e o "limpador de para-brisa" a 100km/h.
+   ══════════════════════════════════════════════════════════════ */
+
+const PARTES_OLHO_ANATOMIA: { n: number; x: number; y: number; nome: string; texto: string }[] = [
+  { n: 1, x: 196, y: 135, nome: "1. Pupila — a janela", texto: "Não é um buraco parado: é a abertura que os músculos da íris abrem e fecham o tempo todo. Quando o criador cobre a luz com a mão e solta, está medindo a VELOCIDADE desses músculos — a famosa 'reação à luz' do eye-sign é anatomia pura funcionando." },
+  { n: 2, x: 170, y: 98, nome: "2. Músculos RADIAIS da íris", texto: "Fibras dispostas como raios de roda: quando contraem, PUXAM a pupila pra fora e a DILATAM (olho abrindo no escuro). Estão escondidos sob a camada de vasos da íris." },
+  { n: 3, x: 220, y: 106, nome: "3. Músculos CIRCULARES — as 'distance lines'", texto: "Fibras em volta, como cintas: contraem e ESTREITAM a pupila. Onde elas ficam mais próximas da superfície, aparecem na íris as linhas finas que os mestres chamavam de 'distance lines' — a leitura clássica da região da correlação é literalmente músculo visto através da íris!" },
+  { n: 4, x: 185, y: 172, nome: "4. Cristalino — o foco instantâneo", texto: "A lente interna. Os músculos ciliares mudam a FORMA dele (não só a posição) — é por isso que o pombo refoca o relevo do terreno em pleno voo, numa fração de segundo." },
+  { n: 5, x: 302, y: 192, nome: "5. Retina e fóvea — a câmera de alta resolução", texto: "A 'película' onde a imagem se forma. Na fóvea (a depressão central) está a concentração máxima de cones — o ponto de visão nítida que o pombo aponta pro horizonte e pro pombal." },
+  { n: 6, x: 296, y: 138, nome: "6. Pecten — o pente (exclusivo das aves!)", texto: "Uma prega cheia de vasos que 'penteia' o interior do olho, nutrindo a retina e mantendo a oxigenação. Nenhum mamífero tem — é peça de ave de elite, e o pombo-correio tem um dos mais desenvolvidos." },
+  { n: 7, x: 258, y: 48, nome: "7. Anel escleral — a armadura de OSSOS", texto: "Plaquinhas ósseas formando um anel rígido ao redor do olho. É por isso que o globo ocular NÃO deforma com a pressão do ar em alta velocidade — a lente fica sempre na distância certa. Aeroespacial de fábrica!" },
+  { n: 8, x: 252, y: 78, nome: "8. A rede de vasos — o RADIADOR do cérebro", texto: "O pombo não transpira: o sangue quente do corpo passa pela malha de vasos ao redor do olho, esfria no contato com o ar... e só então segue pro cérebro. O olho é literalmente o radiador que protege o 'computador de bordo'. Íris cheia de circulação visível = sistema de refrigeração forte." },
+  { n: 9, x: 140, y: 96, nome: "9. Membrana nictitante — o limpador de para-brisa", texto: "A terceira pálpebra: uma película translúcida que varre o olho de lado a lado, umedecendo e limpando poeira e insetos EM PLENO VOO — sem precisar fechar o olho nem por um segundo." },
+];
+
+const VOO_CARDS: { emoji: string; titulo: string; texto: string }[] = [
+  { emoji: "🧭", titulo: "~340° de campo de visão", texto: "Olhos laterais: cada olho cobre quase um semicírculo — o pombo enxerga praticamente tudo em volta, com um cone binocular à frente (a 'mira' de chegada pro pombal)." },
+  { emoji: "💨", titulo: "A 100 km/h de vento na cara", texto: "Anel de ossos firmes + pálpebras + membrana nictitante: o olho aguenta o jato de ar sem ressecar e sem deformar a imagem." },
+  { emoji: "🎯", titulo: "Foco mais rápido que o piscar", texto: "Cristalino com mudança de FORMA pelos músculos ciliares: refoca o relevo, o cesto e o telhado do pombal em frações de segundo." },
+  { emoji: "🧲", titulo: "Bússola solar no fundo do olho", texto: "A retina enxerga padrões de luz polarizada do céu — um dos pilares da navegação lendária de volta pra casa por território nunca visto." },
+  { emoji: "🌈", titulo: "Enxerga além de nós", texto: "Cones com gotinhas de óleo filtram a luz — o pombo enxerga ultravioleta e um mundo de cores que o olho humano não alcança." },
+];
+
+export function AnatomiaOlho() {
+  const [sel, setSel] = useState(1);
+  const parte = PARTES_OLHO_ANATOMIA.find((p) => p.n === sel)!;
+
+  return (
+    <>
+      {/* ANATOMIA INTERATIVA */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 4 }}>🔬 O Mecanismo Maravilhoso do Olho — anatomia interativa</div>
+        <div style={{ ...T.small, fontSize: 11, color: T.dim, marginBottom: 10, lineHeight: 1.5 }}>
+          O capítulo 2 do livro de Bishop, em desenho: toque nos números do corte do olho (ou nos botões) e veja cada peça — e onde a tradição do eye-sign encosta na anatomia de verdade.
+        </div>
+
+        <div style={{ borderRadius: 12, background: "#0b1529", border: `1px solid ${T.border}`, padding: 4 }}>
+          <svg viewBox="0 0 440 270" style={{ width: "100%", height: "auto", display: "block" }} role="img" aria-label="Corte esquemático do olho do pombo com 9 partes numeradas">
+            {/* esclera (casca externa) */}
+            <circle cx="240" cy="135" r="92" fill="#e9f0f8" stroke="#9db4cf" strokeWidth="6" />
+            {/* coroide e retina (revestimento interno) */}
+            <circle cx="240" cy="135" r="84" fill="none" stroke="#e58f6f" strokeWidth="3" />
+            <circle cx="240" cy="135" r="79" fill="none" stroke="#f2b98a" strokeWidth="5" />
+            {/* humor vítreo */}
+            <circle cx="240" cy="135" r="78" fill="#f4f8fd" opacity="0.6" />
+            {/* córnea (cúpula frontal) */}
+            <path d="M 186 76 A 74 74 0 0 0 186 194 L 196 185 A 60 60 0 0 1 196 85 Z" fill="#cfe5f7" stroke="#7fa3c4" strokeWidth="3" />
+            {/* íris (dois setores com fibras) */}
+            <path d="M 186 76 Q 178 105 197 108 L 204 118 Q 176 118 172 78 Z" fill="#e8b25c" stroke="#b98634" strokeWidth="2" />
+            <path d="M 186 194 Q 178 165 197 162 L 204 152 Q 176 152 172 192 Z" fill="#e8b25c" stroke="#b98634" strokeWidth="2" />
+            {/* fibras radiais da íris */}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <line key={"r" + i} x1={196 + i * 2} y1={108 + i * 0.4} x2={178 - i * 0.5} y2={80 + i * 3} stroke="#a3742b" strokeWidth="1.2" />
+            ))}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <line key={"r2" + i} x1={196 + i * 2} y1={162 - i * 0.4} x2={178 - i * 0.5} y2={190 - i * 3} stroke="#a3742b" strokeWidth="1.2" />
+            ))}
+            {/* músculos circulares (cintas ao redor da pupila — as 'distance lines') */}
+            <circle cx="205" cy="135" r="26" fill="none" stroke="#8a5f1e" strokeWidth="4" strokeDasharray="7 3" />
+            {/* cristalino */}
+            <ellipse cx="205" cy="135" rx="17" ry="27" fill="#bcdcee" stroke="#6f97ba" strokeWidth="3" />
+            {/* pupila */}
+            <ellipse cx="207" cy="135" rx="7" ry="12" fill="#14161a" />
+            {/* corpo ciliar (zigzag ligando íris à esclera) */}
+            <path d="M 186 76 L 196 88 L 206 80 L 214 90" fill="none" stroke="#c99a4d" strokeWidth="3" />
+            <path d="M 186 194 L 196 182 L 206 190 L 214 180" fill="none" stroke="#c99a4d" strokeWidth="3" />
+            {/* pecten (o pente, roxo) */}
+            <path d="M 322 118 L 290 125 L 297 133 L 287 139 L 296 147 L 290 154 L 322 152 Z" fill="#7c5cbf" stroke="#5c3f9e" strokeWidth="2" />
+            {/* nervo óptico */}
+            <path d="M 330 126 L 372 122 L 372 148 L 330 144 Z" fill="#f0dcc8" stroke="#c9a684" strokeWidth="2.5" />
+            {/* anel escleral (plaquinhas ósseas no topo) */}
+            <path d="M 200 58 A 92 92 0 0 1 320 80" fill="none" stroke="#cbd5e1" strokeWidth="10" strokeDasharray="11 4" />
+            {/* rede de vasos (o radiador) */}
+            <path d="M 328 152 Q 300 168 262 160 Q 240 155 228 140" fill="none" stroke="#e05252" strokeWidth="2.2" />
+            <path d="M 262 160 Q 250 140 240 118 Q 234 104 218 92" fill="none" stroke="#e05252" strokeWidth="2.2" />
+            <path d="M 240 118 Q 226 122 210 112" fill="none" stroke="#e05252" strokeWidth="1.8" />
+            <path d="M 328 152 Q 296 176 258 172 Q 244 170 236 158" fill="none" stroke="#e05252" strokeWidth="1.8" />
+            {/* membrana nictitante (varredura translúcida sobre a córnea) */}
+            <path d="M 148 108 Q 166 132 150 158" fill="none" stroke="#8ff0c1" strokeWidth="4" opacity="0.85" />
+            {/* marcadores numerados */}
+            {PARTES_OLHO_ANATOMIA.map((p) => (
+              <g key={p.n} onClick={() => setSel(p.n)} style={{ cursor: "pointer" }}>
+                <circle cx={p.x} cy={p.y} r="11" fill={sel === p.n ? "#f7bd00" : "#1b283c"} stroke={sel === p.n ? "#f7bd00" : "#64748b"} strokeWidth="2" />
+                <text x={p.x} y={p.y + 4} textAnchor="middle" fontSize="12" fontWeight="900" fill={sel === p.n ? "#0b1426" : "#e2e8f0"}>{p.n}</text>
+              </g>
+            ))}
+            <text x="12" y="262" fontSize="9.5" fill="#64748b">corte esquemático didático do olho do pombo-correio (frente à esquerda)</text>
+          </svg>
+        </div>
+
+        {/* painel da parte selecionada */}
+        <div style={{ marginTop: 12, padding: 13, borderRadius: 12, background: "#ffffff08", border: `1px solid ${T.gold}44` }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.gold }}>{parte.nome}</div>
+          <div style={{ ...T.small, fontSize: 12, lineHeight: 1.75, marginTop: 6 }}>{parte.texto}</div>
+        </div>
+
+        {/* botões alternativos */}
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 10 }}>
+          {PARTES_OLHO_ANATOMIA.map((p) => (
+            <button key={p.n} type="button" onClick={() => setSel(p.n)} style={{ width: 34, height: 34, borderRadius: 99, cursor: "pointer", fontSize: 12.5, fontWeight: 900, border: `1.5px solid ${sel === p.n ? T.gold : T.border}`, background: sel === p.n ? T.gold : T.bgInput, color: sel === p.n ? T.bg : T.dim }}>
+              {p.n}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* O OLHO EM VOO */}
+      <section style={{ ...T.card, marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 10 }}>✈️ O Olho em Voo — a máquina de voar e enxergar</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(215px, 1fr))", gap: 9 }}>
+          {VOO_CARDS.map((c) => (
+            <div key={c.titulo} style={{ padding: 12, borderRadius: 12, background: "#ffffff08", border: `1px solid ${T.border}` }}>
+              <div style={{ fontSize: 22 }}>{c.emoji}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 800, marginTop: 4 }}>{c.titulo}</div>
+              <div style={{ ...T.small, fontSize: 11, lineHeight: 1.65, marginTop: 4, color: T.dim }}>{c.texto}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ ...T.small, fontSize: 11.5, marginTop: 12, lineHeight: 1.8, color: T.dim, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
+          🧩 <b style={{ color: T.white }}>Onde o eye-sign encosta na ciência:</b> os mestres liam "energia", "circulação" e "reação do olho" sem microscópio — e a anatomia mostra que é exatamente disso que se trata: músculos da íris, malha de vasos (o radiador!) e nutrição da retina (o pecten). A tradição não provava nada em laboratório, mas descrevia uma máquina real. Continua sendo <b>mais uma ferramenta</b> — nunca um veredito.
+        </div>
+      </section>
     </>
   );
 }

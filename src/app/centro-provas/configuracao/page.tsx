@@ -366,6 +366,17 @@ export default function Configuracao() {
           {pushMsg && <div style={{ ...T.small, fontSize: 12, marginTop: 10, color: pushMsg.startsWith("✅") ? T.green : T.orange, lineHeight: 1.5 }}>{pushMsg}</div>}
         </section>
 
+        {/* 🧭 TOUR DE BOAS-VINDAS */}
+        <section style={T.card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>🧭 Tour de boas-vindas</div>
+          <div style={{ ...T.small, fontSize: 12, marginBottom: 10, lineHeight: 1.6 }}>
+            O guia de 1ª vez do app (mostrado a cada aparelho novo). Quer rever ou mostrar pra alguém? Toque aí:
+          </div>
+          <button type="button" onClick={() => window.dispatchEvent(new Event("nutripombos:tour"))} style={T.btn}>
+            ▶️ Rever o tour de boas-vindas
+          </button>
+        </section>
+
         {/* ☁️ SINCRONIZAÇÃO — mesmo login, mesmos dados em qualquer aparelho */}
         <section style={{ ...T.card, borderColor: `${T.blue}55`, background: `${T.blue}0d` }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: T.blue, marginBottom: 8 }}>☁️ Sincronização entre aparelhos</div>

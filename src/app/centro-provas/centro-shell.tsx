@@ -6,11 +6,12 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { alternarTema, temaAtual, EVENTO_TEMA } from "./theme";
 import { EXIGE_PAGO } from "../../lib/permissoes";
 import {
-  Activity, Bell, Bird, Bot, BookOpen, Brain, Calculator, CalendarClock, CalendarDays, ChevronDown, Printer, Tv,
+  Activity, Bell, Bird, Bot, BookOpen, Brain, Calculator, CalendarClock, CalendarDays, ChevronDown, Clapperboard, Printer, Tv,
   CloudSun, Dna, FileText, HeartHandshake, HeartPulse, LayoutDashboard, Map, Menu, Network, Package, PackageOpen,
   Palette, Radio, Scale, Search, Settings, ShieldCheck, Sparkles, Store, Tag, Target, TrendingUp, Trophy,
   Users, UtensilsCrossed, Wallet, X, LogOut,
 } from "lucide-react";
+import TourBoasVindas from "./tour-boas-vindas";
 
 type NavItem = { href: string; label: string; icon: typeof Activity };
 type NavGroup = { label: string; items: NavItem[] };
@@ -79,6 +80,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
       { href: "/centro-provas/contrato", label: "Contrato de Venda", icon: FileText },
       { href: "/centro-provas/etiquetas", label: "Etiquetas com QR", icon: Tag },
       { href: "/centro-provas/vitrine", label: "🛒 Vitrine de criadores", icon: Store },
+      { href: "/centro-provas/demo", label: "🎬 Modo Demonstração", icon: Clapperboard },
         { href: "/centro-provas/acasalamento", label: "Assistente de acasalamento", icon: HeartPulse },
         { href: "/centro-provas/comparador", label: "Comparador de pombos", icon: Activity },
         { href: "/centro-provas/ficha-pombo", label: "Ficha de avaliação", icon: ShieldCheck },
@@ -317,6 +319,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
           </div>
         </header>
         <div className="centro-content min-h-[calc(100vh-4rem)]">{children}</div>
+        <TourBoasVindas />
       </div>
     </div>
   );

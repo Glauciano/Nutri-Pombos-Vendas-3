@@ -87,7 +87,7 @@ const FASES = [
 
 function CicloForma() {
   const [fase, setFase] = useState(1);
-  const f = FASES[fase];
+  const f = FASES[fase - 1];
   return (
     <section style={{ ...T.card, marginTop: 14 }}>
       <div style={{ fontSize: 13, fontWeight: 800, color: T.gold, marginBottom: 4 }}>📈 O ciclo da forma — toque nas fases</div>
@@ -117,7 +117,7 @@ function CicloForma() {
           {/* botões-fase */}
           {[[1, 80, 100], [2, 204, 40], [3, 120, 152], [4, 290, 152]].map(([n, x, y]) => (
             <g key={n} onClick={() => setFase(n)} style={{ cursor: "pointer" }}>
-              <circle cx={x} cy={y} r="12" fill={fase === n ? FASES[n].cor : "#1b283c"} stroke={FASES[n].cor} strokeWidth="2" />
+              <circle cx={x} cy={y} r="12" fill={fase === n ? FASES[n - 1].cor : "#1b283c"} stroke={FASES[n - 1].cor} strokeWidth="2" />
               <text x={x} y={y + 4} textAnchor="middle" fontSize="12" fontWeight="900" fill={fase === n ? "#0b1426" : "#e2e8f0"}>{n}</text>
             </g>
           ))}

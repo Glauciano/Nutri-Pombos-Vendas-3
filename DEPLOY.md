@@ -148,3 +148,4 @@ Total: **R$ 0/mês** para começar 🎉
 deploy 05/10/2026 noite
 barkel 09/10/2026
 cadastro seguro
+botao excluir

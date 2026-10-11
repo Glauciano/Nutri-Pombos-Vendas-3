@@ -2,7 +2,7 @@
   "name": "Nutri Pombos — Centro de Provas",
   "short_name": "Nutri Pombos",
   "description": "Gestão de pombos-correio: rota da prova, clima, Kp, nutrição e desempenho",
-  "start_url": "/centro-provas",
+  "start_url": "https://nutri-pombos-vendas-3.vercel.app/centro-provas",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

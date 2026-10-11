@@ -93,6 +93,7 @@ export default function CentroShell({ children, user }: { children: ReactNode; u
       items: [
         { href: "/centro-provas/protocolos", label: "Protocolos gerais", icon: Trophy },
         { href: "/centro-provas/peso", label: "⚖️ Peso e Forma", icon: Scale },
+        { href: "/centro-provas/atleta", label: "📖 O Pombo Atleta", icon: BookOpen },
         { href: "/centro-provas/velocidade-extrema", label: "Velocidade", icon: Sparkles },
         { href: "/centro-provas/meio-fundo", label: "Meio fundo", icon: Target },
         { href: "/centro-provas/fundo-extremo", label: "Fundo extremo", icon: Bird },

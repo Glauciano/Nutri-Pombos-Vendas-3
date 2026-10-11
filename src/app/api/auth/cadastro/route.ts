@@ -26,19 +26,20 @@ export async function POST(request: Request) {
       if (existing) return NextResponse.json({ error: "Este email já possui uma conta." }, { status: 409 });
 
       const senhaHash = await hash(senha, 12);
-      const acessoAte = new Date(Date.now() + 365 * 86_400_000);
-      const [user] = await db.insert(usuarios).values({ nome, email, senhaHash, plano: "admin", acessoAte }).returning({ id: usuarios.id });
+      // 🎫 PLANO TESTE: novo cadastro nasce no teste grátis (módulos livres + 8 pombos).
+      //    Quem assina é liberado pelo Painel Admin (ou webhook de pagamento).
+      const [user] = await db.insert(usuarios).values({ nome, email, senhaHash, plano: "teste", acessoAte: null }).returning({ id: usuarios.id });
       await createSession(user.id);
-      return NextResponse.json({ ok: true, nome, plano: "admin" });
+      return NextResponse.json({ ok: true, nome, plano: "teste" });
     }
 
     // No database — use fallback cookie
-    const response = NextResponse.json({ ok: true, nome, plano: "admin" });
+    const response = NextResponse.json({ ok: true, nome, plano: "teste" });
     response.cookies.set("nutripombos_fallback_user", JSON.stringify({
       id: 1,
       nome: nome,
       email: email,
-      plano: "admin",
+      plano: "teste",
       acessoAtivo: true,
       acessoAte: null,
     }), {

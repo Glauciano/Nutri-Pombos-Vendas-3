@@ -21,6 +21,20 @@ export default function PainelAdmin() {
   const [busca, setBusca] = useState("");
   const [planteis, setPlanteis] = useState<PlantelUser[] | null>(null);
   const [meuId, setMeuId] = useState<number>(0);
+  const [excluirId, setExcluirId] = useState<number | null>(null);
+
+  const excluirUsuario = async (u: Usuario) => {
+    try {
+      const r = await fetch(`/api/admin/usuarios?id=${u.id}`, { method: "DELETE" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setMsg("⚠️ " + (j.error || "falhou")); setExcluirId(null); return; }
+      setMsg(`✅ Conta de ${u.nome} excluída (com plantel e dados).`);
+      setExcluirId(null);
+      window.setTimeout(() => setMsg(""), 3000);
+      void carregar();
+      void carregarPlanteis();
+    } catch { setMsg("⚠️ Falha na exclusão."); }
+  };
 
   const carregarPlanteis = useCallback(async () => {
     try {
@@ -136,7 +150,24 @@ export default function PainelAdmin() {
                       <button type="button" onClick={() => atualizar(u, { plano: "anual", dias: 365 }, `${u.nome}: anual +365 dias`)} style={{ padding: "5px 10px", borderRadius: 8, fontSize: 10.5, fontWeight: 700, cursor: "pointer", color: T.gold, background: "#0b1529", border: `1px solid ${T.border}` }}>
                         +365 dias
                       </button>
+                      {u.id !== meuId && (
+                        <button type="button" onClick={() => setExcluirId(excluirId === u.id ? null : u.id)} title="excluir esta conta" style={{ padding: "5px 10px", borderRadius: 8, fontSize: 10.5, fontWeight: 700, cursor: "pointer", color: T.red, background: "#0b1529", border: `1px solid ${T.red}44` }}>
+                          🗑️ excluir
+                        </button>
+                      )}
                     </div>
+                    {excluirId === u.id && (
+                      <div style={{ marginTop: 8, padding: 12, borderRadius: 10, background: "#ef444414", border: `1px solid ${T.red}55` }}>
+                        <b style={{ color: T.red, fontSize: 12.5 }}>⚠️ Excluir a conta de {u.nome}?</b>
+                        <div style={{ ...T.small, fontSize: 11.5, lineHeight: 1.6, marginTop: 4 }}>
+                          Isso apaga <b>a conta, o plantel de pombos e todos os dados</b> dela (histórico, diário, inscrições de notificação...). <b>Não dá pra desfazer.</b>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                          <button type="button" onClick={() => setExcluirId(null)} style={{ ...T.btnGhost, flex: 1, padding: "8px 0", fontWeight: 800 }}>Cancelar</button>
+                          <button type="button" onClick={() => void excluirUsuario(u)} style={{ flex: 1.5, padding: "8px 0", borderRadius: 8, cursor: "pointer", fontWeight: 900, fontSize: 12, color: "#fff", background: "#EF4444", border: "1px solid #EF4444" }}>🗑️ Excluir definitivamente</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

@@ -1,6 +1,6 @@
 import { db, isDbConfigured } from "@/db";
 import { usuarios } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { exijaUsuario, resposta401 } from "@/lib/seguranca";
 
@@ -21,6 +21,38 @@ export async function GET() {
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Falha ao listar" }, { status: 500 });
+  }
+}
+
+/** 🗑️ EXCLUIR conta — remove a conta E tudo que depende dela (plantel, dados, inscrições).
+ *  Bloqueia excluir a si mesmo. Aviso: não dá pra desfazer. */
+export async function DELETE(request: Request) {
+  if (!isDbConfigured()) return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+  const user = await exijaUsuario();
+  if (!user) return resposta401();
+  if (user.plano !== "admin") return NextResponse.json({ error: "Acesso restrito ao administrador" }, { status: 403 });
+  try {
+    const id = Number(new URL(request.url).searchParams.get("id"));
+    if (!id) return NextResponse.json({ error: "Informe o id do usuário" }, { status: 400 });
+    if (id === user.id) return NextResponse.json({ error: "Você não pode excluir a si mesmo 😄" }, { status: 400 });
+    const [alvo] = await db.select({ id: usuarios.id, nome: usuarios.nome }).from(usuarios).where(eq(usuarios.id, id)).limit(1);
+    if (!alvo) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+
+    // limpa os dependentes na ordem certa (FK-safe); falhas individuais não bloqueiam
+    const passo = async (q: ReturnType<typeof sql>) => { try { await db.execute(q); } catch { /* tabela inexistente */ } };
+    await passo(sql`DELETE FROM alimentacoes WHERE usuario_id = ${id}`);
+    await passo(sql`DELETE FROM saude WHERE pombo_id IN (SELECT id FROM pombos WHERE usuario_id = ${id})`);
+    await passo(sql`DELETE FROM pombos WHERE usuario_id = ${id}`);
+    await passo(sql`DELETE FROM racoes WHERE usuario_id = ${id}`);
+    await passo(sql`DELETE FROM dados_usuario WHERE usuario_id = ${id}`);
+    await passo(sql`DELETE FROM push_subs WHERE usuario_id = ${id}`);
+    await passo(sql`DELETE FROM anuncios_vitrine WHERE usuario_id = ${id}`);
+    await passo(sql`DELETE FROM sessoes WHERE usuario_id = ${id}`);
+    await db.delete(usuarios).where(eq(usuarios.id, id));
+    return NextResponse.json({ ok: true, nome: alvo.nome });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Falha ao excluir" }, { status: 500 });
   }
 }
 

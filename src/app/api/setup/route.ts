@@ -94,17 +94,9 @@ export async function GET(request: Request) {
       );
     `;
 
-    await sql`
-      INSERT INTO usuarios (nome, email, senha_hash, plano, acesso_ativo)
-      VALUES (
-        'Admin',
-        'admin@nutripombos.com',
-        '$2b$10$8TgEZoJNbrw.TWwb.OSUMOcmSQOVyFzjZpSCxx7VVuXodC./sqssW',
-        'admin',
-        true
-      )
-      ON CONFLICT (email) DO NOTHING;
-    `;
+    // 🛡️ NÃO existe mais conta "admin" com senha fixa de fábrica:
+    //    quem instala o app se cadastra normalmente (/cadastro) e vira admin
+    //    pelo SQL do Neon ou pelo painel de outro admin. Porta dos fundos fechada.
 
     // 🔐 Plantel Privado: garante colunas de dono + dono padrão + anilha única por usuário
     //    (idempotente — seguro rodar em banco novo ou antigo)
@@ -117,9 +109,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "✅ Todas as tabelas e a conta de Admin foram criadas com sucesso no banco de dados PostgreSQL!",
+      message: "✅ Todas as tabelas foram criadas com sucesso no banco de dados PostgreSQL! Cadastre-se normalmente no app.",
       tabelas: ["usuarios", "sessoes", "pombos", "racoes", "alimentacoes", "saude"],
-      adminEmail: "admin@nutripombos.com",
     });
   } catch (error: any) {
     console.error("Erro na criação automática das tabelas:", error);

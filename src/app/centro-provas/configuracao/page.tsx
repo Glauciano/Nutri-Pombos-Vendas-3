@@ -25,6 +25,31 @@ export default function Configuracao() {
   const [cfg, setCfg] = useState<ConfigPlantel>(DEFAULT_CONFIG);
   const [custom, setCustom] = useState(false);
   const [saved, setSaved] = useState(false);
+  // 🔐 troca de senha
+  const [senhaAtual, setSenhaAtual] = useState("");
+  const [senhaNova, setSenhaNova] = useState("");
+  const [senhaConf, setSenhaConf] = useState("");
+  const [senhaMsg, setSenhaMsg] = useState("");
+  const [senhaOk, setSenhaOk] = useState(false);
+
+  async function trocarSenha() {
+    setSenhaMsg(""); setSenhaOk(false);
+    if (!senhaAtual || !senhaNova || !senhaConf) { setSenhaMsg("⚠️ Preencha os três campos."); return; }
+    if (senhaNova.length < 8) { setSenhaMsg("⚠️ A nova senha precisa ter pelo menos 8 caracteres."); return; }
+    if (senhaNova !== senhaConf) { setSenhaMsg("⚠️ A confirmação não confere com a nova senha."); return; }
+    try {
+      const r = await fetch("/api/auth/senha", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ senhaAtual, senhaNova }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setSenhaMsg("⚠️ " + (j.error || "não foi possível")); return; }
+      setSenhaAtual(""); setSenhaNova(""); setSenhaConf("");
+      setSenhaMsg("✅ Senha trocada! Você já pode usar a nova na próxima vez que entrar.");
+      setSenhaOk(true);
+    } catch { setSenhaMsg("⚠️ Sem conexão — tente de novo."); }
+  }
 
   // 🏠 Localização do pombal
   const [pombal, setPombalState] = useState({ lat: -23.55, lon: -46.63, nome: "Pombal (sua base)" });
@@ -375,6 +400,21 @@ export default function Configuracao() {
           <button type="button" onClick={() => window.dispatchEvent(new Event("nutripombos:tour"))} style={T.btn}>
             ▶️ Rever o tour de boas-vindas
           </button>
+        </section>
+
+        {/* 🔐 TROCAR SENHA */}
+        <section style={T.card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 8 }}>🔐 Trocar minha senha</div>
+          <div style={{ ...T.small, fontSize: 12, marginBottom: 10, lineHeight: 1.6 }}>
+            Por segurança, informe a senha <b>atual</b> pra definir uma nova (mínimo 8 caracteres). Seus outros aparelhos continuam logados.
+          </div>
+          <div style={{ display: "grid", gap: 8, maxWidth: 420 }}>
+            <input type="password" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} placeholder="Senha atual" autoComplete="current-password" style={T.input} />
+            <input type="password" value={senhaNova} onChange={(e) => setSenhaNova(e.target.value)} placeholder="Nova senha (mínimo 8 caracteres)" autoComplete="new-password" style={T.input} />
+            <input type="password" value={senhaConf} onChange={(e) => setSenhaConf(e.target.value)} placeholder="Confirmar a nova senha" autoComplete="new-password" style={T.input} />
+            <button type="button" onClick={() => void trocarSenha()} style={T.btn}>💾 Trocar senha</button>
+            {senhaMsg && <div style={{ ...T.small, fontSize: 12, color: senhaOk ? T.green : T.orange, lineHeight: 1.6 }}>{senhaMsg}</div>}
+          </div>
         </section>
 
         {/* ☁️ SINCRONIZAÇÃO — mesmo login, mesmos dados em qualquer aparelho */}

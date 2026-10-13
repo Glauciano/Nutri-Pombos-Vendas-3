@@ -167,13 +167,21 @@ export default function Configuracao() {
       return;
     }
     salvarPombal(pombal.lat, pombal.lon, pombalNome);
+    // 🛡️ mantém a folha geral (cfg) em dia com o pombal — pro salvar geral nunca pisar em cima
+    setCfg((c) => ({ ...c, pombalLat: pombal.lat, pombalLon: pombal.lon, pombalNome: pombalNome.trim() || c.pombalNome }));
     setPombalSalvo(true);
     setGpsMsg("");
     window.setTimeout(() => setPombalSalvo(false), 2500);
   };
 
   const salvar = () => {
-    saveConfig(cfg);
+    // 🛡️ mescla o pombal ATUAL do formulário antes de gravar a folha geral
+    saveConfig({
+      ...cfg,
+      pombalLat: Number.isFinite(pombal.lat) ? pombal.lat : cfg.pombalLat,
+      pombalLon: Number.isFinite(pombal.lon) ? pombal.lon : cfg.pombalLon,
+      pombalNome: pombalNome.trim() || cfg.pombalNome,
+    });
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2000);
   };

@@ -89,7 +89,9 @@ export async function sincronizarAgora(): Promise<{ ok: boolean; aplicadas: numb
     aplicandoRemoto = true;
     Object.entries(servidor).forEach(([k, row]) => {
       if (!sincronizavel(k)) return;
-      const localT = meta[k]?.t ?? (localStorage.getItem(k) !== null ? Date.now() : -1);
+      // 🛡️ fallback: sem meta E sem valor local, considera "existia" (data 0),
+      //    para não regravar por cima de dado que o usuário acabou de salvar
+      const localT = meta[k]?.t ?? (localStorage.getItem(k) !== null ? Date.now() : 0);
       if (row.at > localT) {
         if (row.valor == null) localStorage.removeItem(k);
         else localStorage.setItem(k, row.valor);
